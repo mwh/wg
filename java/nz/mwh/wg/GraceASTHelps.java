@@ -1,6 +1,5 @@
 package nz.mwh.wg;
 
-import nz.mwh.wg.runtime.BaseObject;
 import nz.mwh.wg.runtime.*;
 
 import nz.mwh.wg.ast.ASTNode;
@@ -15,7 +14,7 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
             return cons(request.getParts().get(0).getArgs().get(0), (Cons<GraceObject>) request.getParts().get(0).getArgs().get(1));
         });
         lexicalParent.addMethod("nil(0)", request -> {
-            return null;
+            return new Cons<GraceObject>();
         });
         lexicalParent.addMethod("objectConstructor(1)", request -> {
             Cons<ASTNode> body = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(0);
@@ -86,6 +85,8 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
         return lexicalParent;
 
     }
+
+    static Object test = null;
 
 }
 

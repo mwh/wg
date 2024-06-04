@@ -18,6 +18,10 @@ public class Cons<T> extends nz.mwh.wg.ast.Cons<T> implements GraceObject {
         super(head, tail);
         this.tail = tail;
     }
+
+    public Cons() {
+        super();
+    }
     
     @Override
     public GraceObject request(Request request) {
@@ -31,7 +35,7 @@ public class Cons<T> extends nz.mwh.wg.ast.Cons<T> implements GraceObject {
         } else if ("asString".equals(name)) {
             return new GraceString("cons(" + head + ", " + tail.request(request).toString() + ")");
         } else if ("reversed".equals(name)) {
-            return reversed(null);
+            return reversed(new Cons<GraceObject>());
         } else if ("map".equals(name)) {
             return map(request);
         }
@@ -42,12 +46,12 @@ public class Cons<T> extends nz.mwh.wg.ast.Cons<T> implements GraceObject {
         List<RequestPartR> parts = request.getParts();
         GraceObject f = parts.get(0).getArgs().get(0);
         GraceObject fResult = f.request(new Request(request.getVisitor(), Collections.singletonList(new RequestPartR("apply", Collections.singletonList(graceWrap(head))))));
-        return cons(fResult, tail == null ? null : tail.map(request));
+        return cons(fResult, tail.isNil ? new Cons<GraceObject>() : tail.map(request));
     }
 
     private Cons<GraceObject> reversed(Cons<GraceObject> next) {
         Cons<GraceObject> c = cons(graceWrap(head), next);
-        if (tail == null) {
+        if (tail == null || tail.isNil) {
             return c;
         } else {
             return tail.reversed(c);

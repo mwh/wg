@@ -77,7 +77,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
     @Override
     public GraceObject visit(GraceObject context, VarDecl node) {
         if (node.getValue() != null) {
-            new LexicalRequest(new Cons<RequestPart>(new RequestPart(node.getName() + ":=", new Cons<ASTNode>(node.getValue(), null)), null)).accept(context, this);
+            new LexicalRequest(new Cons<RequestPart>(new RequestPart(node.getName() + ":=", new Cons<ASTNode>(node.getValue(), Cons.<ASTNode>nil() )), Cons.<RequestPart>nil())).accept(context, this);
         }
         return done;
     }

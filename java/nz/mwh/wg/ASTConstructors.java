@@ -23,7 +23,7 @@ public class ASTConstructors {
     }
 
     @SuppressWarnings("rawtypes")
-    static Cons nil = null;
+    static Cons nil = new Cons();
 
     static ObjectConstructor objectConstructor(Cons<ASTNode> body) {
         return new ObjectConstructor(body);
@@ -37,7 +37,7 @@ public class ASTConstructors {
         return new RequestPart(name, args);
     }
 
-    static NumberNode numberNode(int value) {
+    static NumberNode numberNode(double value) {
         return new NumberNode(value);
     }
 

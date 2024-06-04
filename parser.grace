@@ -274,24 +274,25 @@ method lexer(code) {
                 return OperatorToken(location, op)
             }
 
-            if (c == "\r") then {
+            if (c.firstCP == 13) then {
                 c := source.at(index)
                 index := index + 1
             }
-            if (c == "\n") then {
+            if (c.firstCP == 10) then {
                 line := line + 1
                 lineStart := index - 1
                 return NewlineToken(location)
             }
 
-            if (c == "\"") then {
+            if (c.firstCP == 34) then {
                 var value := ""
                 var escaped := false
-                while {(source.at(index) != "\"") || escaped} do {
+                while {(source.at(index).firstCP != 34) || escaped} do {
                     var escapeNext := false
-                    value := value ++ source.at(index)
-                    if ((source.at(index) == "\\") && (escaped == false)) then {
+                    if ((source.at(index).firstCP == 92) && (escaped == false)) then {
                         escapeNext := true
+                    } else {
+                        value := value ++ source.at(index)
                     }
                     escaped := escapeNext
                     index := index + 1

@@ -39,6 +39,8 @@ public class GraceString implements GraceObject {
             } else if (name.equals("at")) {
                 int index = (int) ((GraceNumber) parts.get(0).getArgs().get(0)).value;
                 return new GraceString("" + value.charAt(index - 1));
+            } else if (name.equals("firstCP")) {
+                return new GraceNumber(value.codePointAt(0));
             }
         }
         throw new RuntimeException("No such method in String: " + request.getName());

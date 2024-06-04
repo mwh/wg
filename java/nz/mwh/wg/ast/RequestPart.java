@@ -16,7 +16,7 @@ public class RequestPart {
     }
 
     public String toString() {
-        return "requestPart(" + name + ", " + args + ")";
+        return "requestPart(\"" + name + "\", " + args + ")";
     }
 
     public String getName() {
