@@ -20,4 +20,5 @@ public interface Visitor<T> {
     T visit(T context, Assign node);
     T visit(T context, Block node);
     T visit(T context, ReturnStmt node);
+    T visit(T context, Comment node);
 }

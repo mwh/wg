@@ -191,6 +191,18 @@ method NewlineToken(index) {
     }
 }
 
+method CommentToken(index, text) {
+    object {
+        def nature is public = "COMMENT"
+        def position is public = index
+        def value is public = text
+
+        method asString {
+            nature ++ "(" ++ value ++ ")[" ++ position.asString ++ "]"
+        }
+    }
+}
+
 method isOperatorCharacter(c) {
     (c == "+") || (c == "-") || (c == "*") || (c == "/") || (c == "=") || (c == ":") || (c == "|") || (c == "&") || (c == "!") || (c == ">") || (c == "<") || (c == ".")
 }
@@ -270,6 +282,18 @@ method lexer(code) {
                 }
                 if (op == ".") then {
                     return DotToken(location)
+                }
+                if (op == "//") then {
+                    var cp := c.firstCP
+                    var text := ""
+                    index := index + 1
+                    while { (cp != 10) && (cp != 13) && (index <= source.size) } do {
+                        text := text ++ c
+                        c := source.at(index)
+                        cp := c.firstCP
+                        index := index + 1
+                    }
+                    return CommentToken(location, text)
                 }
                 return OperatorToken(location, op)
             }
@@ -593,6 +617,16 @@ method identifierDeclaration(id) {
     }
 }
 
+method comment(text) {
+    object {
+        def value is public = text
+
+        method asString {
+            "comment(\"" ++ text ++ "\")"
+        }
+    }
+}
+
 "------- End marker; methods back to the start marker are duplicated in scope in Java"
 
 method parseNumber(lxr) {
@@ -745,6 +779,9 @@ method parseStatement(lxr) {
         if (token.value == "def") then {
             return parseDefDeclaration(lxr)
         }
+    } elseif {token.nature == "COMMENT"} then {
+        lxr.advance
+        return comment(token.value)
     }
     var exp := parseExpression(lxr)
     if (lxr.current.nature == "ASSIGN") then {

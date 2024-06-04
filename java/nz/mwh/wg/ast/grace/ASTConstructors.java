@@ -70,4 +70,8 @@ public class ASTConstructors {
         return new ReturnStmt(value);
     }
 
+    protected static Comment comment(String value) {
+        return new Comment(value);
+    }
+
 }

@@ -81,6 +81,9 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
             String name = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
             return identifierDeclaration(name);
         });
+        lexicalParent.addMethod("comment(1)", request -> {
+            return comment(((GraceString) request.getParts().get(0).getArgs().get(0)).getValue());
+        });
 
         return lexicalParent;
 

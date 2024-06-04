@@ -186,6 +186,11 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
         throw new UnsupportedOperationException("return can only appear inside method body");
     }
 
+    @Override
+    public GraceObject visit(GraceObject context, Comment node) {
+        return done;
+    }
+
     static BaseObject basePrelude() {
         BaseObject lexicalParent = new BaseObject(null);
         lexicalParent.addMethod("print(1)", request -> {

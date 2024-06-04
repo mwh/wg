@@ -4,6 +4,7 @@ import nz.mwh.wg.ast.ASTNode;
 import nz.mwh.wg.ast.Assign;
 import nz.mwh.wg.ast.Block;
 import nz.mwh.wg.ast.Cons;
+import nz.mwh.wg.ast.Comment;
 import nz.mwh.wg.ast.DeclarationPart;
 import nz.mwh.wg.ast.DefDecl;
 import nz.mwh.wg.ast.ExplicitRequest;
@@ -83,6 +84,10 @@ public class ASTConstructors {
 
     static ReturnStmt returnStmt(ASTNode value) {
         return new ReturnStmt(value);
+    }
+
+    protected static Comment comment(String value) {
+        return new Comment(value);
     }
 
 }
