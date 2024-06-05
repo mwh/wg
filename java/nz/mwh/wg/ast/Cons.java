@@ -45,6 +45,14 @@ public class Cons<T> {
         return "cons(" + (head instanceof String ? "\"" + head + "\"" : head instanceof GraceString ? "\"" + head.toString() + "\"" : head) + ", " + (tail == null ? "nil" : tail.toString()) + ")";
     }
 
+    public boolean isNil() {
+        return isNil;
+    }
+
+    public T getHead() {
+        return head;
+    }
+
     public static <T> Cons<T> nil() {
         return new Cons<T>();
     }

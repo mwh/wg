@@ -40,22 +40,26 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
             GraceObject body = request.getParts().get(0).getArgs().get(1);
             return block((Cons<ASTNode>) params, (Cons<ASTNode>) body);
         });
-        lexicalParent.addMethod("defDecl(3)", request -> {
+        lexicalParent.addMethod("defDecl(4)", request -> {
             String name = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
-            Cons<String> annotations = (Cons<String>) request.getParts().get(0).getArgs().get(1);
-            ASTNode value = (ASTNode) request.getParts().get(0).getArgs().get(2);
-            return defDecl(name, annotations, value);
+            Cons<ASTNode> typeCons = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(1);
+            Cons<String> annotations = (Cons<String>) request.getParts().get(0).getArgs().get(2);
+            ASTNode value = (ASTNode) request.getParts().get(0).getArgs().get(3);
+            return defDecl(name, typeCons, annotations, value);
         });
-        lexicalParent.addMethod("varDecl(3)", request -> {
+        lexicalParent.addMethod("varDecl(4)", request -> {
             String name = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
-            Cons<String> annotations = (Cons<String>) request.getParts().get(0).getArgs().get(1);
-            ASTNode value = (ASTNode) request.getParts().get(0).getArgs().get(2);
-            return varDecl(name, annotations, value);
+            Cons<ASTNode> typeCons = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(1);
+            Cons<String> annotations = (Cons<String>) request.getParts().get(0).getArgs().get(2);
+            ASTNode value = (ASTNode) request.getParts().get(0).getArgs().get(3);
+            return varDecl(name, typeCons, annotations, value);
         });
-        lexicalParent.addMethod("methodDecl(2)", request -> {
+        lexicalParent.addMethod("methodDecl(4)", request -> {
             Cons<DeclarationPart> parts = (Cons<DeclarationPart>) request.getParts().get(0).getArgs().get(0);
-            Cons<ASTNode> body = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(1);
-            return methodDecl(parts, body);
+            Cons<ASTNode> typeCons = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(1);
+            Cons<String> anns = (Cons<String>) request.getParts().get(0).getArgs().get(2);
+            Cons<ASTNode> body = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(3);
+            return methodDecl(parts, typeCons, anns, body);
         });
         lexicalParent.addMethod("declarationPart(2)", request -> {
             String name = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
@@ -77,9 +81,10 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
             ASTNode value = (ASTNode) request.getParts().get(0).getArgs().get(0);
             return returnStmt(value);
         });
-        lexicalParent.addMethod("identifierDeclaration(1)", request -> {
+        lexicalParent.addMethod("identifierDeclaration(2)", request -> {
             String name = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
-            return identifierDeclaration(name);
+            Cons<ASTNode> typeCons = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(1);
+            return identifierDeclaration(name, typeCons);
         });
         lexicalParent.addMethod("comment(1)", request -> {
             return comment(((GraceString) request.getParts().get(0).getArgs().get(0)).getValue());

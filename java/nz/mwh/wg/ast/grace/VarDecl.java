@@ -6,8 +6,8 @@ import nz.mwh.wg.runtime.Request;
 
 public class VarDecl extends nz.mwh.wg.ast.VarDecl implements GraceObject{
     
-    public VarDecl(String name, Cons<String> annotations, ASTNode value) {
-        super(name, annotations, value);
+    public VarDecl(String name, ASTNode type, Cons<String> annotations, ASTNode value) {
+        super(name, type, annotations, value);
     }
 
     public GraceObject request(Request request) {

@@ -4,11 +4,13 @@ import nz.mwh.wg.Visitor;
 
 public class VarDecl extends ASTNode {
     String name;
+    ASTNode type;
     Cons<String> annotations;
     ASTNode value;
 
-    public VarDecl(String name, Cons<String> annotations, ASTNode value) {
+    public VarDecl(String name, ASTNode type, Cons<String> annotations, ASTNode value) {
         this.name = name;
+        this.type = type;
         this.annotations = annotations;
         this.value = value;
     }
@@ -18,7 +20,7 @@ public class VarDecl extends ASTNode {
     }
 
     public String toString() {
-        return "varDecl(\"" + name + "\", " + annotations + ", " + value + ")";
+        return "varDecl(\"" + name + "\", " + (type == null ? "nil" : type) + ", " + annotations + ", " + value + ")";
     }
 
     public String getName() {

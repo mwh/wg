@@ -31,7 +31,7 @@ public class Cons<T> extends nz.mwh.wg.ast.Cons<T> implements GraceObject {
         } else if ("tail".equals(name)) {
             return tail;
         } else if ("end".equals(name)) {
-            return new GraceBoolean(false);
+            return new GraceBoolean(isNil);
         } else if ("asString".equals(name)) {
             return new GraceString("cons(" + head + ", " + tail.request(request).toString() + ")");
         } else if ("reversed".equals(name)) {
@@ -50,6 +50,8 @@ public class Cons<T> extends nz.mwh.wg.ast.Cons<T> implements GraceObject {
     }
 
     private Cons<GraceObject> reversed(Cons<GraceObject> next) {
+        if (isNil)
+            return next;
         Cons<GraceObject> c = cons(graceWrap(head), next);
         if (tail == null || tail.isNil) {
             return c;

@@ -1,12 +1,5 @@
 method EOFToken(index) {
-    object {
-        def nature is public = "EOF"
-        def position is public = index
-
-        method asString {
-            nature
-        }
-    }
+    SymbolToken(index, "EOF")
 }
 
 method NumberToken(index, val) {
@@ -22,69 +15,27 @@ method NumberToken(index, val) {
 }
 
 method LParenToken(index) {
-    object {
-        def nature is public = "LPAREN"
-        def position is public = index
-
-        method asString {
-            nature ++ "[" ++ position.asString ++ "]"
-        }
-    }
+    SymbolToken(index, "LPAREN")
 }
 
 method RParenToken(index) {
-    object {
-        def nature is public = "RPAREN"
-        def position is public = index
-
-        method asString {
-            nature ++ "[" ++ position.asString ++ "]"
-        }
-    }
+    SymbolToken(index, "RPAREN")
 }
 
 method LBraceToken(index) {
-    object {
-        def nature is public = "LBRACE"
-        def position is public = index
-
-        method asString {
-            nature ++ "[" ++ position.asString ++ "]"
-        }
-    }
+    SymbolToken(index, "LBRACE")
 }
 
 method RBraceToken(index) {
-    object {
-        def nature is public = "RBRACE"
-        def position is public = index
-
-        method asString {
-            nature ++ "[" ++ position.asString ++ "]"
-        }
-    }
+    SymbolToken(index, "RBRACE")
 }
 
 method CommaToken(index) {
-    object {
-        def nature is public = "COMMA"
-        def position is public = index
-
-        method asString {
-            nature ++ "[" ++ position.asString ++ "]"
-        }
-    }
+    SymbolToken(index, "COMMA")
 }
 
 method DotToken(index) {
-    object {
-        def nature is public = "DOT"
-        def position is public = index
-
-        method asString {
-            nature ++ "[" ++ position.asString ++ "]"
-        }
-    }
+    SymbolToken(index, "DOT")
 }
 
 method IdentifierToken(index, val) {
@@ -148,30 +99,20 @@ method CommentToken(index, val) {
 }
 
 method EqualsToken(index) {
-    object {
-        def nature is public = "EQUALS"
-        def position is public = index
-
-        method asString {
-            nature ++ "[" ++ position.asString ++ "]"
-        }
-    }
+    SymbolToken(index, "EQUALS")
 }
 
 method AssignToken(index) {
-    object {
-        def nature is public = "ASSIGN"
-        def position is public = index
-
-        method asString {
-            nature ++ "[" ++ position.asString ++ "]"
-        }
-    }
+    SymbolToken(index, "ASSIGN")
 }
 
 method ArrowToken(index) {
+    SymbolToken(index, "ARROW")
+}
+
+method SymbolToken(index, nat) {
     object {
-        def nature is public = "ARROW"
+        def nature is public = nat
         def position is public = index
 
         method asString {
@@ -181,14 +122,7 @@ method ArrowToken(index) {
 }
 
 method NewlineToken(index) {
-    object {
-        def nature is public = "NEWLINE"
-        def position is public = index
-
-        method asString {
-            nature ++ "[" ++ position.asString ++ "]"
-        }
-    }
+    SymbolToken(index, "NEWLINE")
 }
 
 method CommentToken(index, text) {
@@ -283,14 +217,17 @@ method lexer(code) {
                 if (op == ".") then {
                     return DotToken(location)
                 }
+                if (op == ":") then {
+                    return SymbolToken(location, "COLON")
+                }
                 if (op == "//") then {
-                    var cp := c.firstCP
+                    var cp := c.firstCodepoint
                     var text := ""
                     index := index + 1
                     while { (cp != 10) && (cp != 13) && (index <= source.size) } do {
                         text := text ++ c
                         c := source.at(index)
-                        cp := c.firstCP
+                        cp := c.firstCodepoint
                         index := index + 1
                     }
                     return CommentToken(location, text)
@@ -298,22 +235,22 @@ method lexer(code) {
                 return OperatorToken(location, op)
             }
 
-            if (c.firstCP == 13) then {
+            if (c.firstCodepoint == 13) then {
                 c := source.at(index)
                 index := index + 1
             }
-            if (c.firstCP == 10) then {
+            if ((c.firstCodepoint == 10) || (c.firstCodepoint == 8232)) then {
                 line := line + 1
                 lineStart := index - 1
                 return NewlineToken(location)
             }
 
-            if (c.firstCP == 34) then {
+            if (c.firstCodepoint == 34) then {
                 var value := ""
                 var escaped := false
-                while {(source.at(index).firstCP != 34) || escaped} do {
+                while {(source.at(index).firstCodepoint != 34) || escaped} do {
                     var escapeNext := false
-                    if ((source.at(index).firstCP == 92) && (escaped == false)) then {
+                    if ((source.at(index).firstCodepoint == 92) && (escaped == false)) then {
                         escapeNext := true
                     } else {
                         value := value ++ source.at(index)
@@ -362,7 +299,7 @@ method lexer(code) {
                 return IdentifierToken(location, value)
             }
 
-            print("Unknown character: " ++ c.asString ++ " at index " ++ index.asString)
+            print("Unknown character: " ++ c.asString ++ "(" ++ c.firstCodepoint.asString ++ ") at index " ++ index.asString)
         
         }
 
@@ -372,6 +309,31 @@ method lexer(code) {
 
         method advance {
             currentToken := nextToken
+        }
+
+        method expectToken(nature) {
+            if (currentToken.nature != nature) then {
+                print("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.position.asString)
+                Exception.raise("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.position.asString)
+            }
+        }
+
+        method expectSymbol(nature) {
+            if (currentToken.nature != nature) then {
+                print("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.position.asString)
+                Exception.raise("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.position.asString)
+            }
+        }
+
+        method expectKeyword(val) {
+            if (currentToken.nature != "KEYWORD") then {
+                print("Expected KEYWORD but got " ++ currentToken.nature ++ " at " ++ currentToken.position.asString)
+                Exception.raise("Expected KEYWORD but got " ++ currentToken.nature ++ " at " ++ currentToken.position.asString)
+            }
+            if (currentToken.value != val) then {
+                print("Expected " ++ val ++ " but got " ++ currentToken.value ++ " at " ++ currentToken.position.asString)
+                Exception.raise("Expected " ++ val ++ " but got " ++ currentToken.value ++ " at " ++ currentToken.position.asString)
+            }
         }
     }
 }
@@ -496,26 +458,28 @@ method block(params, stmts) {
     }
 }
 
-method defDecl(id, anns, val) {
+method defDecl(id, dtype, anns, val) {
     object {
         def name is public = id
+        def decType is public = dtype
         def annotations is public = anns
         def value is public = val
 
         method asString {
-            "defDecl(\"" ++ name ++ "\", " ++ anns.map { x -> "\"" ++ x ++ "\"" } ++ ", " ++ value ++ ")"
+            "defDecl(\"" ++ name ++ "\", "  ++ decType ++ ", " ++ anns.map { x -> "\"" ++ x ++ "\"" } ++ ", " ++ value ++ ")"
         }
     }
 }
 
-method varDecl(id, anns, val) {
+method varDecl(id, dtype, anns, val) {
     object {
         def name is public = id
+        def decType is public = dtype
         def annotations is public = anns
         def value is public = val
 
         method asString {
-            "varDecl(\"" ++ name ++ "\", " ++ anns.map { x -> "\"" ++ x ++ "\"" } ++ ", " ++ value ++ ")"
+            "varDecl(\"" ++ name ++ "\", " ++ dtype ++ ", " ++ anns.map { x -> "\"" ++ x ++ "\"" } ++ ", " ++ value ++ ")"
         }
     }
 }
@@ -553,13 +517,15 @@ method requestPart(partName, args) {
     }
 }
 
-method methodDecl(declarationParts, bd) {
+method methodDecl(declarationParts, retType, anns, bd) {
     object {
         def parts is public = declarationParts
+        def returnType is public = retType
+        def annotations is public = anns
         def body is public = bd
 
         method asString {
-            "methodDecl(" ++ parts ++ ", " ++ body ++ ")"
+            "methodDecl(" ++ parts ++ ", " ++ returnType ++ ", " ++ annotations ++ ", " ++ body ++ ")"
         }
     }
 }
@@ -607,12 +573,13 @@ method returnStmt(val) {
     }
 }
 
-method identifierDeclaration(id) {
+method identifierDeclaration(id, dtype) {
     object {
         def name is public = id
+        def decType is public = dtype
 
         method asString {
-            "identifierDeclaration(\"" ++ name ++ "\")"
+            "identifierDeclaration(\"" ++ name ++ "\", " ++ dtype ++ ")"
         }
     }
 }
@@ -648,12 +615,17 @@ method parseString(lxr) {
     stringNode(token.value)
 }
 
-method parselexicalRequest(lxr) {
-    def parts = parserequestParts(lxr)
+method parseLexicalRequestNoBlock(lxr, id) {
+    def parts = parseRequestParts(lxr, false)
     lexicalRequest(parts)
 }
 
-method parserequestParts(lxr) {
+method parselexicalRequest(lxr) {
+    def parts = parseRequestParts(lxr, true)
+    lexicalRequest(parts)
+}
+
+method parseRequestParts(lxr, allowBlock) {
     var parts := nil
     while {lxr.current.nature == "IDENTIFIER"} do {
         var id := lxr.current.value
@@ -670,7 +642,7 @@ method parserequestParts(lxr) {
             lxr.advance
             def part = requestPart(id, args.reversed(nil))
             parts := cons(part, parts)
-        } elseif { lxr.current.nature == "LBRACE" } then {
+        } elseif { allowBlock && (lxr.current.nature == "LBRACE") } then {
             def blk = parseBlock(lxr)
             def part = requestPart(id, cons(blk, nil))
             parts := cons(part, parts)
@@ -691,11 +663,27 @@ method parserequestParts(lxr) {
     parts.reversed(nil)
 }
 
+method parseExplicitRequestNoBlock(receiver, lxr) {
+    lxr.advance
+    def pos = lxr.current.asString
+    def parts = parseRequestParts(lxr, false)
+    explicitRequest(pos, receiver, parts)
+}
+
 method parseExplicitRequest(receiver, lxr) {
     lxr.advance
     def pos = lxr.current.asString
-    def parts = parserequestParts(lxr)
+    def parts = parseRequestParts(lxr, true)
     explicitRequest(pos, receiver, parts)
+}
+
+method parseTypeExpression(lxr) {
+    def token = lxr.current
+    if (token.nature == "IDENTIFIER") then {
+        return parseLexicalRequestNoBlock(lxr, token.value)
+    }
+    print("Unexpected token: " ++ token.asString)
+    Exception.raise("Unexpected token: " ++ token.asString)
 }
 
 method parseExpressionNoOpNoDot(lxr) {
@@ -839,6 +827,12 @@ method parseDefDeclaration(lxr) {
     lxr.advance
     def name = lxr.current.value
     lxr.advance
+    var dtype := nil
+    if (lxr.current.nature == "COLON") then {
+        // Type annotation
+        lxr.advance
+        dtype := cons(parseExpression(lxr), nil)
+    }
     var anns := nil
     if ((lxr.current.nature == "KEYWORD")) then {
         if (lxr.current.value == "is") then {
@@ -848,13 +842,19 @@ method parseDefDeclaration(lxr) {
     lxr.advance
     def val = parseExpression(lxr)
     
-    defDecl(name, anns, val)
+    defDecl(name, dtype, anns, val)
 }
 
 method parseVarDeclaration(lxr) {
     lxr.advance
     def name = lxr.current.value
     lxr.advance
+    var dtype := nil
+    if (lxr.current.nature == "COLON") then {
+        // Type annotation
+        lxr.advance
+        dtype := cons(parseExpression(lxr), nil)
+    }
     var anns := nil
     if ((lxr.current.nature == "KEYWORD")) then {
         if (lxr.current.value == "is") then {
@@ -864,9 +864,9 @@ method parseVarDeclaration(lxr) {
     if (lxr.current.nature == "ASSIGN") then {
         lxr.advance
         def val = parseExpression(lxr)
-        varDecl(name, anns, val)
+        varDecl(name, dtype, anns, val)
     } else {
-        varDecl(name, anns, nil)
+        varDecl(name, dtype, anns, nil)
     }
 }
 
@@ -905,8 +905,16 @@ method parseMethodDeclaration(lxr) {
             lxr.advance
             var args := nil
             while {(lxr.current.nature != "RPAREN") && (lxr.current.nature != "EOF")} do {
-                args := cons(identifierDeclaration(lxr.current.value), args)
+                lxr.expectToken "IDENTIFIER"
+                def idToken = lxr.current
+                var dtype := nil
                 lxr.advance
+                if (lxr.current.nature == "COLON") then {
+                    // Type annotation
+                    lxr.advance
+                    dtype := cons(parseTypeExpression(lxr), nil)
+                }
+                args := cons(identifierDeclaration(idToken.value, dtype), args)
                 if (lxr.current.nature == "COMMA") then {
                     lxr.advance
                 }
@@ -919,8 +927,21 @@ method parseMethodDeclaration(lxr) {
             parts := cons(part, parts)
         }
     }
+    var dtype := nil
+    if (lxr.current.nature == "ARROW") then {
+        // Type annotation
+        lxr.advance
+        dtype := cons(parseTypeExpression(lxr), nil)
+    }
+    var anns := nil
+    if ((lxr.current.nature == "KEYWORD")) then {
+        if (lxr.current.value == "is") then {
+            anns := parseAnnotations(lxr)
+        }
+    }
+    //lxr.advance
     def body = parseMethodBody(lxr)
-    methodDecl(parts.reversed(nil), body)
+    methodDecl(parts.reversed(nil), dtype, anns, body)
 }
 
 method parseClassDeclaration(lxr) {
@@ -950,7 +971,7 @@ method parseClassDeclaration(lxr) {
     lxr.advance
     def body = parseObjectBody(lxr)
     def obj = objectConstructor(body)
-    methodDecl(parts.reversed(nil), cons(obj, nil))
+    methodDecl(parts.reversed(nil), nil, nil, cons(obj, nil))
 }
 
 method parseObjectBody(lxr) {

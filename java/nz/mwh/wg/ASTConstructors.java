@@ -46,20 +46,20 @@ public class ASTConstructors {
         return new StringNode(value);
     }
 
-    static IdentifierDeclaration identifierDeclaration(String name) {
-        return new IdentifierDeclaration(name);
+    static IdentifierDeclaration identifierDeclaration(String name, Cons<ASTNode> type) {
+        return new IdentifierDeclaration(name, type.isNil() ? null : type.getHead());
     }
 
-    static DefDecl defDecl(String name, Cons<String> annotations, ASTNode value) {
-        return new DefDecl(name, annotations, value);
+    static DefDecl defDecl(String name, Cons<ASTNode> type, Cons<String> annotations, ASTNode value) {
+        return new DefDecl(name, type.isNil() ? null : type.getHead(), annotations, value);
     }
 
-    static VarDecl varDecl(String name, Cons<String> annotations, ASTNode value) {
-        return new VarDecl(name, annotations, value);
+    static VarDecl varDecl(String name, Cons<ASTNode> type, Cons<String> annotations, ASTNode value) {
+        return new VarDecl(name, type.isNil() ? null : type.getHead(), annotations, value);
     }
 
-    static MethodDecl methodDecl(Cons<DeclarationPart> parts, Cons<ASTNode> body) {
-        return new MethodDecl(parts, body);
+    static MethodDecl methodDecl(Cons<DeclarationPart> parts, Cons<ASTNode> type, Cons<String> annotations, Cons<ASTNode> body) {
+        return new MethodDecl(parts, type.isNil() ? null : type.getHead(), annotations, body);
     }
 
     static DeclarationPart declarationPart(String name, Cons<IdentifierDeclaration> parameters) {

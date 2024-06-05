@@ -1,12 +1,13 @@
 package nz.mwh.wg.ast.grace;
 
+import nz.mwh.wg.ast.ASTNode;
 import nz.mwh.wg.runtime.GraceObject;
 import nz.mwh.wg.runtime.Request;
 
 public class IdentifierDeclaration extends nz.mwh.wg.ast.IdentifierDeclaration implements GraceObject {
     
-    public IdentifierDeclaration(String name) {
-        super(name);
+    public IdentifierDeclaration(String name, ASTNode type) {
+        super(name, type);
     }
 
     public GraceObject request(Request request) {
