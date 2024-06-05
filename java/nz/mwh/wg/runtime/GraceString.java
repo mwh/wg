@@ -42,6 +42,17 @@ public class GraceString implements GraceObject {
             } else if (name.equals("firstCodepoint") || name.equals("firstCP")) {
                 return new GraceNumber(value.codePointAt(0));
             }
+        } else if (parts.size() == 2) {
+            String name = request.getName();
+            if (name.equals("replace(1)with(1)")) {
+                String old = ((GraceString) parts.get(0).getArgs().get(0)).value;
+                String replacement = ((GraceString) parts.get(1).getArgs().get(0)).value;
+                return new GraceString(value.replace(old, replacement));
+            } else if (name.equals("substringFrom(1)to(1)")) {
+                int start = (int) ((GraceNumber) parts.get(0).getArgs().get(0)).value;
+                int end = (int) ((GraceNumber) parts.get(1).getArgs().get(0)).value;
+                return new GraceString(value.substring(start - 1, end));
+            }
         }
         throw new RuntimeException("No such method in String: " + request.getName());
     }

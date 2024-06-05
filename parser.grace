@@ -250,8 +250,13 @@ method lexer(code) {
                 var escaped := false
                 while {(source.at(index).firstCodepoint != 34) || escaped} do {
                     var escapeNext := false
-                    if ((source.at(index).firstCodepoint == 92) && (escaped == false)) then {
+                    def cp = source.at(index).firstCodepoint
+                    if ((cp == 92) && (escaped == false)) then {
                         escapeNext := true
+                    } elseif { escaped && (cp == 110) } then {
+                        value := value ++ "\n"
+                    } elseif { escaped && (cp == 114) } then {
+                        value := value ++ "\r"
                     } else {
                         value := value ++ source.at(index)
                     }
@@ -373,6 +378,10 @@ method digitToNumber(c) {
     Exception.raise("Unexpected digit: " ++ c.asString)
 }
 
+method escapeString(value) {
+    value.replace "\\" with "\\\\".replace "\"" with "\\\"".replace "\n" with "\\n".replace "\r" with "\\r"
+}
+
 "------- Methods from here until the end marker are duplicated in scope in Java"
 method cons(hd, tl) {
     object {
@@ -442,7 +451,7 @@ method stringNode(val) {
         def value is public = val
 
         method asString {
-            "stringNode(\"" ++ value ++ "\")"
+            "stringNode(\"" ++ escapeString(value) ++ "\")"
         }
     }
 }
@@ -589,7 +598,7 @@ method comment(text) {
         def value is public = text
 
         method asString {
-            "comment(\"" ++ text ++ "\")"
+            "comment(\"" ++ escapeString(text) ++ "\")"
         }
     }
 }
@@ -864,7 +873,7 @@ method parseVarDeclaration(lxr) {
     if (lxr.current.nature == "ASSIGN") then {
         lxr.advance
         def val = parseExpression(lxr)
-        varDecl(name, dtype, anns, val)
+        varDecl(name, dtype, anns, cons(val, nil))
     } else {
         varDecl(name, dtype, anns, nil)
     }

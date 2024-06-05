@@ -15,7 +15,12 @@ public class Comment extends ASTNode {
     }
 
     public String toString() {
-        return "comment(\"" + text + "\")";
+        return "comment(\"" +
+            text.replace("\\", "\\\\")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\"", "\\\"")
+            + "\")";
     }
 
     @Override

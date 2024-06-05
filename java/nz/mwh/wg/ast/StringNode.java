@@ -14,7 +14,12 @@ public class StringNode extends ASTNode {
     }
 
     public String toString() {
-        return "stringNode(\"" + value + "\")";
+        return "stringNode(\"" +
+            value.replace("\\", "\\\\")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\"", "\\\"")
+            + "\")";
     }
 
     public String getValue() {
