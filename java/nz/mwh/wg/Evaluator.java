@@ -24,9 +24,6 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             if (part instanceof DefDecl) {
                 DefDecl def = (DefDecl) part;
                 object.addField(def.getName());
-                if (def.getName().equals("location")) {
-                    System.out.println("added field location to object " + object);
-                }
             } else if (part instanceof VarDecl) {
                 VarDecl var = (VarDecl) part;
                 object.addField(var.getName());
