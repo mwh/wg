@@ -10,11 +10,11 @@ public class VarDecl extends ASTNode {
     List<String> annotations;
     ASTNode value;
 
-    public VarDecl(String name, ASTNode type, Cons<String> annotations, ASTNode value) {
+    public VarDecl(String name, ASTNode type, Cons<String> annotations, Cons<ASTNode> value) {
         this.name = name;
         this.type = type;
         this.annotations = annotations.toList();
-        this.value = value;
+        this.value = value.getHead();
     }
 
     public <T> T accept(T context, Visitor<T> visitor) {
@@ -22,7 +22,7 @@ public class VarDecl extends ASTNode {
     }
 
     public String toString() {
-        return "varDecl(\"" + name + "\", " + (type == null ? "nil" : type) + ", " + Cons.stringFromList(annotations) + ", " + value + ")";
+        return "varDecl(\"" + name + "\", " + Cons.fromValue(type) + ", " + Cons.stringFromList(annotations) + ", " + Cons.fromValue(value) + ")";
     }
 
     public String getName() {

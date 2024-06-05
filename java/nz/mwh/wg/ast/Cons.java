@@ -78,5 +78,11 @@ public class Cons<T> {
         return sb.toString();
     }
 
+    public static <T> Cons<T> fromValue(T value) {
+        if (value == null)
+            return new Cons<T>();
+        return new Cons<T>(value, new Cons<T>());
+    }
+
 }
 

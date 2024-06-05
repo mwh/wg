@@ -54,7 +54,7 @@ public class ASTConstructors {
         return new DefDecl(name, type.isNil() ? null : type.getHead(), annotations, value);
     }
 
-    static VarDecl varDecl(String name, Cons<ASTNode> type, Cons<String> annotations, ASTNode value) {
+    static VarDecl varDecl(String name, Cons<ASTNode> type, Cons<String> annotations, Cons<ASTNode> value) {
         return new VarDecl(name, type.isNil() ? null : type.getHead(), annotations, value);
     }
 

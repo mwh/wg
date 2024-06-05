@@ -22,7 +22,7 @@ public class DefDecl extends ASTNode {
     }
 
     public String toString() {
-        return "defDecl(\"" + name + "\", " + (type == null ? "nil" : type) + ", " + Cons.stringFromList(annotations) + ", " + value + ")";
+        return "defDecl(\"" + name + "\", " + Cons.fromValue(type) + ", " + Cons.stringFromList(annotations) + ", " + value + ")";
     }
 
     public String getName() {

@@ -16,7 +16,7 @@ public class IdentifierDeclaration extends ASTNode {
     }
 
     public String toString() {
-        return "identifierDeclaration(\"" + name + "\", " + (type == null ? "nil" : type) + ")";
+        return "identifierDeclaration(\"" + name + "\", " + Cons.fromValue(type) + ")";
     }
 
     public String getName() {

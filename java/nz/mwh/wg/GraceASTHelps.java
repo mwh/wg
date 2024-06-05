@@ -51,7 +51,7 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
             String name = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
             Cons<ASTNode> typeCons = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(1);
             Cons<String> annotations = (Cons<String>) request.getParts().get(0).getArgs().get(2);
-            ASTNode value = (ASTNode) request.getParts().get(0).getArgs().get(3);
+            Cons<ASTNode> value = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(3);
             return varDecl(name, typeCons, annotations, value);
         });
         lexicalParent.addMethod("methodDecl(4)", request -> {
