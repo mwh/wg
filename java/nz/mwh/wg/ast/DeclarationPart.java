@@ -1,14 +1,16 @@
 package nz.mwh.wg.ast;
 
+import java.util.List;
+
 import nz.mwh.wg.Visitor;
 
 public class DeclarationPart extends ASTNode {
     String name;
-    Cons<? extends IdentifierDeclaration> parameters;
+    List<? extends IdentifierDeclaration> parameters;
 
     public DeclarationPart(String name, Cons<? extends IdentifierDeclaration> parameters) {
         this.name = name;
-        this.parameters = parameters;
+        this.parameters = parameters.toList();
     }
     
     public <T> T accept(T context, Visitor<T> visitor) {
@@ -16,14 +18,14 @@ public class DeclarationPart extends ASTNode {
     }
 
     public String toString() {
-        return "declarationPart(\"" + name + "\", " + parameters + ")";
+        return "declarationPart(\"" + name + "\", " + Cons.stringFromList(parameters) + ")";
     }
 
     public String getName() {
         return name;
     }
 
-    public Cons<? extends IdentifierDeclaration> getParameters() {
+    public List<? extends IdentifierDeclaration> getParameters() {
         return parameters;
     }
 }

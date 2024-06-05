@@ -1,14 +1,16 @@
 package nz.mwh.wg.ast;
 
+import java.util.List;
+
 import nz.mwh.wg.Visitor;
 
 public class Block extends ASTNode {
-    Cons<ASTNode> parameters;
-    Cons<ASTNode> body;
+    List<ASTNode> parameters;
+    List<ASTNode> body;
 
     public Block(Cons<ASTNode> parameters, Cons<ASTNode> body) {
-        this.parameters = parameters;
-        this.body = body;
+        this.parameters = parameters.toList();
+        this.body = body.toList();
     }
 
     
@@ -17,14 +19,14 @@ public class Block extends ASTNode {
     }
 
     public String toString() {
-        return "block(" + parameters + ", " + body + ")";
+        return "block(" + Cons.stringFromList(parameters) + ", " + Cons.stringFromList(body) + ")";
     }
 
-    public Cons<ASTNode> getParameters() {
+    public List<ASTNode> getParameters() {
         return parameters;
     }
 
-    public Cons<ASTNode> getBody() {
+    public List<ASTNode> getBody() {
         return body;
     }
 }

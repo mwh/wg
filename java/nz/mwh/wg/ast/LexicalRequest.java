@@ -1,12 +1,14 @@
 package nz.mwh.wg.ast;
 
+import java.util.List;
+
 import nz.mwh.wg.Visitor;
 
 public class LexicalRequest extends ASTNode {
-    Cons<? extends RequestPart> parts;
+    List<? extends RequestPart> parts;
 
     public LexicalRequest(Cons<? extends RequestPart> parts) {
-        this.parts = parts;
+        this.parts = parts.toList();
     }
 
     public <T> T accept(T context, Visitor<T> visitor) {
@@ -14,10 +16,10 @@ public class LexicalRequest extends ASTNode {
     }
 
     public String toString() {
-        return "lexicalRequest(" + parts + ")";
+        return "lexicalRequest(" + Cons.stringFromList(parts) + ")";
     }
 
-    public Cons<? extends RequestPart> getParts() {
+    public List<? extends RequestPart> getParts() {
         return parts;
     }
 }

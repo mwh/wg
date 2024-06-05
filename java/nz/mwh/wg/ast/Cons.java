@@ -57,5 +57,26 @@ public class Cons<T> {
         return new Cons<T>();
     }
 
+    public static <T> String stringFromList(List<T> items) {
+        if (items.size() == 0)
+            return "nil";
+        StringBuilder sb = new StringBuilder();
+        for (T it : items) {
+            sb.append("cons(");
+            if (it instanceof String || it instanceof GraceString) {
+                sb.append("\"");
+                sb.append(it);
+                sb.append("\"");
+            } else
+                sb.append(it);
+            sb.append(", ");
+        }
+        sb.append("nil");
+        for (int i = 0; i < items.size(); i++) {
+            sb.append(")");
+        }
+        return sb.toString();
+    }
+
 }
 

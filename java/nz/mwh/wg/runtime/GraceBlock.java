@@ -33,7 +33,7 @@ public class GraceBlock implements GraceObject {
             if (parameter instanceof IdentifierDeclaration) {
                 name = ((IdentifierDeclaration) parameter).getName();
             } else if (parameter instanceof LexicalRequest) {
-                name = ((LexicalRequest) parameter).getParts().head.getName();
+                name = ((LexicalRequest) parameter).getParts().get(0).getName();
             } else {
                 throw new RuntimeException("Invalid parameter in block: " + parameter);
             }

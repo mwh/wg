@@ -1,12 +1,14 @@
 package nz.mwh.wg.ast;
 
+import java.util.List;
+
 import nz.mwh.wg.Visitor;
 
 public class ObjectConstructor extends ASTNode {
-    Cons<ASTNode> body;
+    List<ASTNode> body;
 
     public ObjectConstructor(Cons<ASTNode> body) {
-        this.body = body;
+        this.body = body.toList();
     }
 
     public <T> T accept(T context, Visitor<T> visitor) {
@@ -14,10 +16,10 @@ public class ObjectConstructor extends ASTNode {
     }
 
     public String toString() {
-        return "objectConstructor(" + body + ")";
+        return "objectConstructor(" + Cons.stringFromList(body) + ")";
     }
 
-    public Cons<ASTNode> getBody() {
+    public List<ASTNode> getBody() {
         return body;
     }
 }

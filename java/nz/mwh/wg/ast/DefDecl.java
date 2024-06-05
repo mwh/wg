@@ -1,17 +1,19 @@
 package nz.mwh.wg.ast;
 
+import java.util.List;
+
 import nz.mwh.wg.Visitor;
 
 public class DefDecl extends ASTNode {
     String name;
     ASTNode type;
-    Cons<String> annotations;
+    List<String> annotations;
     ASTNode value;
 
     public DefDecl(String name, ASTNode type, Cons<String> annotations,  ASTNode value) {
         this.name = name;
         this.type = type;
-        this.annotations = annotations;
+        this.annotations = annotations.toList();
         this.value = value;
     }
 
@@ -20,14 +22,14 @@ public class DefDecl extends ASTNode {
     }
 
     public String toString() {
-        return "defDecl(\"" + name + "\", " + (type == null ? "nil" : type) + ", " + annotations + ", " + value + ")";
+        return "defDecl(\"" + name + "\", " + (type == null ? "nil" : type) + ", " + Cons.stringFromList(annotations) + ", " + value + ")";
     }
 
     public String getName() {
         return name;
     }
 
-    public Cons<String> getAnnotations() {
+    public List<String> getAnnotations() {
         return annotations;
     }
 
