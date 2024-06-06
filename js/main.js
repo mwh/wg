@@ -26,6 +26,7 @@ function status(s) {
 }
 
 let theAST
+let theSerialisedAST
 
 document.getElementById('source').addEventListener('input', () => {
     theAST = null
@@ -63,10 +64,10 @@ async function doParse() {
     let parseTree = cont.result
     let r2 = parseTree.request(cont, {name: "asString(0)"}, [])
     await evaluate(r2)
-    document.getElementById('ast').textContent = cont.result
+    document.getElementById('ast').value = cont.result
     theAST = cont.result
     let end = performance.now()
-    status("Ready. Parse time: " + (end - start) + "ms")
+    status("Ready. Parse time: " + Math.round(end - start) + "ms")
 }
 
 document.getElementById('parse').addEventListener('click', async () => {
@@ -88,7 +89,26 @@ document.getElementById('run').addEventListener('click', async () => {
         jsAST)
     await evaluate(r)
     let end = performance.now()
-    status("Ready. Run time: " + (end - start) + "ms")
+    status("Ready. Run time: " + Math.round(end - start) + "ms")
+})
+
+document.getElementById('java').addEventListener('click', async () => {
+    if (!theAST)
+        await doParse()
+    let text = theAST
+    let f = await fetch("flat-template.java")
+    let base = await f.text()
+    document.getElementById('ast').value = base + `class TheProgram extends ASTConstructors {
+    @SuppressWarnings("unchecked")
+    public static final ASTNode program = ${text};
+}`
+    let blob = new Blob([document.getElementById('ast').value], {type: "text/plain"})
+    let url = URL.createObjectURL(blob)
+    let a = document.createElement('a')
+    a.href = url
+    a.download = "Runner.java"
+    a.textContent = 'Download Runner.java'
+    document.getElementById('status').replaceChildren(a)
 })
 
 let steps = document.getElementById('steps')
