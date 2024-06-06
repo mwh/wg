@@ -22,7 +22,8 @@ data DeclarationPart = DeclarationPart String [ASTNode]
         deriving Show
 
 
-cons (hd,tl) = hd : tl
+cons = uncurry (:)
+one hd = [hd]
 nil = []
 
 

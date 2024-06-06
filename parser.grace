@@ -378,8 +378,10 @@ method cons(hd, tl) {
         def end is public = false
 
         method asString {
+            if (tail.end) then {
+                return "one(" ++ head.asString ++ ")"
+            }
             return "cons(" ++ head.asString ++ ", " ++ tail.asString ++ ")"
-            return reversed(nil).stringHelper
         }
 
         method reversed(next) {

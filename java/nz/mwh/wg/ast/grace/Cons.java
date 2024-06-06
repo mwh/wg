@@ -22,6 +22,10 @@ public class Cons<T> extends nz.mwh.wg.ast.Cons<T> implements GraceObject {
     public Cons() {
         super();
     }
+
+    public static <T> Cons<T> nil() {
+        return new Cons<T>();
+    }
     
     @Override
     public GraceObject request(Request request) {

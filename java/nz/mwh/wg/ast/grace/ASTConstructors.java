@@ -7,6 +7,10 @@ public class ASTConstructors {
         return new Cons<>(head, tail);
     }
 
+    protected static <T> Cons<T> one(T head) {
+        return new Cons<>(head, Cons.nil());
+    }
+
     @SuppressWarnings("rawtypes")
     protected static Cons nil = new Cons();
 

@@ -19,8 +19,12 @@ import nz.mwh.wg.ast.StringNode;
 import nz.mwh.wg.ast.VarDecl;
 
 public class ASTConstructors {
-        static <T> Cons<T> cons(T head, Cons<T> tail) {
+    static <T> Cons<T> cons(T head, Cons<T> tail) {
         return new Cons<>(head, tail);
+    }
+
+    static <T> Cons<T> one(T head) {
+        return new Cons<>(head, Cons.nil());
     }
 
     @SuppressWarnings("rawtypes")

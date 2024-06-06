@@ -42,7 +42,10 @@ public class Cons<T> {
     public String toString() {
         if (isNil)
             return "nil";
-        return "cons(" + (head instanceof String ? "\"" + head + "\"" : head instanceof GraceString ? "\"" + head.toString() + "\"" : head) + ", " + (tail == null ? "nil" : tail.toString()) + ")";
+        String headStr = head instanceof String ? "\"" + head + "\"" : head instanceof GraceString ? "\"" + head.toString() + "\"" : head.toString();
+        if (tail == null || tail.isNil)
+            return "one(" + headStr + ")";
+        return "cons(" + headStr + ", " + (tail == null ? "nil" : tail.toString()) + ")";
     }
 
     public boolean isNil() {
@@ -57,21 +60,33 @@ public class Cons<T> {
         return new Cons<T>();
     }
 
+    private static <T> void headToString(T it, StringBuilder sb) {
+        if (it instanceof String || it instanceof GraceString) {
+            sb.append("\"");
+            sb.append(it);
+            sb.append("\"");
+        } else
+            sb.append(it);
+    }
+
     public static <T> String stringFromList(List<T> items) {
         if (items.size() == 0)
             return "nil";
         StringBuilder sb = new StringBuilder();
+        int len = items.size();
+        int n = 0;
         for (T it : items) {
-            sb.append("cons(");
-            if (it instanceof String || it instanceof GraceString) {
-                sb.append("\"");
-                sb.append(it);
-                sb.append("\"");
-            } else
-                sb.append(it);
-            sb.append(", ");
+            n++;
+            if (n == len) {
+                sb.append("one(");
+                headToString(it, sb);
+            } else {
+                sb.append("cons(");
+                headToString(it, sb);
+                sb.append(", ");
+            }
         }
-        sb.append("nil");
+        //sb.append("nil");
         for (int i = 0; i < items.size(); i++) {
             sb.append(")");
         }
