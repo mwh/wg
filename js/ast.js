@@ -6,18 +6,27 @@ export class ObjectConstructor {
 }
 
 export class MethodDecl {
+    #name
     constructor(parts, returnType, annotations, body) {
         this.parts = parts;
         this.returnType = returnType[0];
         this.annotations = annotations;
         this.body = body;
     }
+
+    get name() {
+        if (this.#name !== undefined) {
+            return this.#name;
+        }
+        this.#name = this.parts.map(part => part.name + "(" + part.params.length + ")").join("");
+        return this.#name;
+    }
 }
 
 export class DeclarationPart {
     constructor(name, params) {
         this.name = name;
-        this.args = params;
+        this.params = params;
     }
 }
 
@@ -30,8 +39,20 @@ export class IdentifierDeclaration {
 }
 
 export class LexicalRequest {
+    #name
     constructor(parts) {
+        if (parts === undefined) {
+            throw new Error("undefined parts")
+        }
         this.parts = parts;
+    }
+
+    get name() {
+        if (this.#name !== undefined) {
+            return this.#name;
+        }
+        this.#name = this.parts.map(part => part.name + "(" + part.args.length + ")").join("");
+        return this.#name;
     }
 }
 
@@ -43,9 +64,21 @@ export class RequestPart {
 }
 
 export class ExplicitRequest {
+    #name
     constructor(receiver, parts) {
+        if (parts === undefined) {
+            throw new Error("undefined parts")
+        }
         this.receiver = receiver;
         this.parts = parts;
+    }
+
+    get name() {
+        if (this.#name !== undefined) {
+            return this.#name;
+        }
+        this.#name = this.parts.map(part => part.name + "(" + part.args.length + ")").join("");
+        return this.#name;
     }
 }
 
@@ -92,5 +125,17 @@ export class Comment {
     }
 }
 
+export class ReturnStmt {
+    constructor(value) {
+        this.value = value;
+    }
+}
+
+export class Assign {
+    constructor(lhs, rhs) {
+        this.lhs = lhs;
+        this.rhs = rhs;
+    }
+}
 
 

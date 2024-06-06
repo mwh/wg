@@ -86,18 +86,6 @@ method StringToken(index, val) {
     }
 }
 
-method CommentToken(index, val) {
-    object {
-        def nature is public = "COMMENT"
-        def value is public = val
-        def position is public = index
-
-        method asString {
-            nature ++ "(" ++ value ++ ")" ++ "[" ++ position.asString ++ "]"
-        }
-    }
-}
-
 method EqualsToken(index) {
     SymbolToken(index, "EQUALS")
 }

@@ -3,8 +3,21 @@
     <head>
         <meta charset="utf-8">
         <title>WG-Grace-JS</title>
+        <style type="text/css">
+            :root {
+                background: black;
+                color: white;
+            }
+        </style>
     </head>
     <body>
-        <script type="module" src="program.js"></script>
+        <textarea id="source" rows="20" style="width: 100%">print "Hello, world!"</textarea>
+        <button id="parse">Produce AST</button><button id="run">Execute</button>
+        <div id="status" style="display: inline-block"></div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr">
+            <textarea id="ast" rows="10"></textarea>
+            <div id="output"></div>
+        </div>
+        <script type="module" src="main.js"></script>
     </body>
 </html>
