@@ -130,11 +130,13 @@ method isOperatorCharacter(c) {
 }
 
 method isIdentifierStart(c) {
-    (c == "a") || (c == "b") || (c == "c") || (c == "d") || (c == "e") || (c == "f") || (c == "g") || (c == "h") || (c == "i") || (c == "j") || (c == "k") || (c == "l") || (c == "m") || (c == "n") || (c == "o") || (c == "p") || (c == "q") || (c == "r") || (c == "s") || (c == "t") || (c == "u") || (c == "v") || (c == "w") || (c == "x") || (c == "y") || (c == "z") || (c == "A") || (c == "B") || (c == "C") || (c == "D") || (c == "E") || (c == "F") || (c == "G") || (c == "H") || (c == "I") || (c == "J") || (c == "K") || (c == "L") || (c == "M") || (c == "N") || (c == "O") || (c == "P") || (c == "Q") || (c == "R") || (c == "S") || (c == "T") || (c == "U") || (c == "V") || (c == "W") || (c == "X") || (c == "Y") || (c == "Z") || (c == "_")
+    def cp = c.firstCodepoint
+    ((cp >= 97) && (cp <= 122)) || ((cp >= 65) && (cp <= 90)) || (cp == 95)
 }
 
 method isDigit(c) {
-    (c == "1") || (c == "2") || (c == "3") || (c == "4") || (c == "5") || (c == "6") || (c == "7") || (c == "8") || (c == "9") || (c == "0")
+    def cp = c.firstCodepoint
+    (cp >= 48) && (cp <= 57)
 }
 
 method lexer(code) {
@@ -180,47 +182,6 @@ method lexer(code) {
 
             if (c == ",") then {
                 return CommaToken(location)
-            }
-
-            if (isOperatorCharacter(c)) then {
-                def startIndex = index
-                var op := c
-                c := source.at(index)
-                index := index + 1
-                while {isOperatorCharacter(c) && (index <= source.size)} do {
-                    op := op ++ c
-                    c := source.at(index)
-                    index := index + 1
-                }
-                index := index - 1
-                if (op == ":=") then {
-                    return AssignToken(location)
-                }
-                if (op == "=") then {
-                    return EqualsToken(location)
-                }
-                if (op == "->") then {
-                    return ArrowToken(location)
-                }
-                if (op == ".") then {
-                    return DotToken(location)
-                }
-                if (op == ":") then {
-                    return SymbolToken(location, "COLON")
-                }
-                if (op == "//") then {
-                    var cp := c.firstCodepoint
-                    var text := ""
-                    index := index + 1
-                    while { (cp != 10) && (cp != 13) && (index <= source.size) } do {
-                        text := text ++ c
-                        c := source.at(index)
-                        cp := c.firstCodepoint
-                        index := index + 1
-                    }
-                    return CommentToken(location, text)
-                }
-                return OperatorToken(location, op)
             }
 
             if (c.firstCodepoint == 13) then {
@@ -290,6 +251,47 @@ method lexer(code) {
                     return KeywordToken(location, value)
                 }
                 return IdentifierToken(location, value)
+            }
+
+            if (isOperatorCharacter(c)) then {
+                def startIndex = index
+                var op := c
+                c := source.at(index)
+                index := index + 1
+                while {isOperatorCharacter(c) && (index <= source.size)} do {
+                    op := op ++ c
+                    c := source.at(index)
+                    index := index + 1
+                }
+                index := index - 1
+                if (op == ":=") then {
+                    return AssignToken(location)
+                }
+                if (op == "=") then {
+                    return EqualsToken(location)
+                }
+                if (op == "->") then {
+                    return ArrowToken(location)
+                }
+                if (op == ".") then {
+                    return DotToken(location)
+                }
+                if (op == ":") then {
+                    return SymbolToken(location, "COLON")
+                }
+                if (op == "//") then {
+                    var cp := c.firstCodepoint
+                    var text := ""
+                    index := index + 1
+                    while { (cp != 10) && (cp != 13) && (index <= source.size) } do {
+                        text := text ++ c
+                        c := source.at(index)
+                        cp := c.firstCodepoint
+                        index := index + 1
+                    }
+                    return CommentToken(location, text)
+                }
+                return OperatorToken(location, op)
             }
 
             print("Unknown character: " ++ c.asString ++ "(" ++ c.firstCodepoint.asString ++ ") at index " ++ index.asString)
