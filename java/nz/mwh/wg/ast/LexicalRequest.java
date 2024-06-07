@@ -5,9 +5,9 @@ import java.util.List;
 import nz.mwh.wg.Visitor;
 
 public class LexicalRequest extends ASTNode {
-    List<? extends RequestPart> parts;
+    List<? extends Part> parts;
 
-    public LexicalRequest(Cons<? extends RequestPart> parts) {
+    public LexicalRequest(Cons<? extends Part> parts) {
         this.parts = parts.toList();
     }
 
@@ -16,10 +16,10 @@ public class LexicalRequest extends ASTNode {
     }
 
     public String toString() {
-        return "lexicalRequest(" + Cons.stringFromList(parts) + ")";
+        return "lexReq(" + Cons.stringFromList(parts) + ")";
     }
 
-    public List<? extends RequestPart> getParts() {
+    public List<? extends Part> getParts() {
         return parts;
     }
 }

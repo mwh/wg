@@ -4,9 +4,9 @@ import nz.mwh.wg.ast.ASTNode;
 import nz.mwh.wg.runtime.GraceObject;
 import nz.mwh.wg.runtime.Request;
 
-public class RequestPart extends nz.mwh.wg.ast.RequestPart implements GraceObject {
+public class Part extends nz.mwh.wg.ast.Part implements GraceObject {
     
-    public RequestPart(String name, Cons<ASTNode> args) {
+    public Part(String name, Cons<? extends ASTNode> args) {
         super(name, args);
     }
 

@@ -6,12 +6,12 @@ import nz.mwh.wg.Visitor;
 
 
 public class MethodDecl extends ASTNode {
-    List<? extends DeclarationPart> parts;
+    List<? extends Part> parts;
     ASTNode type;
     List<String> annotations;
     List<? extends ASTNode> body;
 
-    public MethodDecl(Cons<? extends DeclarationPart> parts, ASTNode type, Cons<String> annotations, Cons<? extends ASTNode> body) {
+    public MethodDecl(Cons<? extends Part> parts, ASTNode type, Cons<String> annotations, Cons<? extends ASTNode> body) {
         this.parts = parts.toList();
         this.type = type;
         this.annotations = annotations.toList();
@@ -23,10 +23,10 @@ public class MethodDecl extends ASTNode {
     }
 
     public String toString() {
-        return "methodDecl(" + Cons.stringFromList(parts) + ", " + (type == null ? "nil" : "cons(" + type + ", nil)") + ", " + Cons.stringFromList(annotations) + ", " + Cons.stringFromList(body) + ")";
+        return "methDec(" + Cons.stringFromList(parts) + ", " + (type == null ? "nil" : "cons(" + type + ", nil)") + ", " + Cons.stringFromList(annotations) + ", " + Cons.stringFromList(body) + ")";
     }
 
-    public List<? extends DeclarationPart> getParts() {
+    public List<? extends Part> getParts() {
         return parts;
     }
 

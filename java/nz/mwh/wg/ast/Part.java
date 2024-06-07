@@ -4,11 +4,11 @@ import java.util.List;
 
 import nz.mwh.wg.Visitor;
 
-public class DeclarationPart extends ASTNode {
+public class Part extends ASTNode {
     String name;
-    List<? extends IdentifierDeclaration> parameters;
+    List<? extends ASTNode> parameters;
 
-    public DeclarationPart(String name, Cons<? extends IdentifierDeclaration> parameters) {
+    public Part(String name, Cons<? extends ASTNode> parameters) {
         this.name = name;
         this.parameters = parameters.toList();
     }
@@ -18,14 +18,19 @@ public class DeclarationPart extends ASTNode {
     }
 
     public String toString() {
-        return "declarationPart(\"" + name + "\", " + Cons.stringFromList(parameters) + ")";
+        return "part(\"" + name + "\", " + Cons.stringFromList(parameters) + ")";
     }
 
     public String getName() {
         return name;
     }
 
-    public List<? extends IdentifierDeclaration> getParameters() {
+    public List<? extends ASTNode> getParameters() {
         return parameters;
     }
+
+    public List<? extends ASTNode> getArgs() {
+        return parameters;
+    }
+
 }

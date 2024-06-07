@@ -16,7 +16,7 @@ public class ObjectConstructor extends ASTNode {
     }
 
     public String toString() {
-        return "objectConstructor(" + Cons.stringFromList(body) + ")";
+        return "objCons(" + Cons.stringFromList(body) + ")";
     }
 
     public List<ASTNode> getBody() {

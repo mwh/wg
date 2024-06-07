@@ -41,7 +41,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
     @Override
     public GraceObject visit(GraceObject context, LexicalRequest node) {
         List<RequestPartR> parts = new ArrayList<>();
-        for (RequestPart part : node.getParts()) {
+        for (Part part : node.getParts()) {
             List<GraceObject> args = part.getArgs().stream().map(x -> visit(context, x)).collect(Collectors.toList());
             parts.add(new RequestPartR(part.getName(), args));
         }
@@ -74,14 +74,14 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
     @Override
     public GraceObject visit(GraceObject context, VarDecl node) {
         if (node.getValue() != null) {
-            new LexicalRequest(new Cons<RequestPart>(new RequestPart(node.getName() + ":=", new Cons<ASTNode>(node.getValue(), Cons.<ASTNode>nil() )), Cons.<RequestPart>nil())).accept(context, this);
+            new LexicalRequest(new Cons<Part>(new Part(node.getName() + ":=", new Cons<ASTNode>(node.getValue(), Cons.<ASTNode>nil() )), Cons.<Part>nil())).accept(context, this);
         }
         return done;
     }
 
     @Override
     public GraceObject visit(GraceObject context, MethodDecl node) {
-        List<? extends DeclarationPart> parts = node.getParts();
+        List<? extends Part> parts = node.getParts();
         String name = parts.stream().map(x -> x.getName() + "(" + x.getParameters().size() + ")").collect(Collectors.joining(""));
         if (context instanceof BaseObject) {
             BaseObject object = (BaseObject) context;
@@ -90,11 +90,11 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
                 BaseObject methodContext = new BaseObject(context, true);
                 List<RequestPartR> requestParts = request.getParts();
                 for (int j = 0; j < requestParts.size(); j++) {
-                    DeclarationPart part = parts.get(j);
+                    Part part = parts.get(j);
                     RequestPartR rpart = requestParts.get(j);
-                    List<? extends IdentifierDeclaration> parameters = part.getParameters();
+                    List<? extends ASTNode> parameters = part.getParameters();
                     for (int i = 0; i < parameters.size(); i++) {
-                        IdentifierDeclaration parameter = parameters.get(i);
+                        IdentifierDeclaration parameter = (IdentifierDeclaration) parameters.get(i);
                         methodContext.addField(parameter.getName());
                         methodContext.setField(parameter.getName(), rpart.getArgs().get(i));
                     }
@@ -131,7 +131,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
     @Override
     public GraceObject visit(GraceObject context, ExplicitRequest node) {
         List<RequestPartR> parts = new ArrayList<>();
-        for (RequestPart part : node.getParts()) {
+        for (Part part : node.getParts()) {
             List<GraceObject> args = part.getArgs().stream().map(x -> visit(context, x)).collect(Collectors.toList());
             parts.add(new RequestPartR(part.getName(), args));
         }

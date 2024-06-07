@@ -17,7 +17,7 @@ public class Assign extends ASTNode {
     }
 
     public String toString() {
-        return "assign(" + target + ", " + value + ")";
+        return "assn(" + target + ", " + value + ")";
     }
 
     public ASTNode getTarget() {

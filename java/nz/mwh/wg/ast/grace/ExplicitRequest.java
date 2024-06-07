@@ -6,7 +6,7 @@ import nz.mwh.wg.runtime.Request;
 
 public class ExplicitRequest extends nz.mwh.wg.ast.ExplicitRequest implements GraceObject {
     
-    public ExplicitRequest(String location, ASTNode receiver, Cons<RequestPart> parts) {
+    public ExplicitRequest(String location, ASTNode receiver, Cons<Part> parts) {
         super(location, receiver, parts);
     }
 

@@ -22,7 +22,7 @@ public class VarDecl extends ASTNode {
     }
 
     public String toString() {
-        return "varDecl(\"" + name + "\", " + Cons.fromValue(type) + ", " + Cons.stringFromList(annotations) + ", " + Cons.fromValue(value) + ")";
+        return "varDec(\"" + name + "\", " + Cons.fromValue(type) + ", " + Cons.stringFromList(annotations) + ", " + Cons.fromValue(value) + ")";
     }
 
     public String getName() {

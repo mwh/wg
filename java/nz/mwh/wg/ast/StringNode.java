@@ -14,7 +14,7 @@ public class StringNode extends ASTNode {
     }
 
     public String toString() {
-        return "stringNode(\"" +
+        return "strLit(\"" +
             value.replace("\\", "\\\\")
                 .replace("\n", "\\n")
                 .replace("\r", "\\r")

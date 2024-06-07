@@ -6,7 +6,7 @@ import nz.mwh.wg.runtime.Request;
 
 public class MethodDecl extends nz.mwh.wg.ast.MethodDecl implements GraceObject {
 
-    public MethodDecl(Cons<DeclarationPart> parts, ASTNode type, Cons<String> annotations, Cons<ASTNode> body) {
+    public MethodDecl(Cons<Part> parts, ASTNode type, Cons<String> annotations, Cons<ASTNode> body) {
         super(parts, type, annotations, body);
     }
 

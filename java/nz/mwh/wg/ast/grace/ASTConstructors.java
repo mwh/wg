@@ -18,12 +18,16 @@ public class ASTConstructors {
         return new ObjectConstructor(body);
     }
 
-    protected static LexicalRequest lexicalRequest(Cons<RequestPart> parts) {
+    protected static LexicalRequest lexicalRequest(Cons<Part> parts) {
         return new LexicalRequest(parts);
     }
 
-    protected static RequestPart requestPart(String name, Cons<ASTNode> args) {
-        return new RequestPart(name, args);
+    protected static Part requestPart(String name, Cons<ASTNode> args) {
+        return new Part(name, args);
+    }
+
+    protected static Part part(String name, Cons<ASTNode> args) {
+        return new Part(name, args);
     }
 
     protected static NumberNode numberNode(double value) {
@@ -46,19 +50,19 @@ public class ASTConstructors {
         return new VarDecl(name, type.isNil() ? null : type.getHead(), annotations, value);
     }
 
-    protected static MethodDecl methodDecl(Cons<DeclarationPart> parts, Cons<ASTNode> type, Cons<String> annotations, Cons<ASTNode> body) {
+    protected static MethodDecl methodDecl(Cons<Part> parts, Cons<ASTNode> type, Cons<String> annotations, Cons<ASTNode> body) {
         return new MethodDecl(parts, type.isNil() ? null : type.getHead(), annotations, body);
     }
 
-    protected static DeclarationPart declarationPart(String name, Cons<IdentifierDeclaration> parameters) {
-        return new DeclarationPart(name, parameters);
+    protected static Part declarationPart(String name, Cons<IdentifierDeclaration> parameters) {
+        return new Part(name, parameters);
     }
 
-    protected static ExplicitRequest explicitRequest(ASTNode receiver, Cons<RequestPart> parts) {
+    protected static ExplicitRequest explicitRequest(ASTNode receiver, Cons<Part> parts) {
         return new ExplicitRequest("<unknown>", receiver, parts);
     }
 
-    protected static ExplicitRequest explicitRequest(String location, ASTNode receiver, Cons<RequestPart> parts) {
+    protected static ExplicitRequest explicitRequest(String location, ASTNode receiver, Cons<Part> parts) {
         return new ExplicitRequest(location, receiver, parts);
     }
 

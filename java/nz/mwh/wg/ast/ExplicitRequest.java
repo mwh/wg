@@ -6,10 +6,10 @@ import nz.mwh.wg.Visitor;
 
 public class ExplicitRequest extends ASTNode {
     ASTNode receiver;
-    List<? extends RequestPart> parts;
+    List<? extends Part> parts;
     public String location;
 
-    public ExplicitRequest(String location, ASTNode receiver, Cons<? extends RequestPart> parts) {
+    public ExplicitRequest(String location, ASTNode receiver, Cons<? extends Part> parts) {
         this.receiver = receiver;
         this.parts = parts.toList();
         this.location = location;
@@ -20,14 +20,14 @@ public class ExplicitRequest extends ASTNode {
     }
 
     public String toString() {
-        return "explicitRequest(" + receiver + ", " + Cons.stringFromList(parts) + ")";
+        return "dotReq(" + receiver + ", " + Cons.stringFromList(parts) + ")";
     }
 
     public ASTNode getReceiver() {
         return receiver;
     }
 
-    public List<? extends RequestPart> getParts() {
+    public List<? extends Part> getParts() {
         return parts;
     }
 }

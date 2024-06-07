@@ -5,7 +5,6 @@ import nz.mwh.wg.ast.Assign;
 import nz.mwh.wg.ast.Block;
 import nz.mwh.wg.ast.Cons;
 import nz.mwh.wg.ast.Comment;
-import nz.mwh.wg.ast.DeclarationPart;
 import nz.mwh.wg.ast.DefDecl;
 import nz.mwh.wg.ast.ExplicitRequest;
 import nz.mwh.wg.ast.IdentifierDeclaration;
@@ -13,13 +12,17 @@ import nz.mwh.wg.ast.LexicalRequest;
 import nz.mwh.wg.ast.MethodDecl;
 import nz.mwh.wg.ast.NumberNode;
 import nz.mwh.wg.ast.ObjectConstructor;
-import nz.mwh.wg.ast.RequestPart;
+import nz.mwh.wg.ast.Part;
 import nz.mwh.wg.ast.ReturnStmt;
 import nz.mwh.wg.ast.StringNode;
 import nz.mwh.wg.ast.VarDecl;
 
 public class ASTConstructors {
     static <T> Cons<T> cons(T head, Cons<T> tail) {
+        return new Cons<>(head, tail);
+    }
+
+    static <T> Cons<T> at(int line, T head, Cons<T> tail) {
         return new Cons<>(head, tail);
     }
 
@@ -30,23 +33,46 @@ public class ASTConstructors {
     @SuppressWarnings("rawtypes")
     static Cons nil = new Cons();
 
+    @SuppressWarnings("rawtypes")
+    static Cons no = nil;
+
     static ObjectConstructor objectConstructor(Cons<ASTNode> body) {
         return new ObjectConstructor(body);
     }
 
-    static LexicalRequest lexicalRequest(Cons<RequestPart> parts) {
+    static ObjectConstructor objCons(Cons<ASTNode> body) {
+        return new ObjectConstructor(body);
+    }
+
+    static LexicalRequest lexicalRequest(Cons<Part> parts) {
         return new LexicalRequest(parts);
     }
 
-    static RequestPart requestPart(String name, Cons<ASTNode> args) {
-        return new RequestPart(name, args);
+    static LexicalRequest lexReq(Cons<Part> parts) {
+        return new LexicalRequest(parts);
+    }
+
+    static Part requestPart(String name, Cons<ASTNode> args) {
+        return new Part(name, args);
+    }
+
+    static Part part(String name, Cons<ASTNode> args) {
+        return new Part(name, args);
     }
 
     static NumberNode numberNode(double value) {
         return new NumberNode(value);
     }
 
+    static NumberNode numLit(double value) {
+        return new NumberNode(value);
+    }
+
     static StringNode stringNode(String value) {
+        return new StringNode(value);
+    }
+
+    static StringNode strLit(String value) {
         return new StringNode(value);
     }
 
@@ -57,28 +83,48 @@ public class ASTConstructors {
     static DefDecl defDecl(String name, Cons<ASTNode> type, Cons<String> annotations, ASTNode value) {
         return new DefDecl(name, type.isNil() ? null : type.getHead(), annotations, value);
     }
+    
+    static DefDecl defDec(String name, Cons<ASTNode> type, Cons<String> annotations, ASTNode value) {
+        return new DefDecl(name, type.isNil() ? null : type.getHead(), annotations, value);
+    }
 
     static VarDecl varDecl(String name, Cons<ASTNode> type, Cons<String> annotations, Cons<ASTNode> value) {
         return new VarDecl(name, type.isNil() ? null : type.getHead(), annotations, value);
     }
 
-    static MethodDecl methodDecl(Cons<DeclarationPart> parts, Cons<ASTNode> type, Cons<String> annotations, Cons<ASTNode> body) {
+    static VarDecl varDec(String name, Cons<ASTNode> type, Cons<String> annotations, Cons<ASTNode> value) {
+        return new VarDecl(name, type.isNil() ? null : type.getHead(), annotations, value);
+    }
+
+    static MethodDecl methodDecl(Cons<Part> parts, Cons<ASTNode> type, Cons<String> annotations, Cons<ASTNode> body) {
         return new MethodDecl(parts, type.isNil() ? null : type.getHead(), annotations, body);
     }
 
-    static DeclarationPart declarationPart(String name, Cons<IdentifierDeclaration> parameters) {
-        return new DeclarationPart(name, parameters);
+    static MethodDecl methDec(Cons<Part> parts, Cons<ASTNode> type, Cons<String> annotations, Cons<ASTNode> body) {
+        return new MethodDecl(parts, type.isNil() ? null : type.getHead(), annotations, body);
     }
 
-    static ExplicitRequest explicitRequest(ASTNode receiver, Cons<RequestPart> parts) {
+    static Part declarationPart(String name, Cons<IdentifierDeclaration> parameters) {
+        return new Part(name, parameters);
+    }
+
+    static ExplicitRequest explicitRequest(ASTNode receiver, Cons<Part> parts) {
+        return new ExplicitRequest("<unknown>", receiver, parts);
+    }
+    
+    static ExplicitRequest dotReq(ASTNode receiver, Cons<Part> parts) {
         return new ExplicitRequest("<unknown>", receiver, parts);
     }
 
-    static ExplicitRequest explicitRequest(String location, ASTNode receiver, Cons<RequestPart> parts) {
+    static ExplicitRequest explicitRequest(String location, ASTNode receiver, Cons<Part> parts) {
         return new ExplicitRequest(location, receiver, parts);
     }
 
     static Assign assign(ASTNode target, ASTNode value) {
+        return new Assign(target, value);
+    }
+    
+    static Assign assn(ASTNode target, ASTNode value) {
         return new Assign(target, value);
     }
 

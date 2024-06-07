@@ -34,8 +34,13 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
             Cons<ASTNode> args = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(1);
             return requestPart(name, args);
         });
+        lexicalParent.addMethod("part(2)", request -> {
+            String name = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
+            Cons<ASTNode> args = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(1);
+            return part(name, args);
+        });
         lexicalParent.addMethod("lexicalRequest(1)", request -> {
-            Cons<RequestPart> parts = (Cons<RequestPart>) request.getParts().get(0).getArgs().get(0);
+            Cons<Part> parts = (Cons<Part>) request.getParts().get(0).getArgs().get(0);
             return lexicalRequest(parts);
         });
         lexicalParent.addMethod("block(2)", request -> {
@@ -58,7 +63,7 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
             return varDecl(name, typeCons, annotations, value);
         });
         lexicalParent.addMethod("methodDecl(4)", request -> {
-            Cons<DeclarationPart> parts = (Cons<DeclarationPart>) request.getParts().get(0).getArgs().get(0);
+            Cons<Part> parts = (Cons<Part>) request.getParts().get(0).getArgs().get(0);
             Cons<ASTNode> typeCons = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(1);
             Cons<String> anns = (Cons<String>) request.getParts().get(0).getArgs().get(2);
             Cons<ASTNode> body = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(3);
@@ -72,7 +77,7 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
         lexicalParent.addMethod("explicitRequest(3)", request -> {
             String location = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
             ASTNode receiver = (ASTNode) request.getParts().get(0).getArgs().get(1);
-            Cons<RequestPart> parts = (Cons<RequestPart>) request.getParts().get(0).getArgs().get(2);
+            Cons<Part> parts = (Cons<Part>) request.getParts().get(0).getArgs().get(2);
             return explicitRequest(location, receiver, parts);
         });
         lexicalParent.addMethod("assign(2)", request -> {

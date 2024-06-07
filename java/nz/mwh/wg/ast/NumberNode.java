@@ -15,9 +15,9 @@ public class NumberNode extends ASTNode {
 
     public String toString() {
         if (value == (int) value) {
-            return "numberNode(" + (int) value + ")";
+            return "numLit(" + (int) value + ")";
         }
-        return "numberNode(" + value + ")";
+        return "numLit(" + value + ")";
     }
 
     public double getValue() {

@@ -408,7 +408,7 @@ method nil {
         def end is public = true
 
         method asString {
-            "nil"
+            "no"
         }
 
         method reversed(next) {
@@ -431,7 +431,7 @@ method numberNode(val) {
         def value is public = val
 
         method asString {
-            "numberNode(" ++ value.asString ++ ")"
+            "numLit(" ++ value.asString ++ ")"
         }
     }
 }
@@ -441,7 +441,7 @@ method stringNode(val) {
         def value is public = val
 
         method asString {
-            "stringNode(\"" ++ escapeString(value) ++ "\")"
+            "strLit(\"" ++ escapeString(value) ++ "\")"
         }
     }
 }
@@ -465,7 +465,7 @@ method defDecl(id, dtype, anns, val) {
         def value is public = val
 
         method asString {
-            "defDecl(\"" ++ name ++ "\", "  ++ decType ++ ", " ++ anns.map { x -> "\"" ++ x ++ "\"" } ++ ", " ++ value ++ ")"
+            "defDec(\"" ++ name ++ "\", "  ++ decType ++ ", " ++ anns.map { x -> "\"" ++ x ++ "\"" } ++ ", " ++ value ++ ")"
         }
     }
 }
@@ -478,7 +478,7 @@ method varDecl(id, dtype, anns, val) {
         def value is public = val
 
         method asString {
-            "varDecl(\"" ++ name ++ "\", " ++ dtype ++ ", " ++ anns.map { x -> "\"" ++ x ++ "\"" } ++ ", " ++ value ++ ")"
+            "varDec(\"" ++ name ++ "\", " ++ dtype ++ ", " ++ anns.map { x -> "\"" ++ x ++ "\"" } ++ ", " ++ value ++ ")"
         }
     }
 }
@@ -488,7 +488,7 @@ method lexicalRequest(requestParts) {
         def parts is public = requestParts
 
         method asString {
-            "lexicalRequest(" ++ parts ++ ")"
+            "lexReq(" ++ parts ++ ")"
         }
     }
 }
@@ -500,7 +500,7 @@ method explicitRequest(pos, rec, requestParts) {
         def position is public = pos
 
         method asString {
-            "explicitRequest(" ++ receiver.asString ++ ", " ++ parts ++ ")"
+            "dotReq(" ++ receiver.asString ++ ", " ++ parts ++ ")"
         }
     }
 }
@@ -511,7 +511,19 @@ method requestPart(partName, args) {
         def arguments is public = args
 
         method asString {
-            "requestPart(\"" ++ name ++ "\", " ++ args ++ ")"
+            "part(\"" ++ name ++ "\", " ++ args ++ ")"
+        }
+    }
+}
+
+
+method part(partName, args) {
+    object {
+        def name is public = partName
+        def parameters is public = args
+
+        method asString {
+            "part(\"" ++ name ++ "\", " ++ parameters ++ ")"
         }
     }
 }
@@ -524,7 +536,7 @@ method methodDecl(declarationParts, retType, anns, bd) {
         def body is public = bd
 
         method asString {
-            "methodDecl(" ++ parts ++ ", " ++ returnType ++ ", " ++ annotations ++ ", " ++ body ++ ")"
+            "methDec(" ++ parts ++ ", " ++ returnType ++ ", " ++ annotations ++ ", " ++ body ++ ")"
         }
     }
 }
@@ -545,7 +557,7 @@ method objectConstructor(bd) {
         def body is public = bd
 
         method asString {
-            "objectConstructor(" ++ body ++ ")"
+            "objCons(" ++ body ++ ")"
         }
     }
 
@@ -557,7 +569,7 @@ method assign(lhs, rhs) {
         def right is public = rhs
 
         method asString {
-            "assign(" ++ left ++ ", " ++ right ++ ")"
+            "assn(" ++ left ++ ", " ++ right ++ ")"
         }
     }
 }
