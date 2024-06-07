@@ -173,7 +173,7 @@ function evaluateStatement(cont, scope, stmt) {
         if (stmt.value === undefined) {
             return cont.of(undefined);
         }
-        let req = new ast.LexicalRequest([new ast.RequestPart(stmt.name + ":=", [stmt.value])])
+        let req = new ast.LexicalRequest([new ast.Part(stmt.name + ":=", [stmt.value])])
         let reqCont = new RequestContinuation(cont, scope, req);
         let argCont = new ArgumentsContinuation(reqCont, scope, req, 0, 0);
         return argCont;
@@ -193,29 +193,10 @@ function evaluateStatement(cont, scope, stmt) {
             throw new Error("No return continuation in scope");
         return evaluateExpression(rscope.returnContinuation, scope, stmt.value)
     } else if (stmt instanceof ast.Assign) {
-        // if (node.getTarget() instanceof LexicalRequest) {
-        //     LexicalRequest target = (LexicalRequest) node.getTarget();
-        //     String name = target.getParts().get(0).getName();
-        //     List<RequestPartR> parts = new ArrayList<>();
-        //     parts.add(new RequestPartR(name + ":=", Collections.singletonList(node.getValue().accept(context, this))));
-        //     Request request = new Request(this, parts);
-        //     GraceObject receiver = context.findReceiver(request.getName());
-        //     receiver.request(request);
-        //     return done;
-        // } else if (node.getTarget() instanceof ExplicitRequest) {
-        //     ExplicitRequest target = (ExplicitRequest) node.getTarget();
-        //     String name = target.getParts().get(0).getName();
-        //     List<RequestPartR> parts = new ArrayList<>();
-        //     parts.add(new RequestPartR(name + ":=", Collections.singletonList(node.getValue().accept(context, this))));
-        //     Request request = new Request(this, parts);
-        //     GraceObject receiver = target.getReceiver().accept(context, this);
-        //     receiver.request(request);
-        //     return done;
-        // }
         if (stmt.lhs instanceof ast.LexicalRequest) {
             let target = stmt.lhs;
             let name = target.parts[0].name;
-            let parts = [new ast.RequestPart(name + ":=", [stmt.rhs])];
+            let parts = [new ast.Part(name + ":=", [stmt.rhs])];
             let request = new ast.LexicalRequest(parts);
             let receiver = scope.findReceiver(request);
             if (receiver === null) {
@@ -225,6 +206,8 @@ function evaluateStatement(cont, scope, stmt) {
             let reqCont = new RequestContinuation(cont, receiver, request);
             let argCont = new ArgumentsContinuation(reqCont, scope, request, 0, 0);
             return argCont;
+        } else {
+            throw new Error("unimplemented assignment LHS", stmt.lhs);
         }
     } else if (stmt instanceof ast.Comment) {
         return cont.of(undefined);
@@ -395,7 +378,7 @@ const GraceString = new GraceObject({
             new FunctionContinuation(cont, (cont, val) => {
                 return cont.of(rec + val);
             }),
-            args[0], new ast.LexicalRequest([new ast.RequestPart("asString", [])]));
+            args[0], new ast.LexicalRequest([new ast.Part("asString", [])]));
         return rc //cont.of(rec + args[0]);
     },
     "at(1)": (cont, args, rec) => {
@@ -453,7 +436,7 @@ const GraceBoolean = new GraceObject({
 })
 
 function call(cont, rec, name, args) {
-    return rec.request(cont, new ast.LexicalRequest([new ast.RequestPart(name, args)]), args);
+    return rec.request(cont, new ast.LexicalRequest([new ast.Part(name, args)]), args);
 }
 
 function whileDo(cont, cond, block) {
@@ -461,7 +444,7 @@ function whileDo(cont, cond, block) {
         if (val) {
             let rc = new RequestContinuation(
                 new FunctionContinuation(cont, (cont, val) => {return whileDo(cont, cond, block);}),
-                block, new ast.LexicalRequest([new ast.RequestPart("apply", [])]));
+                block, new ast.LexicalRequest([new ast.Part("apply", [])]));
             return rc.of([]);
         }
         return cont.of(undefined);
@@ -480,7 +463,7 @@ function elseifs(cont, elseifConds, elseifThens, elseCont) {
         if (val) {
             let rc = new RequestContinuation(
                 cont,
-                then, new ast.LexicalRequest([new ast.RequestPart("apply", [])]));
+                then, new ast.LexicalRequest([new ast.Part("apply", [])]));
             return rc
         }
         return elseifs(cont, elseifConds.slice(1), elseifThens.slice(1), elseCont);
@@ -489,7 +472,7 @@ function elseifs(cont, elseifConds, elseifThens, elseCont) {
 
 function ifThenElseIfs(cont, args) {
     if (args[0]) {
-        let rc = new RequestContinuation(cont, args[1], new ast.LexicalRequest([new ast.RequestPart("apply", [])]));
+        let rc = new RequestContinuation(cont, args[1], new ast.LexicalRequest([new ast.Part("apply", [])]));
         return rc.of([])
     } else {
         let conds = []
@@ -504,7 +487,7 @@ function ifThenElseIfs(cont, args) {
         }
         return elseifs(cont, conds, thens,
             elseBlock
-                ? new RequestContinuation(cont, elseBlock, new ast.LexicalRequest([new ast.RequestPart("apply", [])]))
+                ? new RequestContinuation(cont, elseBlock, new ast.LexicalRequest([new ast.Part("apply", [])]))
                 : cont
         );
     }
@@ -518,17 +501,17 @@ export const prelude = new GraceObject({
     },
     'if(1)then(1)': (cont, args) => {
         if (args[0]) {
-            let rc = new RequestContinuation(cont, args[1], new ast.LexicalRequest([new ast.RequestPart("apply", [])]));
+            let rc = new RequestContinuation(cont, args[1], new ast.LexicalRequest([new ast.Part("apply", [])]));
             return rc.of([])
         }
         return cont.of(undefined);
     },
     'if(1)then(1)else(1)': (cont, args) => {
         if (args[0]) {
-            let rc = new RequestContinuation(cont, args[1], new ast.LexicalRequest([new ast.RequestPart("apply", [])]));
+            let rc = new RequestContinuation(cont, args[1], new ast.LexicalRequest([new ast.Part("apply", [])]));
             return rc.of([])
         } else {
-            let rc = new RequestContinuation(cont, args[2], new ast.LexicalRequest([new ast.RequestPart("apply", [])]));
+            let rc = new RequestContinuation(cont, args[2], new ast.LexicalRequest([new ast.Part("apply", [])]));
             return rc.of([])
         }
         return cont.of(undefined);

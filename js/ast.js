@@ -23,10 +23,14 @@ export class MethodDecl {
     }
 }
 
-export class DeclarationPart {
+export class Part {
     constructor(name, params) {
         this.name = name;
         this.params = params;
+    }
+
+    get args() {
+        return this.params;
     }
 }
 
@@ -53,13 +57,6 @@ export class LexicalRequest {
         }
         this.#name = this.parts.map(part => part.name + "(" + part.args.length + ")").join("");
         return this.#name;
-    }
-}
-
-export class RequestPart {
-    constructor(name, args) {
-        this.name = name;
-        this.args = args;
     }
 }
 

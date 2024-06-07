@@ -547,7 +547,7 @@ method declarationPart(id, params) {
         def parameters is public = params
 
         method asString {
-            "declarationPart(\"" ++ name ++ "\", " ++ parameters ++ ")"
+            "part(\"" ++ name ++ "\", " ++ parameters ++ ")"
         }
     }
 }
