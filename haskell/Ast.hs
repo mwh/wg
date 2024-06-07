@@ -3,11 +3,11 @@ module Ast where
 data ASTNode = ObjectConstructor [ASTNode]
              | VarDecl String [ASTNode] [String] [ASTNode]
              | DefDecl String [ASTNode] [String] ASTNode
-             | ExplicitRequest ASTNode [RequestPart]
-             | LexicalRequest [RequestPart]
+             | ExplicitRequest ASTNode [Part]
+             | LexicalRequest [Part]
              | NumberNode Int
              | Block [ASTNode] [ASTNode]
-             | MethodDecl [DeclarationPart] [ASTNode] [String] [ASTNode]
+             | MethodDecl [Part] [ASTNode] [String] [ASTNode]
              | Assign ASTNode ASTNode
              | ReturnStmt ASTNode
              | IdentifierDeclaration String [ASTNode]
@@ -15,39 +15,34 @@ data ASTNode = ObjectConstructor [ASTNode]
              | Comment String
         deriving Show
 
-data RequestPart = RequestPart String [ASTNode]
-        deriving Show
-
-data DeclarationPart = DeclarationPart String [ASTNode]
+data Part = Part String [ASTNode]
         deriving Show
 
 
 cons = uncurry (:)
 one hd = [hd]
 nil = []
+no = nil
 
 
-objectConstructor (l) = ObjectConstructor l
-varDecl (name, dtype, anns, val) = VarDecl name dtype anns val
-defDecl (name, dtype, anns, val) = DefDecl name dtype anns val
-methodDecl (parts, rtype, anns, body) = MethodDecl parts rtype anns body
-explicitRequest (receiver, req) = ExplicitRequest receiver req
-lexicalRequest = LexicalRequest
-numberNode = NumberNode
-stringNode = StringNode
-assign (lhs, rhs) = Assign lhs rhs
+objCons (l) = ObjectConstructor l
+varDec (name, dtype, anns, val) = VarDecl name dtype anns val
+defDec (name, dtype, anns, val) = DefDecl name dtype anns val
+methDec (parts, rtype, anns, body) = MethodDecl parts rtype anns body
+dotReq (receiver, req) = ExplicitRequest receiver req
+lexReq = LexicalRequest
+numLit = NumberNode
+strLit = StringNode
+assn (lhs, rhs) = Assign lhs rhs
 returnStmt = ReturnStmt
 identifierDeclaration (name, dtype) = IdentifierDeclaration name dtype
 block (params, body) = Block params body
 comment = Comment
 
 
-requestPart (name, args) = RequestPart name args
-declarationPart (name, params) = DeclarationPart name params
+part (name, params) = Part name params
 
-ppDeclarationPart (DeclarationPart name params) = "declarationPart(\"" ++ name ++ "\", " ++ ppASTList params ++ ")"
-
-ppRequestPart (RequestPart name args) = "requestPart(\"" ++ name ++ "\", " ++ ppASTList args ++ ")"
+ppPart (Part name params) = "part(\"" ++ name ++ "\", " ++ ppASTList params ++ ")"
 
 ppStrList [] = "nil"
 ppStrList (h:t) = "cons(\"" ++ h ++ "\", " ++ (ppStrList t) ++ ")"
@@ -60,36 +55,36 @@ ppASTList l = case l of
              (h:t) -> "cons(" ++ (prettyPrint h) ++ ", " ++ (ppASTList t) ++ ")"
 
 prettyPrint :: ASTNode -> String
-prettyPrint (ObjectConstructor body) = "objectConstructor(" ++ (ppASTList body) ++ ")"
+prettyPrint (ObjectConstructor body) = "objCons(" ++ (ppASTList body) ++ ")"
 prettyPrint (VarDecl name dtype anns val) =
-        "varDecl(\"" ++
+        "varDec(\"" ++
                 name ++ "\", " ++
                 (ppASTList dtype) ++ ", " ++
                 ppStrList anns ++ ", " ++
                 ppASTList val ++ ")"
 prettyPrint (DefDecl name dtype anns val) =
-        "defDecl(\"" ++
+        "defDec(\"" ++
                 name ++ "\", " ++
                 (ppASTList dtype) ++ ", " ++
                 ppStrList anns ++ ", " ++
                 prettyPrint val ++ ")"
 prettyPrint (MethodDecl parts rtype anns body) =
-        "methodDecl(" ++
-                ppList (map ppDeclarationPart parts) ++ ", " ++
+        "methDec(" ++
+                ppList (map ppPart parts) ++ ", " ++
                 ppASTList rtype ++ ", " ++
                 ppStrList anns ++ ", " ++
                 ppASTList body ++ ")"
 prettyPrint (ExplicitRequest receiver req) =
-        "explicitRequest(" ++
+        "dotReq(" ++
                 prettyPrint receiver ++ ", " ++
-                ppList (map ppRequestPart req) ++ ")"
+                ppList (map ppPart req) ++ ")"
 prettyPrint (LexicalRequest req) =
-        "lexicalRequest(" ++
-                ppList (map ppRequestPart req) ++ ")"
-prettyPrint (NumberNode val) = "numberNode(" ++ (show val) ++ ")"
-prettyPrint (StringNode val) = "stringNode(\"" ++ val ++ "\")"
+        "lexReq(" ++
+                ppList (map ppPart req) ++ ")"
+prettyPrint (NumberNode val) = "numLit(" ++ (show val) ++ ")"
+prettyPrint (StringNode val) = "strLit(\"" ++ val ++ "\")"
 prettyPrint (Assign lhs rhs) =
-        "assign(" ++ prettyPrint lhs ++ ", " ++ prettyPrint rhs ++ ")"
+        "assn(" ++ prettyPrint lhs ++ ", " ++ prettyPrint rhs ++ ")"
 prettyPrint (ReturnStmt val) = "returnStmt(" ++ prettyPrint val ++ ")"
 prettyPrint (IdentifierDeclaration name dtype) =
         "identifierDeclaration(" ++
