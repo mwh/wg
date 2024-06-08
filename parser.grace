@@ -1,128 +1,135 @@
 import "ast" as ast
 
-method EOFToken(index) {
-    SymbolToken(index, "EOF")
+method EOFToken(line, column) {
+    SymbolToken(line, column, "EOF")
 }
 
-method NumberToken(index, val) {
+method NumberToken(ln, col, val) {
     object {
         def nature is public = "NUMBER"
         def value is public = val
-        def position is public = index
+        def line is public = ln
+        def column is public = col
 
         method asString {
-            nature ++ "(" ++ value ++ ")[" ++ position.asString ++ "]"
+            nature ++ "(" ++ value ++ ")[" ++ line ++ ":" ++ column ++ "]"
         }
     }
 }
 
-method LParenToken(index) {
-    SymbolToken(index, "LPAREN")
+method LParenToken(line, column) {
+    SymbolToken(line, column, "LPAREN")
 }
 
-method RParenToken(index) {
-    SymbolToken(index, "RPAREN")
+method RParenToken(line, column) {
+    SymbolToken(line, column, "RPAREN")
 }
 
-method LBraceToken(index) {
-    SymbolToken(index, "LBRACE")
+method LBraceToken(line, column) {
+    SymbolToken(line, column, "LBRACE")
 }
 
-method RBraceToken(index) {
-    SymbolToken(index, "RBRACE")
+method RBraceToken(line, column) {
+    SymbolToken(line, column, "RBRACE")
 }
 
-method CommaToken(index) {
-    SymbolToken(index, "COMMA")
+method CommaToken(line, column) {
+    SymbolToken(line, column, "COMMA")
 }
 
-method DotToken(index) {
-    SymbolToken(index, "DOT")
+method DotToken(line, column) {
+    SymbolToken(line, column, "DOT")
 }
 
-method IdentifierToken(index, val) {
+method IdentifierToken(ln, col, val) {
     object {
         def nature is public = "IDENTIFIER"
         def value is public = val
-        def position is public = index
+        def line is public = ln
+        def column is public = col
 
         method asString {
-            nature ++ "(" ++ value ++ ")[" ++ position.asString ++ "]"
+            nature ++ "(" ++ value ++ ")[" ++ line ++ ":" ++ column ++ "]"
         }
     }
 }
 
-method KeywordToken(index, val) {
+method KeywordToken(ln, col, val) {
     object {
         def nature is public = "KEYWORD"
         def value is public = val
-        def position is public = index
+        def line is public = ln
+        def column is public = col
 
         method asString {
-            nature ++ "(" ++ value ++ ")" ++ "[" ++ position.asString ++ "]"
+            nature ++ "(" ++ value ++ ")" ++ "[" ++ line ++ ":" ++ column ++ "]"
         }
     }
 }
 
-method OperatorToken(index, val) {
+method OperatorToken(ln, col, val) {
     object {
         def nature is public = "OPERATOR"
         def value is public = val
-        def position is public = index
+        def line is public = ln
+        def column is public = col
 
         method asString {
-            nature ++ "(" ++ value ++ ")" ++ "[" ++ position.asString ++ "]"
+            nature ++ "(" ++ value ++ ")" ++ "[" ++ line ++ ":" ++ column ++ "]"
         }
     }
 }
 
-method StringToken(index, val) {
+method StringToken(ln, col, val) {
     object {
         def nature is public = "STRING"
         def value is public = val
-        def position is public = index
+        def line is public = ln
+        def column is public = col
 
         method asString {
-            nature ++ "(" ++ value ++ ")" ++ "[" ++ position.asString ++ "]"
+            nature ++ "(" ++ value ++ ")" ++ "[" ++ line ++ ":" ++ column ++ "]"
         }
     }
 }
 
-method EqualsToken(index) {
-    SymbolToken(index, "EQUALS")
+method EqualsToken(line, column) {
+    SymbolToken(line, column, "EQUALS")
 }
 
-method AssignToken(index) {
-    SymbolToken(index, "ASSIGN")
+method AssignToken(line, column) {
+    SymbolToken(line, column, "ASSIGN")
 }
 
-method ArrowToken(index) {
-    SymbolToken(index, "ARROW")
+method ArrowToken(line, column) {
+    SymbolToken(line, column, "ARROW")
 }
 
-method SymbolToken(index, nat) {
+method SymbolToken(ln, col, nat) {
     object {
         def nature is public = nat
-        def position is public = index
+        def line is public = ln
+        def column is public = col
 
         method asString {
-            nature ++ "[" ++ position.asString ++ "]"
+            nature ++ "[" ++ line ++ ":" ++ column ++ "]"
         }
     }
 }
 
-method NewlineToken(index) {
-    SymbolToken(index, "NEWLINE")
+method NewlineToken(line, column) {
+    SymbolToken(line, column, "NEWLINE")
 }
 
-method CommentToken(index, text) {
+method CommentToken(ln, col, text) {
     object {
         def nature is public = "COMMENT"
-        def position is public = index
+        def line is public = ln
+        def column is public = col
         def value is public = text
 
         method asString {
-            nature ++ "(" ++ value ++ ")[" ++ position.asString ++ "]"
+            nature ++ "(" ++ value ++ ")[" ++ line ++ ":" ++ column ++ "]"
         }
     }
 }
@@ -152,14 +159,12 @@ method lexer(code) {
 
         method nextToken {
             if (index > source.size) then {
-                return EOFToken(index)
+                return EOFToken(line, column)
             }
 
             var c := source.at(index)
             column := index - lineStart
             index := index + 1
-
-            def location = line.asString ++ ":" ++ column.asString
             
 
             if (c == " ") then {
@@ -167,23 +172,23 @@ method lexer(code) {
             }
 
             if (c == "(") then {
-                return LParenToken(location)
+                return LParenToken(line, column)
             }
 
             if (c == ")") then {
-                return RParenToken(location)
+                return RParenToken(line, column)
             }
 
             if ((c > "z") && (c < "|")) then {
-                return LBraceToken(location)
+                return LBraceToken(line, column)
             }
 
             if (c == "}") then {
-                return RBraceToken(location)
+                return RBraceToken(line, column)
             }
 
             if (c == ",") then {
-                return CommaToken(location)
+                return CommaToken(line, column)
             }
 
             if (c.firstCodepoint == 13) then {
@@ -193,7 +198,7 @@ method lexer(code) {
             if ((c.firstCodepoint == 10) || (c.firstCodepoint == 8232)) then {
                 line := line + 1
                 lineStart := index - 1
-                return NewlineToken(location)
+                return NewlineToken(line, column)
             }
 
             if (c.firstCodepoint == 34) then {
@@ -215,13 +220,13 @@ method lexer(code) {
                     index := index + 1
                 }
                 index := index + 1
-                return StringToken(location, value)
+                return StringToken(line, column, value)
             }
 
             if (isDigit(c)) then {
                 def startIndex = index - 1
                 if (index >= source.size) then {
-                    return NumberToken(location, c)
+                    return NumberToken(line, column, c)
                 }
                 var value := ""
                 while {isDigit(c) && (index <= source.size)} do {
@@ -232,14 +237,14 @@ method lexer(code) {
                 if (index > (startIndex + 1)) then {
                     index := index - 1
                 }
-                return NumberToken(location, value)
+                return NumberToken(line, column, value)
             }
 
             if (isIdentifierStart(c)) then {
                 def startIndex = index - 1
                 var value := c
                 if (index > source.size) then {
-                    return IdentifierToken(location, value)
+                    return IdentifierToken(line, column, value)
                 }
                 c := source.at(index)
                 while {(isIdentifierStart(c) || isDigit(c) || (c == "'")) && (index <= source.size)} do {
@@ -250,9 +255,9 @@ method lexer(code) {
                     }
                 }
                 if ((value == "var") || (value == "def") || (value == "method") || (value == "object") || (value == "is") || (value == "return") || (value == "class") || (value == "type") || (value == "import")) then {
-                    return KeywordToken(location, value)
+                    return KeywordToken(line, column, value)
                 }
-                return IdentifierToken(location, value)
+                return IdentifierToken(line, column, value)
             }
 
             if (isOperatorCharacter(c)) then {
@@ -267,19 +272,19 @@ method lexer(code) {
                 }
                 index := index - 1
                 if (op == ":=") then {
-                    return AssignToken(location)
+                    return AssignToken(line, column)
                 }
                 if (op == "=") then {
-                    return EqualsToken(location)
+                    return EqualsToken(line, column)
                 }
                 if (op == "->") then {
-                    return ArrowToken(location)
+                    return ArrowToken(line, column)
                 }
                 if (op == ".") then {
-                    return DotToken(location)
+                    return DotToken(line, column)
                 }
                 if (op == ":") then {
-                    return SymbolToken(location, "COLON")
+                    return SymbolToken(line, column, "COLON")
                 }
                 if (op == "//") then {
                     var cp := c.firstCodepoint
@@ -291,12 +296,12 @@ method lexer(code) {
                         cp := c.firstCodepoint
                         index := index + 1
                     }
-                    return CommentToken(location, text)
+                    return CommentToken(line, column, text)
                 }
-                return OperatorToken(location, op)
+                return OperatorToken(line, column, op)
             }
 
-            print("Unknown character: " ++ c.asString ++ "(" ++ c.firstCodepoint.asString ++ ") at index " ++ index.asString)
+            print("Unknown character: " ++ c.asString ++ "(" ++ c.firstCodepoint.asString ++ ") at " ++ line ++ ":" ++ column)
         
         }
 
