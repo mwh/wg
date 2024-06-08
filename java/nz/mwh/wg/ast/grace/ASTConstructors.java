@@ -82,4 +82,8 @@ public class ASTConstructors {
         return new Comment(value);
     }
 
+    protected static ImportStmt importStmt(String source, IdentifierDeclaration bnd) {
+        return new ImportStmt(source, bnd);
+    }
+
 }

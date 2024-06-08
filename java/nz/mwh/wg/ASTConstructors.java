@@ -8,6 +8,7 @@ import nz.mwh.wg.ast.Comment;
 import nz.mwh.wg.ast.DefDecl;
 import nz.mwh.wg.ast.ExplicitRequest;
 import nz.mwh.wg.ast.IdentifierDeclaration;
+import nz.mwh.wg.ast.ImportStmt;
 import nz.mwh.wg.ast.LexicalRequest;
 import nz.mwh.wg.ast.MethodDecl;
 import nz.mwh.wg.ast.NumberNode;
@@ -138,6 +139,10 @@ public class ASTConstructors {
 
     protected static Comment comment(String value) {
         return new Comment(value);
+    }
+
+    protected static ImportStmt importStmt(String source, IdentifierDeclaration binding) {
+        return new ImportStmt(source, binding);
     }
 
 }

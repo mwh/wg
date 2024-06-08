@@ -2,10 +2,13 @@ package nz.mwh.wg;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import nz.mwh.wg.ast.*;
@@ -15,6 +18,8 @@ import nz.mwh.wg.runtime.*;
 public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
 
     private static GraceDone done = GraceDone.done;
+
+    private Map<String, GraceObject> modules = new HashMap<>();
 
     @Override
     public GraceObject visit(GraceObject context, ObjectConstructor node) {
@@ -28,6 +33,9 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
                 VarDecl var = (VarDecl) part;
                 object.addField(var.getName());
                 object.addFieldWriter(var.getName());
+            } else if (part instanceof ImportStmt) {
+                ImportStmt imp = (ImportStmt) part;
+                object.addField(imp.getName());
             } else if (part instanceof MethodDecl) {
                 visit(object, part);
             }
@@ -188,6 +196,32 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
         return done;
     }
 
+    @Override
+    public GraceObject visit(GraceObject context, ImportStmt node) {
+        if (context instanceof BaseObject) {
+            BaseObject object = (BaseObject) context;
+
+            if (modules.containsKey(node.getSource())) {
+                object.setField(node.getName(), modules.get(node.getSource()));
+                return done;
+            }
+
+            String filename = node.getSource() + ".grace";
+            try {
+                String source = Files.readString(Path.of(filename));
+                ObjectConstructor ast = (ObjectConstructor) Parser.parse(source);
+                GraceObject mod =  this.evaluateModule(ast);
+                modules.put(node.getSource(), mod);
+                object.setField(node.getName(), mod);
+                return done;
+            } catch (IOException e) {
+                throw new RuntimeException("Error reading file: " + filename);
+            }
+        }
+                  
+        throw new UnsupportedOperationException("import can only appear inside in-code context");
+    }
+
     static BaseObject basePrelude() {
         BaseObject lexicalParent = new BaseObject(null);
         lexicalParent.addMethod("print(1)", request -> {
@@ -307,6 +341,14 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             }
         });
         return lexicalParent;
+    }
+
+    public GraceObject evaluateModule(ObjectConstructor module) {
+        return this.visit(basePrelude(), module);
+    }
+
+    public void bindModule(String name, GraceObject module) {
+        modules.put(name, module);
     }
 
     static GraceObject evaluateProgram(ASTNode program) {

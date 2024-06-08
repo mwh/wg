@@ -247,7 +247,7 @@ method lexer(code) {
                         c := source.at(index)
                     }
                 }
-                if ((value == "var") || (value == "def") || (value == "method") || (value == "object") || (value == "is") || (value == "return") || (value == "class") || (value == "type")) then {
+                if ((value == "var") || (value == "def") || (value == "method") || (value == "object") || (value == "is") || (value == "return") || (value == "class") || (value == "type") || (value == "import")) then {
                     return KeywordToken(location, value)
                 }
                 return IdentifierToken(location, value)
@@ -603,6 +603,17 @@ method comment(text) {
 
         method asString {
             "comment(\"" ++ escapeString(text) ++ "\")"
+        }
+    }
+}
+
+method importStmt(src, nm) {
+    object {
+        def source is public = src
+        def binding is public = nm
+
+        method asString {
+            "importStmt(\"" ++ source ++ "\", " ++ binding ++ ")"
         }
     }
 }
@@ -987,6 +998,31 @@ method parseClassDeclaration(lxr) {
     methodDecl(parts.reversed(nil), nil, nil, cons(obj, nil))
 }
 
+method parseImport(lxr) {
+    lxr.expectKeyword("import")
+    lxr.advance
+    lxr.expectToken("STRING")
+    def src = lxr.current.value
+    lxr.advance
+    lxr.expectToken("IDENTIFIER")
+    if (lxr.current.value != "as") then {
+        Exception.raise "Expected 'as' in import"
+    }
+    lxr.advance
+    lxr.expectToken("IDENTIFIER")
+    def name = lxr.current.value
+    lxr.advance
+    var ident
+    if (lxr.current.nature == "COLON") then {
+        lxr.advance
+        def aType = parseTypeExpression(lxr)
+        ident := identifierDeclaration(name, aType)
+    } else {
+        ident := identifierDeclaration(name, nil)
+    }
+    importStmt(src, ident)
+}
+
 method parseObjectBody(lxr) {
     var body := nil
     
@@ -1009,8 +1045,13 @@ method parseObjectBody(lxr) {
                 def dec = parseClassDeclaration(lxr)
                 body := cons(dec, body)
             } else {
-                def stmt = parseStatement(lxr)
-                body := cons(stmt, body)
+                if (token.value == "import") then {
+                    def imp = parseImport(lxr)
+                    body := cons(imp, body)
+                } else {
+                    def stmt = parseStatement(lxr)
+                    body := cons(stmt, body)
+                }
             } 
         } else {
             def stmt = parseStatement(lxr)
