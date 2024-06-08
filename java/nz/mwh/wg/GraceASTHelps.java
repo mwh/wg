@@ -8,8 +8,12 @@ import nz.mwh.wg.ast.grace.*;
 public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
         
     @SuppressWarnings("unchecked")
-    public static BaseObject astConstructorPrelude() {
-        BaseObject lexicalParent = Evaluator.basePrelude();
+    public static BaseObject astModule(boolean withPrelude) {
+        BaseObject lexicalParent;
+        if (withPrelude)
+            lexicalParent = Evaluator.basePrelude();
+        else
+            lexicalParent = new BaseObject(null);
         lexicalParent.addMethod("cons(2)", request -> {
             return cons(request.getParts().get(0).getArgs().get(0), (Cons<GraceObject>) request.getParts().get(0).getArgs().get(1));
         });
@@ -17,6 +21,9 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
             return cons(request.getParts().get(0).getArgs().get(0), Cons.nil());
         });
         lexicalParent.addMethod("nil(0)", request -> {
+            return new Cons<GraceObject>();
+        });
+        lexicalParent.addMethod("no(0)", request -> {
             return new Cons<GraceObject>();
         });
         lexicalParent.addMethod("objectConstructor(1)", request -> {

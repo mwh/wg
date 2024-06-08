@@ -10,15 +10,18 @@ import nz.mwh.wg.runtime.RequestPartR;
 public class Parser {
 
     static GraceObject theParser;
+    static Evaluator evaluator = new Evaluator();
 
     public static ASTNode parse(String input) {
         if (theParser == null) {
-            theParser = Evaluator.evaluateProgram(parserAST, GraceASTHelps.astConstructorPrelude());
+            evaluator.bindModule("ast", GraceASTHelps.astModule(false));
+            theParser = evaluator.evaluateModule(parserAST);
+            //theParser = Evaluator.evaluateProgram(parserAST, GraceASTHelps.astModule(true));
         }
         Request request = new Request(new Evaluator(), Collections.singletonList(new RequestPartR("parse", Collections.singletonList(new GraceString(input)))));
         ASTNode ast = (ASTNode)theParser.request(request);
         return ast;
     }
 
-    private static final ASTNode parserAST = ParserData.program;
+    private static final ObjectConstructor parserAST = (ObjectConstructor) ParserData.program;
 }

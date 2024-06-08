@@ -41,11 +41,11 @@ public class Cons<T> {
 
     public String toString() {
         if (isNil)
-            return "nil";
+            return "no";
         String headStr = head instanceof String ? "\"" + head + "\"" : head instanceof GraceString ? "\"" + head.toString() + "\"" : head.toString();
         if (tail == null || tail.isNil)
             return "one(" + headStr + ")";
-        return "cons(" + headStr + ", " + (tail == null ? "nil" : tail.toString()) + ")";
+        return "cons(" + headStr + ", " + (tail == null ? "no" : tail.toString()) + ")";
     }
 
     public boolean isNil() {
@@ -71,7 +71,7 @@ public class Cons<T> {
 
     public static <T> String stringFromList(List<T> items) {
         if (items.size() == 0)
-            return "nil";
+            return "no";
         StringBuilder sb = new StringBuilder();
         int len = items.size();
         int n = 0;

@@ -1,3 +1,5 @@
+import "ast" as ast
+
 method EOFToken(index) {
     SymbolToken(index, "EOF")
 }
@@ -368,258 +370,6 @@ method digitToNumber(c) {
     Exception.raise("Unexpected digit: " ++ c.asString)
 }
 
-method escapeString(value) {
-    value.replace "\\" with "\\\\".replace "\"" with "\\\"".replace "\n" with "\\n".replace "\r" with "\\r"
-}
-
-"------- Methods from here until the end marker are duplicated in scope in Java"
-method cons(hd, tl) {
-    object {
-        def head is public = hd
-        def tail is public = tl
-        def end is public = false
-
-        method asString {
-            if (tail.end) then {
-                return "one(" ++ head.asString ++ ")"
-            }
-            return "cons(" ++ head.asString ++ ", " ++ tail.asString ++ ")"
-        }
-
-        method reversed(next) {
-            def c = cons(head, next)
-            if (tail.end) then {
-                c
-            } else {
-                tail.reversed(c)
-            }
-        }
-
-        method stringHelper {
-            "cons(" ++ head.asString ++ ", " ++ tail.stringHelper ++ ")"
-        }
-
-        method map(f) {
-            cons(f.apply(head), tail.map(f))
-        }
-    }
-}
-
-method nil {
-    object {
-        def end is public = true
-
-        method asString {
-            "no"
-        }
-
-        method reversed(next) {
-            next
-        }
-
-        method stringHelper {
-            "nil"
-        }
-
-        method map(f) {
-            nil
-        }
-    }
-
-}
-
-method numberNode(val) {
-    object {
-        def value is public = val
-
-        method asString {
-            "numLit(" ++ value.asString ++ ")"
-        }
-    }
-}
-
-method stringNode(val) {
-    object {
-        def value is public = val
-
-        method asString {
-            "strLit(\"" ++ escapeString(value) ++ "\")"
-        }
-    }
-}
-
-method block(params, stmts) {
-    object {
-        def parameters is public = params
-        def statements is public = stmts
-
-        method asString {
-            "block(" ++ parameters ++ ", " ++ statements ++ ")"
-        }
-    }
-}
-
-method defDecl(id, dtype, anns, val) {
-    object {
-        def name is public = id
-        def decType is public = dtype
-        def annotations is public = anns
-        def value is public = val
-
-        method asString {
-            "defDec(\"" ++ name ++ "\", "  ++ decType ++ ", " ++ anns.map { x -> "\"" ++ x ++ "\"" } ++ ", " ++ value ++ ")"
-        }
-    }
-}
-
-method varDecl(id, dtype, anns, val) {
-    object {
-        def name is public = id
-        def decType is public = dtype
-        def annotations is public = anns
-        def value is public = val
-
-        method asString {
-            "varDec(\"" ++ name ++ "\", " ++ dtype ++ ", " ++ anns.map { x -> "\"" ++ x ++ "\"" } ++ ", " ++ value ++ ")"
-        }
-    }
-}
-
-method lexicalRequest(requestParts) {
-    object {
-        def parts is public = requestParts
-
-        method asString {
-            "lexReq(" ++ parts ++ ")"
-        }
-    }
-}
-
-method explicitRequest(pos, rec, requestParts) {
-    object {
-        def receiver is public = rec
-        def parts is public = requestParts
-        def position is public = pos
-
-        method asString {
-            "dotReq(" ++ receiver.asString ++ ", " ++ parts ++ ")"
-        }
-    }
-}
-
-method requestPart(partName, args) {
-    object {
-        def name is public = partName
-        def arguments is public = args
-
-        method asString {
-            "part(\"" ++ name ++ "\", " ++ args ++ ")"
-        }
-    }
-}
-
-
-method part(partName, args) {
-    object {
-        def name is public = partName
-        def parameters is public = args
-
-        method asString {
-            "part(\"" ++ name ++ "\", " ++ parameters ++ ")"
-        }
-    }
-}
-
-method methodDecl(declarationParts, retType, anns, bd) {
-    object {
-        def parts is public = declarationParts
-        def returnType is public = retType
-        def annotations is public = anns
-        def body is public = bd
-
-        method asString {
-            "methDec(" ++ parts ++ ", " ++ returnType ++ ", " ++ annotations ++ ", " ++ body ++ ")"
-        }
-    }
-}
-
-method declarationPart(id, params) {
-    object {
-        def name is public = id
-        def parameters is public = params
-
-        method asString {
-            "part(\"" ++ name ++ "\", " ++ parameters ++ ")"
-        }
-    }
-}
-
-method objectConstructor(bd) {
-    object {
-        def body is public = bd
-
-        method asString {
-            "objCons(" ++ body ++ ")"
-        }
-    }
-
-}
-
-method assign(lhs, rhs) {
-    object {
-        def left is public = lhs
-        def right is public = rhs
-
-        method asString {
-            "assn(" ++ left ++ ", " ++ right ++ ")"
-        }
-    }
-}
-
-method returnStmt(val) {
-    object {
-        def value is public = val
-
-        method asString {
-            "returnStmt(" ++ value ++ ")"
-        }
-    }
-}
-
-method identifierDeclaration(id, dtype) {
-    object {
-        def name is public = id
-        def decType is public = dtype
-
-        method asString {
-            "identifierDeclaration(\"" ++ name ++ "\", " ++ dtype ++ ")"
-        }
-    }
-}
-
-method comment(text) {
-    object {
-        def value is public = text
-
-        method asString {
-            "comment(\"" ++ escapeString(text) ++ "\")"
-        }
-    }
-}
-
-method importStmt(src, nm) {
-    object {
-        def source is public = src
-        def binding is public = nm
-
-        method asString {
-            "importStmt(\"" ++ source ++ "\", " ++ binding ++ ")"
-        }
-    }
-}
-
-"------- End marker; methods back to the start marker are duplicated in scope in Java"
-
 method parseNumber(lxr) {
     def token = lxr.current
     lxr.advance
@@ -630,81 +380,81 @@ method parseNumber(lxr) {
         val := val * 10 + digitToNumber(s.at(index))
         index := index + 1
     }
-    numberNode(val)
+    ast.numberNode(val)
 }
 
 method parseString(lxr) {
     def token = lxr.current
     lxr.advance
-    stringNode(token.value)
+    ast.stringNode(token.value)
 }
 
-method parseLexicalRequestNoBlock(lxr, id) {
-    def parts = parseRequestParts(lxr, false)
-    lexicalRequest(parts)
+method parselexicalRequestNoBlock(lxr, id) {
+    def parts = parseparts(lxr, false)
+    ast.lexicalRequest(parts)
 }
 
 method parselexicalRequest(lxr) {
-    def parts = parseRequestParts(lxr, true)
-    lexicalRequest(parts)
+    def parts = parseparts(lxr, true)
+    ast.lexicalRequest(parts)
 }
 
-method parseRequestParts(lxr, allowBlock) {
-    var parts := nil
+method parseparts(lxr, allowBlock) {
+    var parts := ast.nil
     while {lxr.current.nature == "IDENTIFIER"} do {
         var id := lxr.current.value
         lxr.advance
         if (lxr.current.nature == "LPAREN") then {
             lxr.advance
-            var args := nil
+            var args := ast.nil
             while {(lxr.current.nature != "RPAREN") && (lxr.current.nature != "EOF")} do {
-                args := cons(parseExpression(lxr), args)
+                args := ast.cons(parseExpression(lxr), args)
                 if (lxr.current.nature == "COMMA") then {
                     lxr.advance
                 }
             }
             lxr.advance
-            def part = requestPart(id, args.reversed(nil))
-            parts := cons(part, parts)
+            def part = ast.part(id, args.reversed(ast.nil))
+            parts := ast.cons(part, parts)
         } elseif { allowBlock && (lxr.current.nature == "LBRACE") } then {
-            def blk = parseBlock(lxr)
-            def part = requestPart(id, cons(blk, nil))
-            parts := cons(part, parts)
+            def blk = parseblock(lxr)
+            def part = ast.part(id, ast.cons(blk, ast.nil))
+            parts := ast.cons(part, parts)
         } elseif { lxr.current.nature == "NUMBER" } then {
             def num = parseNumber(lxr)
-            def part = requestPart(id, cons(num, nil))
-            parts := cons(part, parts)
+            def part = ast.part(id, ast.cons(num, ast.nil))
+            parts := ast.cons(part, parts)
         } elseif { lxr.current.nature == "STRING" } then {
             def str = parseString(lxr)
-            def part = requestPart(id, cons(str, nil))
-            parts := cons(part, parts)
+            def part = ast.part(id, ast.cons(str, ast.nil))
+            parts := ast.cons(part, parts)
         } else {
-            def part = requestPart(id, nil)
-            parts := cons(part, parts)
-            return parts.reversed(nil)
+            def part = ast.part(id, ast.nil)
+            parts := ast.cons(part, parts)
+            return parts.reversed(ast.nil)
         }
     }
-    parts.reversed(nil)
+    parts.reversed(ast.nil)
 }
 
-method parseExplicitRequestNoBlock(receiver, lxr) {
+method parseexplicitRequestNoBlock(receiver, lxr) {
     lxr.advance
     def pos = lxr.current.asString
-    def parts = parseRequestParts(lxr, false)
-    explicitRequest(pos, receiver, parts)
+    def parts = parseparts(lxr, false)
+    ast.explicitRequest(pos, receiver, parts)
 }
 
-method parseExplicitRequest(receiver, lxr) {
+method parseexplicitRequest(receiver, lxr) {
     lxr.advance
     def pos = lxr.current.asString
-    def parts = parseRequestParts(lxr, true)
-    explicitRequest(pos, receiver, parts)
+    def parts = parseparts(lxr, true)
+    ast.explicitRequest(pos, receiver, parts)
 }
 
 method parseTypeExpression(lxr) {
     def token = lxr.current
     if (token.nature == "IDENTIFIER") then {
-        return parseLexicalRequestNoBlock(lxr, token.value)
+        return parselexicalRequestNoBlock(lxr, token.value)
     }
     print("Unexpected token: " ++ token.asString)
     Exception.raise("Unexpected token: " ++ token.asString)
@@ -725,7 +475,7 @@ method parseExpressionNoOpNoDot(lxr) {
         return expr
     }
     if (token.nature == "LBRACE") then {
-        return parseBlock(lxr)
+        return parseblock(lxr)
     }
     if (token.nature == "IDENTIFIER") then {
         return parselexicalRequest(lxr)
@@ -739,7 +489,7 @@ method parseExpressionNoOpNoDot(lxr) {
         lxr.advance
         def pos = lxr.current.asString
         def expr = parseExpressionNoOp(lxr)
-        return explicitRequest(pos, expr, cons(requestPart("prefix" ++ token.value, nil), nil))
+        return ast.explicitRequest(pos, expr, ast.cons(ast.part("prefix" ++ token.value, ast.nil), ast.nil))
     }
     print("Unexpected token: " ++ token.asString)
     Exception.raise("Unexpected token: " ++ token.asString)
@@ -749,7 +499,7 @@ method parseExpressionNoOp(lxr) {
     var left := parseExpressionNoOpNoDot(lxr)
     var token := lxr.current
     while { token.nature == "DOT" } do {
-        left := parseExplicitRequest(left, lxr)
+        left := parseexplicitRequest(left, lxr)
         
         token := lxr.current
     }
@@ -763,10 +513,10 @@ method parseExpression(lxr) {
         def pos = token.asString
         lxr.advance
         def right = parseExpressionNoOp(lxr)
-        def args = cons(right, nil)
-        def part = requestPart(token.value, args)
-        def parts = cons(part, nil)
-        def req = explicitRequest(pos, left, parts.reversed(nil))
+        def args = ast.cons(right, ast.nil)
+        def part = ast.part(token.value, args)
+        def parts = ast.cons(part, ast.nil)
+        def req = ast.explicitRequest(pos, left, parts.reversed(ast.nil))
         left := req
         token := lxr.current
     }
@@ -776,7 +526,7 @@ method parseExpression(lxr) {
 method parseReturnStatement(lxr) {
     lxr.advance
     def val = parseExpression(lxr)
-    returnStmt(val)
+    ast.returnStmt(val)
 }
 
 method parseStatement(lxr) {
@@ -786,20 +536,20 @@ method parseStatement(lxr) {
             return parseReturnStatement(lxr)
         }
         if (token.value == "var") then {
-            return parseVarDeclaration(lxr)
+            return parsevarDeclaration(lxr)
         }
         if (token.value == "def") then {
-            return parseDefDeclaration(lxr)
+            return parsedefDeclaration(lxr)
         }
     } elseif {token.nature == "COMMENT"} then {
         lxr.advance
-        return comment(token.value)
+        return ast.comment(token.value)
     }
     var exp := parseExpression(lxr)
     if (lxr.current.nature == "ASSIGN") then {
         lxr.advance
         def val = parseExpression(lxr)
-        exp := assign(exp, val)
+        exp := ast.assign(exp, val)
     }
     if (lxr.current.nature == "NEWLINE") then {
         lxr.advance
@@ -807,9 +557,9 @@ method parseStatement(lxr) {
     exp
 }
 
-method parseBlock(lxr) {
-    var params := nil
-    var body := nil
+method parseblock(lxr) {
+    var params := ast.nil
+    var body := ast.nil
     if (lxr.current.nature == "LBRACE") then {
         lxr.advance
         while { lxr.current.nature == "NEWLINE" } do {
@@ -819,9 +569,9 @@ method parseBlock(lxr) {
             if (lxr.current.nature == "ARROW") then {
                 lxr.advance
                 params := body
-                body := nil
+                body := ast.nil
             } else {
-                body := cons(parseStatement(lxr), body)
+                body := ast.cons(parseStatement(lxr), body)
             }
             while { lxr.current.nature == "NEWLINE" } do {
                 lxr.advance
@@ -830,34 +580,34 @@ method parseBlock(lxr) {
         lxr.advance
     }
 
-    block(params, body.reversed(nil))
+    ast.block(params, body.reversed(ast.nil))
 
 }
 
 method parseAnnotations(lxr) {
-    var anns := nil
+    var anns := ast.nil
     lxr.advance
     while {lxr.current.nature == "IDENTIFIER"} do {
-        anns := cons(lxr.current.value, anns)
+        anns := ast.cons(lxr.current.value, anns)
         lxr.advance
         if (lxr.current.nature == "COMMA") then {
             lxr.advance
         }
     }
-    anns.reversed(nil)
+    anns.reversed(ast.nil)
 }
 
-method parseDefDeclaration(lxr) {
+method parsedefDeclaration(lxr) {
     lxr.advance
     def name = lxr.current.value
     lxr.advance
-    var dtype := nil
+    var dtype := ast.nil
     if (lxr.current.nature == "COLON") then {
         // Type annotation
         lxr.advance
-        dtype := cons(parseExpression(lxr), nil)
+        dtype := ast.cons(parseExpression(lxr), ast.nil)
     }
-    var anns := nil
+    var anns := ast.nil
     if ((lxr.current.nature == "KEYWORD")) then {
         if (lxr.current.value == "is") then {
             anns := parseAnnotations(lxr)
@@ -866,20 +616,20 @@ method parseDefDeclaration(lxr) {
     lxr.advance
     def val = parseExpression(lxr)
     
-    defDecl(name, dtype, anns, val)
+    ast.defDecl(name, dtype, anns, val)
 }
 
-method parseVarDeclaration(lxr) {
+method parsevarDeclaration(lxr) {
     lxr.advance
     def name = lxr.current.value
     lxr.advance
-    var dtype := nil
+    var dtype := ast.nil
     if (lxr.current.nature == "COLON") then {
         // Type annotation
         lxr.advance
-        dtype := cons(parseExpression(lxr), nil)
+        dtype := ast.cons(parseExpression(lxr), ast.nil)
     }
-    var anns := nil
+    var anns := ast.nil
     if ((lxr.current.nature == "KEYWORD")) then {
         if (lxr.current.value == "is") then {
             anns := parseAnnotations(lxr)
@@ -888,76 +638,76 @@ method parseVarDeclaration(lxr) {
     if (lxr.current.nature == "ASSIGN") then {
         lxr.advance
         def val = parseExpression(lxr)
-        varDecl(name, dtype, anns, cons(val, nil))
+        ast.varDecl(name, dtype, anns, ast.cons(val, ast.nil))
     } else {
-        varDecl(name, dtype, anns, nil)
+        ast.varDecl(name, dtype, anns, ast.nil)
     }
 }
 
 method parseMethodBody(lxr) {
-    var body := nil
+    var body := ast.nil
     lxr.advance
     while {lxr.current.nature != "RBRACE"} do {
         if (lxr.current.nature == "NEWLINE") then {
             lxr.advance
         } elseif { lxr.current.nature == "KEYWORD" } then {
             if (lxr.current.value == "var") then {
-                def dec = parseVarDeclaration(lxr)
-                body := cons(dec, body)
+                def dec = parsevarDeclaration(lxr)
+                body := ast.cons(dec, body)
             } elseif { lxr.current.value == "def" } then {
-                def dec = parseDefDeclaration(lxr)
-                body := cons(dec, body)
+                def dec = parsedefDeclaration(lxr)
+                body := ast.cons(dec, body)
             } else {
-                body := cons(parseStatement(lxr), body)
+                body := ast.cons(parseStatement(lxr), body)
             }
         } else {
-            body := cons(parseStatement(lxr), body)
+            body := ast.cons(parseStatement(lxr), body)
         }
     }
     lxr.advance
-    body.reversed(nil)
+    body.reversed(ast.nil)
 
 }
 
 method parseMethodDeclaration(lxr) {
     lxr.advance
-    var parts := nil
+    var parts := ast.nil
     while { lxr.current.nature == "IDENTIFIER" } do {
         def id = lxr.current.value
         lxr.advance
         if (lxr.current.nature == "LPAREN") then {
             lxr.advance
-            var args := nil
+            var args := ast.nil
             while {(lxr.current.nature != "RPAREN") && (lxr.current.nature != "EOF")} do {
                 lxr.expectToken "IDENTIFIER"
                 def idToken = lxr.current
-                var dtype := nil
+                var dtype := ast.nil
                 lxr.advance
                 if (lxr.current.nature == "COLON") then {
                     // Type annotation
                     lxr.advance
-                    dtype := cons(parseTypeExpression(lxr), nil)
+                    dtype := ast.cons(parseTypeExpression(lxr), ast.nil)
                 }
-                args := cons(identifierDeclaration(idToken.value, dtype), args)
+                args := ast.cons(ast.identifierDeclaration(idToken.value, dtype), args)
                 if (lxr.current.nature == "COMMA") then {
                     lxr.advance
                 }
             }
             lxr.advance
-            def part = declarationPart(id, args.reversed(nil))
-            parts := cons(part, parts)
+            def part = ast.part(id, args.reversed(ast.nil))
+            parts := ast.cons(part, parts)
         } else {
-            def part = declarationPart(id, nil)
-            parts := cons(part, parts)
+            def part = ast.part(id, ast.nil)
+            parts := ast.cons(part, parts)
         }
     }
-    var dtype := nil
+    var dtype := ast.nil
     if (lxr.current.nature == "ARROW") then {
         // Type annotation
         lxr.advance
-        dtype := cons(parseTypeExpression(lxr), nil)
+        dtype := ast.cons(parseTypeExpression(lxr), ast.nil)
     }
-    var anns := nil
+    var anns := ast.nil
     if ((lxr.current.nature == "KEYWORD")) then {
         if (lxr.current.value == "is") then {
             anns := parseAnnotations(lxr)
@@ -965,37 +715,37 @@ method parseMethodDeclaration(lxr) {
     }
     //lxr.advance
     def body = parseMethodBody(lxr)
-    methodDecl(parts.reversed(nil), dtype, anns, body)
+    ast.methodDecl(parts.reversed(ast.nil), dtype, anns, body)
 }
 
 method parseClassDeclaration(lxr) {
     lxr.advance
-    var parts := nil
+    var parts := ast.nil
     while { lxr.current.nature == "IDENTIFIER" } do {
         def id = lxr.current.value
         lxr.advance
         if (lxr.current.nature == "LPAREN") then {
             lxr.advance
-            var args := nil
+            var args := ast.nil
             while {(lxr.current.nature != "RPAREN") && (lxr.current.nature != "EOF")} do {
-                args := cons(identifierDeclaration(lxr.current.value), args)
+                args := ast.cons(ast.identifierDeclaration(lxr.current.value), args)
                 lxr.advance
                 if (lxr.current.nature == "COMMA") then {
                     lxr.advance
                 }
             }
             lxr.advance
-            def part = declarationPart(id, args.reversed(nil))
-            parts := cons(part, parts)
+            def part = ast.part(id, args.reversed(ast.nil))
+            parts := ast.cons(part, parts)
         } else {
-            def part = declarationPart(id, nil)
-            parts := cons(part, parts)
+            def part = ast.part(id, ast.nil)
+            parts := ast.cons(part, parts)
         }
     }
     lxr.advance
     def body = parseObjectBody(lxr)
-    def obj = objectConstructor(body)
-    methodDecl(parts.reversed(nil), nil, nil, cons(obj, nil))
+    def obj = ast.objectConstructor(body)
+    ast.methodDecl(parts.reversed(ast.nil), ast.nil, ast.nil, ast.cons(obj, ast.nil))
 }
 
 method parseImport(lxr) {
@@ -1016,15 +766,15 @@ method parseImport(lxr) {
     if (lxr.current.nature == "COLON") then {
         lxr.advance
         def aType = parseTypeExpression(lxr)
-        ident := identifierDeclaration(name, aType)
+        ident := ast.identifierDeclaration(name, aType)
     } else {
-        ident := identifierDeclaration(name, nil)
+        ident := ast.identifierDeclaration(name, ast.nil)
     }
-    importStmt(src, ident)
+    ast.importStmt(src, ident)
 }
 
 method parseObjectBody(lxr) {
-    var body := nil
+    var body := ast.nil
     
     var token := lxr.current
 
@@ -1033,34 +783,34 @@ method parseObjectBody(lxr) {
             lxr.advance
         } elseif { token.nature == "KEYWORD" } then {
             if (token.value == "var") then {
-                def dec = parseVarDeclaration(lxr)
-                body := cons(dec, body)
+                def dec = parsevarDeclaration(lxr)
+                body := ast.cons(dec, body)
             } elseif { token.value == "def" } then {
-                def dec = parseDefDeclaration(lxr)
-                body := cons(dec, body)
+                def dec = parsedefDeclaration(lxr)
+                body := ast.cons(dec, body)
             } elseif { token.value == "method" } then {
                 def dec = parseMethodDeclaration(lxr)
-                body := cons(dec, body)
+                body := ast.cons(dec, body)
             } elseif { token.value == "class" } then {
                 def dec = parseClassDeclaration(lxr)
-                body := cons(dec, body)
+                body := ast.cons(dec, body)
             } else {
                 if (token.value == "import") then {
                     def imp = parseImport(lxr)
-                    body := cons(imp, body)
+                    body := ast.cons(imp, body)
                 } else {
                     def stmt = parseStatement(lxr)
-                    body := cons(stmt, body)
+                    body := ast.cons(stmt, body)
                 }
             } 
         } else {
             def stmt = parseStatement(lxr)
-            body := cons(stmt, body)
+            body := ast.cons(stmt, body)
         }
         token := lxr.current
     }
     
-    body.reversed(nil)
+    body.reversed(ast.nil)
 
 }
 
@@ -1069,15 +819,11 @@ method parseObject(lxr) {
     lxr.advance
     def body = parseObjectBody(lxr)
     lxr.advance
-    objectConstructor(body)
+    ast.objectConstructor(body)
 }
 
 method parse(code) {
     def lxr = lexer(code)
     def body = parseObjectBody(lxr)
-    objectConstructor(body)
+    ast.objectConstructor(body)
 }
-
-def str = getFileContents "wg.grace"
-def pr = parse(str)
-print(pr)
