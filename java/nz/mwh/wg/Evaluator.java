@@ -219,7 +219,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             }
         }
                   
-        throw new UnsupportedOperationException("import can only appear inside in-code context");
+        throw new UnsupportedOperationException("imports can only appear inside in-code context");
     }
 
     static BaseObject basePrelude() {

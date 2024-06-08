@@ -14,6 +14,6 @@ public class Runner {
 EOT
     for f in "${files[@]}"
     do
-        grep -vE '^package|import' "$f" | sed -e 's/public class/class/' -e 's/public abstract class/abstract class/' -e 's/public interface/interface/'
+        grep -vE '^package|^import' "$f" | sed -e 's/public class/class/' -e 's/public abstract class/abstract class/' -e 's/public interface/interface/' -e 's/Parser.parse.*/null; if (true) {throw new RuntimeException("no imports in standalone programs");}/'
     done
 } > flat-template.java
