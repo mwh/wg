@@ -16,7 +16,6 @@ public class Parser {
         if (theParser == null) {
             evaluator.bindModule("ast", GraceASTHelps.astModule(false));
             theParser = evaluator.evaluateModule(parserAST);
-            //theParser = Evaluator.evaluateProgram(parserAST, GraceASTHelps.astModule(true));
         }
         Request request = new Request(new Evaluator(), Collections.singletonList(new RequestPartR("parse", Collections.singletonList(new GraceString(input)))));
         ASTNode ast = (ASTNode)theParser.request(request);

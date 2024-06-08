@@ -135,4 +135,9 @@ export class Assign {
     }
 }
 
-
+export class ImportStmt {
+    constructor(source, binding) {
+        this.source = source;
+        this.binding = binding;
+    }
+}

@@ -8,12 +8,17 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import nz.mwh.wg.ast.ASTNode;
+import nz.mwh.wg.ast.Cons;
+import nz.mwh.wg.ast.DefDecl;
+import nz.mwh.wg.ast.ImportStmt;
+import nz.mwh.wg.ast.ObjectConstructor;
 
 public class Start {
     public static void main(String[] args) {
         String filename = "test.grace";
         boolean printAST = false;
         String updateFile = null;
+        boolean inlineImports = false;
         for (String arg : args) {
             if (arg.equals("-p")) {
                 printAST = true;
@@ -21,6 +26,8 @@ public class Start {
                 updateFile = "";
             } else if (updateFile != null && updateFile.isEmpty()) {
                 updateFile = arg;
+            } else if (arg.equals("-i")) {
+                inlineImports = true;
             } else {
                 filename = arg;
                 break;
@@ -29,6 +36,9 @@ public class Start {
         try {
             String source = Files.readString(Path.of(filename));
             ASTNode ast = Parser.parse(source);
+            if (inlineImports) {
+                inlineImports((ObjectConstructor) ast);
+            }
             if (printAST) {
                 System.out.println(ast);
             } else if (updateFile != null) {
@@ -38,6 +48,22 @@ public class Start {
             }
         } catch (IOException e) {
             throw new RuntimeException("Error reading file: " + filename);
+        }
+    }
+
+    private static void inlineImports(ObjectConstructor ast) throws IOException {
+        List<ASTNode> body = ast.getBody();
+        for (int i = 0; i < body.size(); i++) {
+            ASTNode node = body.get(i);
+            if (node instanceof ImportStmt) {
+                ImportStmt importStmt = (ImportStmt) node;
+                String filename = importStmt.getSource() + ".grace";
+                String source = Files.readString(Path.of(filename));
+                ObjectConstructor imported = (ObjectConstructor) Parser.parse(source);
+                inlineImports(imported);
+                DefDecl def = new DefDecl(importStmt.getName(), null, Cons.nil(), imported);
+                body.set(i, def);
+            }
         }
     }
 
