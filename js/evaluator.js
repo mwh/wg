@@ -247,7 +247,7 @@ function evaluateExpression(cont, scope, expr) {
 }
 
 function evaluateObjectConstructor(cont, scope, obj) {
-    let o = new GraceObject({}, scope);
+    let o = new GraceObject({"self(0)": (cont, args) => cont.of(o)}, scope);
     return evaluateStatementList(
         new FunctionContinuation(cont, (cont, receiver) => {
             return cont.of(o);

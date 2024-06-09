@@ -23,7 +23,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
 
     @Override
     public GraceObject visit(GraceObject context, ObjectConstructor node) {
-        BaseObject object = new BaseObject(context);
+        BaseObject object = new BaseObject(context, false, true);
         List<ASTNode> body = node.getBody();
         for (ASTNode part : body) {
             if (part instanceof DefDecl) {

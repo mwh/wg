@@ -22,6 +22,10 @@ public class BaseObject implements GraceObject {
     }
 
     public BaseObject(GraceObject lexicalParent, boolean returns) {
+        this(lexicalParent, returns, false);
+    }
+
+    public BaseObject(GraceObject lexicalParent, boolean returns, boolean bindSelf) {
         this.lexicalParent = lexicalParent;
         this.returns = returns;
         addMethod("==(1)", request -> {
@@ -32,6 +36,9 @@ public class BaseObject implements GraceObject {
             GraceObject other = request.getParts().get(0).getArgs().get(0);
             return new GraceBoolean(this != other);
         });
+        if (bindSelf) {
+            addMethod("self(0)", request -> this);
+        }
     }
 
     public String toString() {

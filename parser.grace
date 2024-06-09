@@ -283,7 +283,7 @@ method lexer(code) {
                         c := source.at(index)
                     }
                 }
-                if ((value == "var") || (value == "def") || (value == "method") || (value == "object") || (value == "is") || (value == "return") || (value == "class") || (value == "type") || (value == "import")) then {
+                if ((value == "var") || (value == "def") || (value == "method") || (value == "object") || (value == "is") || (value == "return") || (value == "class") || (value == "type") || (value == "import") || (value == "self")) then {
                     return KeywordToken(line, column, value)
                 }
                 return IdentifierToken(line, column, value)
@@ -583,6 +583,9 @@ method parseExpressionNoOpNoDot(lxr) {
     if (token.nature == "KEYWORD") then {
         if (token.value == "object") then {
             return parseObject(lxr)
+        } elseif { token.value == "self" } then {
+            lxr.advance
+            return ast.lexicalRequest(ast.cons(ast.part("self", ast.nil), ast.nil))
         }
     }
     if (token.nature == "OPERATOR") then {
@@ -750,6 +753,7 @@ method parseAnnotations(lxr) {
 
 method parsedefDeclaration(lxr) {
     lxr.advance
+    lxr.expectToken("IDENTIFIER")
     def name = lxr.current.value
     lxr.advance
     var dtype := ast.nil
@@ -772,6 +776,7 @@ method parsedefDeclaration(lxr) {
 
 method parsevarDeclaration(lxr) {
     lxr.advance
+    lxr.expectToken("IDENTIFIER")
     def name = lxr.current.value
     lxr.advance
     var dtype := ast.nil
