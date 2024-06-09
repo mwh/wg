@@ -65,6 +65,18 @@ method stringNode(val) {
     }
 }
 
+method interpString(val, exp, rest) {
+    object {
+        def value is public = val
+        def expression is public = exp
+        def next is public = rest
+
+        method asString {
+            "interpStr(\"" ++ escapeString(value) ++ "\", " ++ expression ++ ", " ++ next ++ ")"
+        }
+    }
+}
+
 method block(params, stmts) {
     object {
         def parameters is public = params

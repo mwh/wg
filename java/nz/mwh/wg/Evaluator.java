@@ -69,6 +69,31 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
     }
 
     @Override
+    public GraceObject visit(GraceObject context, InterpString node) {
+        String value = node.getValue();
+        ASTNode expression = node.getExpression();
+        ASTNode next = node.getNext();
+        StringBuilder sb = new StringBuilder();
+        sb.append(value);
+        sb.append(expression.accept(context, this).toString());
+        while (next instanceof InterpString) {
+            InterpString nextString = (InterpString) next;
+            sb.append(nextString.getValue());
+            expression = nextString.getExpression();
+            next = nextString.getNext();
+            sb.append(expression.accept(context, this).toString());
+        }
+        // next must now be a StringNode
+        if (!(next instanceof StringNode)) {
+            throw new UnsupportedOperationException("Invalid InterpString node");
+        }
+        StringNode sn = (StringNode) next;
+        sb.append(sn.getValue());
+
+        return new GraceString(value + expression.accept(context, this) + next.accept(context, this));
+    }
+
+    @Override
     public GraceObject visit(GraceObject context, DefDecl node) {
         if (context instanceof BaseObject) {
             BaseObject object = (BaseObject) context;

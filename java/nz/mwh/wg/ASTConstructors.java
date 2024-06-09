@@ -9,6 +9,7 @@ import nz.mwh.wg.ast.DefDecl;
 import nz.mwh.wg.ast.ExplicitRequest;
 import nz.mwh.wg.ast.IdentifierDeclaration;
 import nz.mwh.wg.ast.ImportStmt;
+import nz.mwh.wg.ast.InterpString;
 import nz.mwh.wg.ast.LexicalRequest;
 import nz.mwh.wg.ast.MethodDecl;
 import nz.mwh.wg.ast.NumberNode;
@@ -75,6 +76,10 @@ public class ASTConstructors {
 
     static StringNode strLit(String value) {
         return new StringNode(value);
+    }
+
+    static InterpString interpStr(String value, ASTNode expr, ASTNode next) {
+        return new InterpString(value, expr, next);
     }
 
     static IdentifierDeclaration identifierDeclaration(String name, Cons<ASTNode> type) {

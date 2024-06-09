@@ -29,9 +29,17 @@ method LBraceToken(line, column) {
     SymbolToken(line, column, "LBRACE")
 }
 
-method RBraceToken(line, column) {
-    SymbolToken(line, column, "RBRACE")
-}
+method RBraceToken(ln, col, idx) {
+    object {
+        def nature is public = "RBRACE"
+        def line is public = ln
+        def column is public = col
+        def index is public = idx
+
+        method asString {
+            "RBRACE[" ++ line ++ ":" ++ column ++ "@" ++ index ++ "]"
+        }
+    }}
 
 method CommaToken(line, column) {
     SymbolToken(line, column, "COMMA")
@@ -83,6 +91,19 @@ method OperatorToken(ln, col, val) {
 method StringToken(ln, col, val) {
     object {
         def nature is public = "STRING"
+        def value is public = val
+        def line is public = ln
+        def column is public = col
+
+        method asString {
+            nature ++ "(" ++ value ++ ")" ++ "[" ++ line ++ ":" ++ column ++ "]"
+        }
+    }
+}
+
+method InterpStringToken(ln, col, val) {
+    object {
+        def nature is public = "INTERPSTRING"
         def value is public = val
         def line is public = ln
         def column is public = col
@@ -148,14 +169,18 @@ method isDigit(c) {
     (cp >= 48) && (cp <= 57)
 }
 
-method indentCell(lev, prev) {
+method ErrorToken(ln, col, val) {
     object {
-        def level is public = lev
-        def previous is public = prev
+        def nature is public = "ERROR"
+        def message is public = val
+        def line is public = ln
+        def column is public = col
+
+        method asString {
+            nature ++ "(" ++ value ++ ")[" ++ line ++ ":" ++ column ++ "]"
+        }
     }
 }
-
-var currentIndent := indentCell(0, indentCell(0, ast.nil))
 
 var indentColumn := 0
 
@@ -196,7 +221,7 @@ method lexer(code) {
             }
 
             if (c == "}") then {
-                return RBraceToken(line, column)
+                return RBraceToken(line, column, index)
             }
 
             if (c == ",") then {
@@ -214,25 +239,7 @@ method lexer(code) {
             }
 
             if (c.firstCodepoint == 34) then {
-                var value := ""
-                var escaped := false
-                while {(source.at(index).firstCodepoint != 34) || escaped} do {
-                    var escapeNext := false
-                    def cp = source.at(index).firstCodepoint
-                    if ((cp == 92) && (escaped == false)) then {
-                        escapeNext := true
-                    } elseif { escaped && (cp == 110) } then {
-                        value := value ++ "\n"
-                    } elseif { escaped && (cp == 114) } then {
-                        value := value ++ "\r"
-                    } else {
-                        value := value ++ source.at(index)
-                    }
-                    escaped := escapeNext
-                    index := index + 1
-                }
-                index := index + 1
-                return StringToken(line, column, value)
+                return lexString
             }
 
             if (isDigit(c)) then {
@@ -327,7 +334,7 @@ method lexer(code) {
                 return SymbolToken(line, column, "SEMICOLON")
             }
 
-            print("Unknown character: " ++ c.asString ++ "(" ++ c.firstCodepoint.asString ++ ") at " ++ line ++ ":" ++ column)
+            ErrorToken(line, column, "Unknown character: " ++ c.asString ++ "(" ++ c.firstCodepoint.asString ++ ")")
         
         }
 
@@ -341,6 +348,44 @@ method lexer(code) {
             if ((currentToken.nature == "NEWLINE") && (pendingToken.column > indentColumn)) then {
                 advance
             }
+        }
+
+        method lexString {
+            var value := ""
+            var escaped := false
+            while {(source.at(index).firstCodepoint != 34) || escaped} do {
+                var escapeNext := false
+                def cp = source.at(index).firstCodepoint
+                if ((cp == 92) && (escaped == false)) then {
+                    escapeNext := true
+                } elseif { escaped && (cp == 110) } then {
+                    value := value ++ "\n"
+                } elseif { escaped && (cp == 114) } then {
+                    value := value ++ "\r"
+                } else {
+                    if (cp == 123) then {
+                        // String interpolation
+                        index := index + 1
+                        return InterpStringToken(line, column, value)
+                    } else {
+                        value := value ++ source.at(index)
+                    }
+                }
+                escaped := escapeNext
+                index := index + 1
+            }
+            index := index + 1
+            return StringToken(line, column, value)
+        }
+
+        method startStringAt(pos) {
+            index := pos
+            currentToken := lexString
+            pendingToken := nextToken
+        }
+
+        method windback(pos) {
+            index := pos
         }
 
         method expectToken(nature) {
@@ -433,7 +478,15 @@ method parseNumber(lxr) {
 method parseString(lxr) {
     def token = lxr.current
     lxr.advance
-    ast.stringNode(token.value)
+    if (token.nature == "INTERPSTRING") then {
+        def interpExpr = parseExpression(lxr)
+        lxr.expectSymbol("RBRACE")
+        lxr.startStringAt(lxr.current.index)
+        def nextStr = parseString(lxr)
+        ast.interpString(token.value, interpExpr, nextStr)
+    } else {
+        ast.stringNode(token.value)
+    }
 }
 
 method parselexicalRequestNoBlock(lxr, id) {
@@ -471,7 +524,7 @@ method parseparts(lxr, allowBlock) {
             def num = parseNumber(lxr)
             def part = ast.part(id, ast.cons(num, ast.nil))
             parts := ast.cons(part, parts)
-        } elseif { lxr.current.nature == "STRING" } then {
+        } elseif { (lxr.current.nature == "STRING") || (lxr.current.nature == "INTERPSTRING") } then {
             def str = parseString(lxr)
             def part = ast.part(id, ast.cons(str, ast.nil))
             parts := ast.cons(part, parts)
@@ -512,7 +565,7 @@ method parseExpressionNoOpNoDot(lxr) {
     if (token.nature == "NUMBER") then {
         return parseNumber(lxr)
     }
-    if (token.nature == "STRING") then {
+    if ((token.nature == "STRING") || (lxr.current.nature == "INTERPSTRING")) then {
         return parseString(lxr)
     }
     if (token.nature == "LPAREN") then {

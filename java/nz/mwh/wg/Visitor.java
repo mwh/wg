@@ -11,6 +11,7 @@ public interface Visitor<T> {
     //T visit(RequestPart node);
     T visit(T context, NumberNode node);
     T visit(T context, StringNode node);
+    T visit(T context, InterpString node);
     //T visit(IdentifierDeclaration node);
     T visit(T context, DefDecl node);
     T visit(T context, VarDecl node);

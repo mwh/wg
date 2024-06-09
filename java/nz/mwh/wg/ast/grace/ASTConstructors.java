@@ -38,6 +38,10 @@ public class ASTConstructors {
         return new StringNode(value);
     }
 
+    protected static InterpString interpStr(String value, ASTNode expr, ASTNode next) {
+        return new InterpString(value, expr, next);
+    }
+
     protected static IdentifierDeclaration identifierDeclaration(String name, Cons<ASTNode> type) {
         return new IdentifierDeclaration(name, type.isNil() ? null : type.getHead());
     }
