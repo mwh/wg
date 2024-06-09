@@ -1,7 +1,8 @@
 
 export class ObjectConstructor {
-    constructor(body) {
+    constructor(body, annotations) {
         this.body = body;
+        this.annotations = annotations;
     }
 }
 

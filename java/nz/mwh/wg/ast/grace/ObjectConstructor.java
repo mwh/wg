@@ -6,8 +6,8 @@ import nz.mwh.wg.runtime.Request;
 
 public class ObjectConstructor extends nz.mwh.wg.ast.ObjectConstructor implements GraceObject {
 
-    public ObjectConstructor(Cons<ASTNode> body) {
-        super(body);
+    public ObjectConstructor(Cons<ASTNode> body, Cons<String> annotations) {
+        super(body, annotations);
     }
     
     public GraceObject request(Request request) {

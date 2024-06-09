@@ -26,9 +26,10 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
         lexicalParent.addMethod("no(0)", request -> {
             return new Cons<GraceObject>();
         });
-        lexicalParent.addMethod("objectConstructor(1)", request -> {
+        lexicalParent.addMethod("objectConstructor(2)", request -> {
             Cons<ASTNode> body = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(0);
-            return objectConstructor(body);
+            Cons<String> annotations = (Cons<String>) request.getParts().get(0).getArgs().get(1);
+            return objectConstructor(body, annotations);
         });
         lexicalParent.addMethod("numberNode(1)", request -> {
             return numberNode((int) ((GraceNumber) request.getParts().get(0).getArgs().get(0)).getValue());

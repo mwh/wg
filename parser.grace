@@ -913,7 +913,7 @@ method parseClassDeclaration(lxr) {
     }
     lxr.advance
     def body = parseObjectBody(lxr)
-    def obj = ast.objectConstructor(body)
+    def obj = ast.objectConstructor(body, ast.nil)
     ast.methodDecl(parts.reversed(ast.nil), ast.nil, ast.nil, ast.cons(obj, ast.nil))
 }
 
@@ -999,15 +999,20 @@ method parseObjectBody(lxr) {
 
 method parseObject(lxr) {
     lxr.advance
+    var anns := ast.nil
+    if (lxr.current.nature == "KEYWORD") then {
+        lxr.expectKeyword("is")
+        anns := parseAnnotations(lxr)
+    }
     lxr.advance
     def body = parseObjectBody(lxr)
     lxr.advance
-    ast.objectConstructor(body)
+    ast.objectConstructor(body, anns)
 }
 
 method parse(code) {
     indentColumn := 0
     def lxr = lexer(code)
     def body = parseObjectBody(lxr)
-    ast.objectConstructor(body)
+    ast.objectConstructor(body, ast.nil)
 }

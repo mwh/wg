@@ -14,8 +14,8 @@ public class ASTConstructors {
     @SuppressWarnings("rawtypes")
     protected static Cons nil = new Cons();
 
-    protected static ObjectConstructor objectConstructor(Cons<ASTNode> body) {
-        return new ObjectConstructor(body);
+    protected static ObjectConstructor objectConstructor(Cons<ASTNode> body, Cons<String> annotations) {
+        return new ObjectConstructor(body, annotations);
     }
 
     protected static LexicalRequest lexicalRequest(Cons<Part> parts) {

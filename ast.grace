@@ -183,12 +183,13 @@ method declarationPart(id, params) {
     }
 }
 
-method objectConstructor(bd) {
+method objectConstructor(bd, anns) {
     object {
         def body is public = bd
+        def annotations is public = anns
 
         method asString {
-            "objCons(" ++ body ++ ")"
+            "objCons(" ++ body ++ ", " ++ annotations.map { x -> "\"" ++ x ++ "\"" } ++ ")"
         }
     }
 

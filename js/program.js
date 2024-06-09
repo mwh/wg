@@ -9,8 +9,8 @@ function one(head) {
 const nil = [];
 const no = nil;
 
-function objCons(body) {
-    return new ast.ObjectConstructor(body);
+function objCons(body, anns) {
+    return new ast.ObjectConstructor(body, anns);
 }
 
 function methDec(parts, returnType, annotations, body) {

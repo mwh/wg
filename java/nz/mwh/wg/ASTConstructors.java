@@ -38,12 +38,12 @@ public class ASTConstructors {
     @SuppressWarnings("rawtypes")
     static Cons no = nil;
 
-    static ObjectConstructor objectConstructor(Cons<ASTNode> body) {
-        return new ObjectConstructor(body);
+    static ObjectConstructor objectConstructor(Cons<ASTNode> body, Cons<String> annotations) {
+        return new ObjectConstructor(body, annotations);
     }
 
-    static ObjectConstructor objCons(Cons<ASTNode> body) {
-        return new ObjectConstructor(body);
+    static ObjectConstructor objCons(Cons<ASTNode> body, Cons<String> annotations) {
+        return new ObjectConstructor(body, annotations);
     }
 
     static LexicalRequest lexicalRequest(Cons<Part> parts) {
