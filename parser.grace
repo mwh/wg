@@ -323,6 +323,10 @@ method lexer(code) {
                 return OperatorToken(line, column, op)
             }
 
+            if (c == ";") then {
+                return SymbolToken(line, column, "SEMICOLON")
+            }
+
             print("Unknown character: " ++ c.asString ++ "(" ++ c.firstCodepoint.asString ++ ") at " ++ line ++ ":" ++ column)
         
         }
@@ -341,26 +345,26 @@ method lexer(code) {
 
         method expectToken(nature) {
             if (currentToken.nature != nature) then {
-                print("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.position.asString)
-                Exception.raise("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.position.asString)
+                print("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
+                Exception.raise("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
             }
         }
 
         method expectSymbol(nature) {
             if (currentToken.nature != nature) then {
-                print("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.position.asString)
-                Exception.raise("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.position.asString)
+                print("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
+                Exception.raise("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
             }
         }
 
         method expectKeyword(val) {
             if (currentToken.nature != "KEYWORD") then {
-                print("Expected KEYWORD but got " ++ currentToken.nature ++ " at " ++ currentToken.position.asString)
-                Exception.raise("Expected KEYWORD but got " ++ currentToken.nature ++ " at " ++ currentToken.position.asString)
+                print("Expected KEYWORD but got " ++ currentToken.nature ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
+                Exception.raise("Expected KEYWORD but got " ++ currentToken.nature ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
             }
             if (currentToken.value != val) then {
-                print("Expected " ++ val ++ " but got " ++ currentToken.value ++ " at " ++ currentToken.position.asString)
-                Exception.raise("Expected " ++ val ++ " but got " ++ currentToken.value ++ " at " ++ currentToken.position.asString)
+                print("Expected " ++ val ++ " but got " ++ currentToken.value ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
+                Exception.raise("Expected " ++ val ++ " but got " ++ currentToken.value ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
             }
         }
     }
@@ -649,6 +653,10 @@ method parseblock(lxr) {
                 body := ast.cons(first, body)
             }
         }
+        if (lxr.current.nature == "SEMICOLON") then {
+            lxr.advance
+            lxr.expectToken("NEWLINE")
+        }
         while { lxr.current.nature == "NEWLINE" } do {
             lxr.advance
         }
@@ -659,6 +667,10 @@ method parseblock(lxr) {
                 Exception.raise("Indentation must increase inside block body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
             }
             body := ast.cons(parseStatement(lxr), body)
+            if (lxr.current.nature == "SEMICOLON") then {
+                lxr.advance
+                lxr.expectToken("NEWLINE")
+            }
             while { lxr.current.nature == "NEWLINE" } do {
                 lxr.advance
             }
@@ -735,6 +747,10 @@ method parseMethodBody(lxr) {
     lxr.advance
     def indentBefore = indentColumn
     while {lxr.current.nature != "RBRACE"} do {
+        if (lxr.current.nature == "SEMICOLON") then {
+            lxr.advance
+            lxr.expectToken("NEWLINE")
+        }
         if (lxr.current.nature == "NEWLINE") then {
             lxr.advance
         } else {
@@ -882,6 +898,11 @@ method parseObjectBody(lxr) {
             Exception.raise("Indentation must increase inside object body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
         }
 
+        if (token.nature == "SEMICOLON") then {
+            lxr.advance
+            token := lxr.current
+            lxr.expectToken("NEWLINE")
+        }
         if (token.nature == "NEWLINE") then {
             lxr.advance
         } elseif { token.nature == "KEYWORD" } then {
