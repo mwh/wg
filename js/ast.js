@@ -109,6 +109,14 @@ export class StringNode {
     }
 }
 
+export class InterpString {
+    constructor(value, expr, next) {
+        this.value = value;
+        this.expression = expr;
+        this.next = next;
+    }
+}
+
 export class Block {
     constructor(params, body) {
         this.params = params;

@@ -229,6 +229,13 @@ function evaluateExpression(cont, scope, expr) {
     if (expr instanceof ast.StringNode) {
         return cont.of(expr.value);
     }
+    if (expr instanceof ast.InterpString) {
+        return evaluateExpression(new FunctionContinuation(cont, (cont, val) => {
+            return evaluateExpression(new FunctionContinuation(cont, (cont, val2) => {
+                return cont.of(expr.value + val + val2);
+            }), scope, expr.next);
+        }), scope, expr.expression);
+    }
     if (expr instanceof ast.Block) {
         return evaluateBlock(cont, scope, expr);
     }
