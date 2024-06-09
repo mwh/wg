@@ -148,6 +148,17 @@ method isDigit(c) {
     (cp >= 48) && (cp <= 57)
 }
 
+method indentCell(lev, prev) {
+    object {
+        def level is public = lev
+        def previous is public = prev
+    }
+}
+
+var currentIndent := indentCell(0, indentCell(0, ast.nil))
+
+var indentColumn := 0
+
 method lexer(code) {
     object {
         def source = code
@@ -156,6 +167,7 @@ method lexer(code) {
         var column := 0
         var lineStart := 0
         var currentToken := nextToken
+        var pendingToken := nextToken
 
         method nextToken {
             if (index > source.size) then {
@@ -310,7 +322,11 @@ method lexer(code) {
         }
 
         method advance {
-            currentToken := nextToken
+            currentToken := pendingToken
+            pendingToken := nextToken
+            if ((currentToken.nature == "NEWLINE") && (pendingToken.column > indentColumn)) then {
+                advance
+            }
         }
 
         method expectToken(nature) {
@@ -565,27 +581,70 @@ method parseStatement(lxr) {
 method parseblock(lxr) {
     var params := ast.nil
     var body := ast.nil
+    def indentBefore = indentColumn
     if (lxr.current.nature == "LBRACE") then {
         lxr.advance
         while { lxr.current.nature == "NEWLINE" } do {
             lxr.advance
         }
-        while {lxr.current.nature != "RBRACE"} do {
-            if (lxr.current.nature == "ARROW") then {
+        if (lxr.current.nature != "RBRACE") then {
+            def firstTok = lxr.current
+            indentColumn := firstTok.column
+            def first = parseStatement(lxr)
+            def after = lxr.current
+            if ((after.nature == "COLON") || (after.nature == "ARROW") || (after.nature == "COMMA")) then {
+                // Parameter list
+                var prm := first
+                var tp := ast.nil
+                if (after.nature == "COLON") then {
+                    lxr.advance
+                    tp := parseTypeExpression(lxr)
+                }
+                //prm := ast.identifierDeclaration(prm, tp)
+                params := ast.cons(prm, params)
+                while { (lxr.current.nature != "ARROW") && (lxr.current.nature != "RBRACE") } do {
+                    lxr.advance
+                    if (lxr.current.nature == "NEWLINE") then {
+                        lxr.advance
+                    } else {
+                        prm := parseExpressionNoOpNoDot(lxr)
+                        tp := ast.nil
+                        if (lxr.current.nature == "COLON") then {
+                            lxr.advance
+                            tp := parseTypeExpression(lxr)
+                        }
+                        //prm := ast.identifierDeclaration(prm, tp)
+                        params := ast.cons(prm, params)
+                    }
+                }
+                lxr.expectToken("ARROW")
                 lxr.advance
-                params := body
-                body := ast.nil
+                while { lxr.current.nature == "NEWLINE" } do {
+                    lxr.advance
+                }
             } else {
-                body := ast.cons(parseStatement(lxr), body)
+                indentColumn := indentBefore
+                body := ast.cons(first, body)
             }
+        }
+        while { lxr.current.nature == "NEWLINE" } do {
+            lxr.advance
+        }
+        while {lxr.current.nature != "RBRACE"} do {
+            indentColumn := lxr.current.column
+            if (indentColumn <= indentBefore) then {
+                print("Indentation must increase inside block body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
+                Exception.raise("Indentation must increase inside block body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
+            }
+            body := ast.cons(parseStatement(lxr), body)
             while { lxr.current.nature == "NEWLINE" } do {
                 lxr.advance
             }
         }
         lxr.advance
     }
-
-    ast.block(params, body.reversed(ast.nil))
+    indentColumn := indentBefore
+    ast.block(params.reversed(ast.nil), body.reversed(ast.nil))
 
 }
 
@@ -652,24 +711,33 @@ method parsevarDeclaration(lxr) {
 method parseMethodBody(lxr) {
     var body := ast.nil
     lxr.advance
+    def indentBefore = indentColumn
     while {lxr.current.nature != "RBRACE"} do {
         if (lxr.current.nature == "NEWLINE") then {
             lxr.advance
-        } elseif { lxr.current.nature == "KEYWORD" } then {
-            if (lxr.current.value == "var") then {
-                def dec = parsevarDeclaration(lxr)
-                body := ast.cons(dec, body)
-            } elseif { lxr.current.value == "def" } then {
-                def dec = parsedefDeclaration(lxr)
-                body := ast.cons(dec, body)
+        } else {
+            indentColumn := lxr.current.column
+            if (indentColumn <= indentBefore) then {
+                print("Indentation must increase inside method body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
+                Exception.raise("Indentation must increase inside method body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
+            }
+            if (lxr.current.nature == "KEYWORD") then {
+                if (lxr.current.value == "var") then {
+                    def dec = parsevarDeclaration(lxr)
+                    body := ast.cons(dec, body)
+                } elseif { lxr.current.value == "def" } then {
+                    def dec = parsedefDeclaration(lxr)
+                    body := ast.cons(dec, body)
+                } else {
+                    body := ast.cons(parseStatement(lxr), body)
+                }
             } else {
                 body := ast.cons(parseStatement(lxr), body)
             }
-        } else {
-            body := ast.cons(parseStatement(lxr), body)
         }
     }
     lxr.advance
+    indentColumn := indentBefore
     body.reversed(ast.nil)
 
 }
@@ -783,7 +851,15 @@ method parseObjectBody(lxr) {
     
     var token := lxr.current
 
+    def indentBefore = indentColumn
+
     while { (token.nature != "EOF") && (token.nature != "RBRACE") } do {
+        indentColumn := token.column
+        if ((indentColumn <= indentBefore) && (token.nature != "NEWLINE")) then {
+            print("Indentation must increase inside object body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
+            Exception.raise("Indentation must increase inside object body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
+        }
+
         if (token.nature == "NEWLINE") then {
             lxr.advance
         } elseif { token.nature == "KEYWORD" } then {
@@ -815,6 +891,7 @@ method parseObjectBody(lxr) {
         token := lxr.current
     }
     
+    indentColumn := indentBefore
     body.reversed(ast.nil)
 
 }
