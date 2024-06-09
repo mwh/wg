@@ -421,6 +421,9 @@ const GraceString = new GraceObject({
     "!=(1)": (cont, args, rec) => {
         return cont.of(rec != args[0]);
     },
+    "substringFrom(1)to(1)": (cont, args, rec) => {
+        return cont.of(rec.substring(args[0] - 1, args[1]));
+    },
 })
 
 
@@ -431,7 +434,7 @@ const GraceBoolean = new GraceObject({
     "||(1)": (cont, args, rec) => {
         return cont.of(rec || args[0]);
     },
-    "prefix!": (cont, args, rec) => {
+    "prefix!(0)": (cont, args, rec) => {
         return cont.of(!rec);
     },
     "==(1)": (cont, args, rec) => {

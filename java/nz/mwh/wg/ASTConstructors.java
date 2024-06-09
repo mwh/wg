@@ -150,4 +150,22 @@ public class ASTConstructors {
         return new ImportStmt(source, binding);
     }
 
+    protected static final String charDollar = "$";
+    protected static final String charBackslash = "\\";
+    protected static final String charDQuote = "\"";
+    protected static final String charLF = "\n";
+    protected static final String charCR = "\r";
+    protected static final String charLBrace = "{";
+    protected static final String charStar = "*";
+    protected static final String charTilde = "~";
+    protected static final String charBacktick = "`";
+    protected static final String charCaret = "^";
+    protected static final String charAt = "@";
+    protected static final String charPercent = "%";
+    protected static final String charAmp = "&";
+
+    protected static String safeStr(String left, String middle, String right) {
+        return left + middle + right;
+    }
+
 }

@@ -60,7 +60,7 @@ method stringNode(val) {
         def value is public = val
 
         method asString {
-            "strLit(\"" ++ escapeString(value) ++ "\")"
+            "strLit(" ++ escapeString(value) ++ ")"
         }
     }
 }
@@ -72,7 +72,7 @@ method interpString(val, exp, rest) {
         def next is public = rest
 
         method asString {
-            "interpStr(\"" ++ escapeString(value) ++ "\", " ++ expression ++ ", " ++ next ++ ")"
+            "interpStr(" ++ escapeString(value) ++ ", " ++ expression ++ ", " ++ next ++ ")"
         }
     }
 }
@@ -221,7 +221,7 @@ method identifierDeclaration(id, dtype) {
         def decType is public = dtype
 
         method asString {
-            "identifierDeclaration(\"" ++ name ++ "\", " ++ dtype ++ ")"
+            "identifierDeclaration(" ++ name ++ ", " ++ dtype ++ ")"
         }
     }
 }
@@ -231,7 +231,7 @@ method comment(text) {
         def value is public = text
 
         method asString {
-            "comment(\"" ++ escapeString(text) ++ "\")"
+            "comment(" ++ escapeString(text) ++ ")"
         }
     }
 }
@@ -248,5 +248,50 @@ method importStmt(src, nm) {
 }
 
 method escapeString(value) {
-    value.replace "\\" with "\\\\".replace "\"" with "\\\"".replace "\n" with "\\n".replace "\r" with "\\r"
+    var i := 1
+    def len = value.size
+    while { i < len } do {
+        def c = value.at(i)
+        if (c == "\\") then {
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charBackslash, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "$") then {
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charDollar, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "*") then {
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charStar, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "\{") then {
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charLBrace, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "\n") then {
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charLF, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "\r") then {
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charCR, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "\"") then {
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charDQuote, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "~") then {
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charTilde, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "^") then {
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charCaret, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "`") then {
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charBacktick, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "@") then {
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charAt, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "&") then {
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charAmp, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "%") then {
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charPercent, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        i := i + 1
+    }
+    "\"" ++ value.replace "\\" with "\\\\".replace "\"" with "\\\"".replace "\n" with "\\n".replace "\r" with "\\r" ++ "\""
 }

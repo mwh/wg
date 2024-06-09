@@ -15,12 +15,7 @@ public class InterpString extends ASTNode {
     }
 
     public String toString() {
-        return "interpStr(\"" +
-            value.replace("\\", "\\\\")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\"", "\\\"")
-            + "\", " + expression.toString() + ", " + next.toString() + ")";
+        return "interpStr(" + escapeString(value) + ", " + expression.toString() + ", " + next.toString() + ")";
     }
 
     public String getValue() {
