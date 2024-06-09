@@ -363,7 +363,7 @@ method lexer(code) {
                 } elseif { escaped && (cp == 114) } then {
                     value := value ++ "\r"
                 } else {
-                    if (cp == 123) then {
+                    if ((cp == 123) && (!escaped)) then {
                         // String interpolation
                         index := index + 1
                         return InterpStringToken(line, column, value)
