@@ -1001,6 +1001,7 @@ method parseObject(lxr) {
 }
 
 method parse(code) {
+    indentColumn := 0
     def lxr = lexer(code)
     def body = parseObjectBody(lxr)
     ast.objectConstructor(body)
