@@ -246,6 +246,16 @@ method lexer(code) {
                     c := source.at(index)
                     index := index + 1
                 }
+                if (c == ".") then {
+                    value := value ++ c
+                    c := source.at(index)
+                    index := index + 1
+                    while {isDigit(c) && (index <= source.size)} do {
+                        value := value ++ c
+                        c := source.at(index)
+                        index := index + 1
+                    }
+                }
                 if (index > (startIndex + 1)) then {
                     index := index - 1
                 }
@@ -397,8 +407,20 @@ method parseNumber(lxr) {
     def s = token.value
     var val := 0
     var index := 1
-    while { index <= s.size } do {
-        val := val * 10 + digitToNumber(s.at(index))
+    while { (index <= s.size) } do {
+        if (s.at(index) == ".") then {
+            index := index + 1
+            var frac := 0
+            var scale := 1
+            while {index <= s.size} do {
+                frac := frac * 10 + digitToNumber(s.at(index))
+                scale := scale * 10
+                index := index + 1
+            }
+            val := val + (frac / scale)
+        } else {
+            val := val * 10 + digitToNumber(s.at(index))
+        }
         index := index + 1
     }
     ast.numberNode(val)

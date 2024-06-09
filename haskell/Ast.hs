@@ -5,7 +5,7 @@ data ASTNode = ObjectConstructor [ASTNode]
              | DefDecl String [ASTNode] [String] ASTNode
              | ExplicitRequest ASTNode [Part]
              | LexicalRequest [Part]
-             | NumberNode Int
+             | NumberNode Float
              | Block [ASTNode] [ASTNode]
              | MethodDecl [Part] [ASTNode] [String] [ASTNode]
              | Assign ASTNode ASTNode

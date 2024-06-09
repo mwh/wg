@@ -8,7 +8,7 @@ and astNode =
     | DefDecl of string * astNode list * string list * astNode
     | ExplicitRequest of astNode * part list
     | LexicalRequest of part list
-    | NumberNode of int
+    | NumberNode of double
     | Block of astNode list * astNode list
     | MethodDecl of part list * astNode list * string list * astNode list
     | Assign of astNode * astNode
