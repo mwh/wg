@@ -222,7 +222,7 @@ method identifierDeclaration(id, dtype) {
         def decType is public = dtype
 
         method asString {
-            "identifierDeclaration(" ++ name ++ ", " ++ dtype ++ ")"
+            "identifierDeclaration(" ++ escapeString(name) ++ ", " ++ dtype ++ ")"
         }
     }
 }
