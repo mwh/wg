@@ -31,7 +31,7 @@ method nil {
         def end is public = true
 
         method asString {
-            "no"
+            "nil"
         }
 
         method reversed(next) {

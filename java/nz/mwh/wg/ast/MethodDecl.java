@@ -23,7 +23,7 @@ public class MethodDecl extends ASTNode {
     }
 
     public String toString() {
-        return "methDec(" + Cons.stringFromList(parts) + ", " + (type == null ? "no" : "one(" + type + ")") + ", " + Cons.stringFromList(annotations) + ", " + Cons.stringFromList(body) + ")";
+        return "methDec(" + Cons.stringFromList(parts) + ", " + (type == null ? "nil" : "one(" + type + ")") + ", " + Cons.stringFromList(annotations) + ", " + Cons.stringFromList(body) + ")";
     }
 
     public List<? extends Part> getParts() {
