@@ -4,10 +4,10 @@ import "ast" as ast
 
 def x = object {
     var y : Number := 1
-    method foo(arg : Action) -> String {
-        self.y := arg.apply
-        return "y: {y}!"
+    method foo(arg : Action) bar(n) -> String {
+        self.y := arg.apply + n
+        return "y @ {y}!"
     }
 }
 
-print(x.foo { 2 })
+print(x.foo { 2 } bar 3)
