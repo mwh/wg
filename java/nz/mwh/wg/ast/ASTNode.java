@@ -49,6 +49,12 @@ public abstract class ASTNode{
             if (c == '%') {
                 return "safeStr(\"" + value.substring(0, i) + "\", charPercent, " + escapeString(value.substring(i + 1)) + ")";
             }
+            if (c == '#') {
+                return "safeStr(\"" + value.substring(0, i) + "\", charHash, " + escapeString(value.substring(i + 1)) + ")";
+            }
+            if (c == '!') {
+                return "safeStr(\"" + value.substring(0, i) + "\", charExclam, " + escapeString(value.substring(i + 1)) + ")";
+            }
         }
         return "\"" + value.replace("\\", "\\\\")
             .replace("\n", "\\n")

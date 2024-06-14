@@ -86,6 +86,8 @@ const charCaret = "^";
 const charAt = "@";
 const charPercent = "%";
 const charAmp = "&";
+const charHash = "#";
+const charExclam = "!";
 
 function safeStr(left, middle, right) {
     return left + middle + right;

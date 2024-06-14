@@ -292,6 +292,12 @@ method escapeString(value) {
         if (c == "%") then {
             return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charPercent, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
+        if (c == "#") then {
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charHash, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "!") then {
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charExclam, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
         i := i + 1
     }
     "\"" ++ value.replace "\\" with "\\\\".replace "\"" with "\\\"".replace "\n" with "\\n".replace "\r" with "\\r" ++ "\""

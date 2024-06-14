@@ -163,6 +163,8 @@ public class ASTConstructors {
     protected static final String charAt = "@";
     protected static final String charPercent = "%";
     protected static final String charAmp = "&";
+    protected static final String charHash = "#";
+    protected static final String charExclam = "!";
 
     protected static String safeStr(String left, String middle, String right) {
         return left + middle + right;
