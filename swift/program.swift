@@ -32,17 +32,11 @@ class VarDeclaration : Node {
     var annotations : [Node]
     var value : Node?
 
-    init(_ name : String, _ type : Node?, _ annotations : [Node], _ value : [Node]?) {
+    init(_ name : String, _ type : Node?, _ annotations : [Node], _ value : Node?) {
         self.name = name
         self.type = type
         self.annotations = annotations
-        if value == nil {
-            self.value = nil
-        } else if value?.count == 0 {
-            self.value = nil
-        } else {
-            self.value = value?[0]
-        }
+        self.value = value
     }
 }
 
@@ -192,7 +186,13 @@ func defDec(_ name : String, _ type : [Node]?, _ anns : [Node]?, _ value : Node)
 }
 
 func varDec(_ name : String, _ type : [Node]?, _ anns : [Node]?, _ value : [Node]?) -> Node {
-    return VarDeclaration(name, type?[0], anns ?? [], value)
+    let val : Node? =
+        if value == nil || value?.count == 0 {
+            nil
+        } else {
+            value?[0]
+        }
+    return VarDeclaration(name, type?[0], anns ?? [], val)
 }
 
 func numLit(_ value : Int) -> Node {
