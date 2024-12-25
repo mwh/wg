@@ -48,4 +48,8 @@ public class ChildCombinator extends Combinator {
         }
         return new ArrayList<>();
     }
+
+    public PseudoElementSelector getPseudoElement() {
+        return child.getPseudoElement();
+    }
 }

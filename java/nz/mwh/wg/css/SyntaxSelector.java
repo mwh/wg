@@ -1,10 +1,5 @@
 package nz.mwh.wg.css;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import nz.mwh.wg.ast.ASTNode;
 import nz.mwh.wg.ast.Assign;
 import nz.mwh.wg.ast.LexicalRequest;
 import nz.mwh.wg.ast.MethodDecl;

@@ -18,7 +18,7 @@ import nz.mwh.wg.css.Rule;
 
 public class Start {
     public static void main(String[] args) {
-        Rule r = null; //new nz.mwh.wg.css.Parser("method object var {}").parseRule();
+        List<Rule> rules = null; //new nz.mwh.wg.css.Parser("method object var {}").parseRule();
         String filename = "test.grace";
         boolean printAST = false;
         String updateFile = null;
@@ -43,8 +43,8 @@ public class Start {
             }
         }
         if (ruleString != null) {
-            r = new nz.mwh.wg.css.Parser(ruleString).parseRule();
-            System.out.println(r + "\n--------------------");
+            rules = new nz.mwh.wg.css.Parser(ruleString).parseRules();
+            System.out.println(rules + "\n--------------------");
         }
         try {
             String source = Files.readString(Path.of(filename));
@@ -57,8 +57,10 @@ public class Start {
             } else if (updateFile != null) {
                 updateFile(ast, updateFile);
             } else {
-                if (r != null) {
-                    Evaluator.addRule(r);
+                if (rules != null) {
+                    for (Rule r : rules) {
+                        Evaluator.addRule(r);
+                    }
                 }
                 Evaluator.evaluateProgram(ast);
             }

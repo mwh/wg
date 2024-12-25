@@ -1,6 +1,5 @@
 package nz.mwh.wg.css;
 
-import java.util.List;
 
 import nz.mwh.wg.ast.ASTNode;
 import nz.mwh.wg.runtime.GraceObject;
@@ -29,6 +28,10 @@ public class DescendantCombinator extends Combinator {
     @Override
     public boolean matchFrameAt(String name, ASTNode node, GraceObject scope) {
         return descendant.matchFrameAt(name, node, scope);
+    }
+
+    public PseudoElementSelector getPseudoElement() {
+        return descendant.getPseudoElement();
     }
 
 }
