@@ -13,12 +13,17 @@ import nz.mwh.wg.ast.DefDecl;
 import nz.mwh.wg.ast.ImportStmt;
 import nz.mwh.wg.ast.ObjectConstructor;
 
+// import nz.mwh.wg.css.Parser;
+import nz.mwh.wg.css.Rule;
+
 public class Start {
     public static void main(String[] args) {
+        Rule r = null; //new nz.mwh.wg.css.Parser("method object var {}").parseRule();
         String filename = "test.grace";
         boolean printAST = false;
         String updateFile = null;
         boolean inlineImports = false;
+        String ruleString = null;
         for (String arg : args) {
             if (arg.equals("-p")) {
                 printAST = true;
@@ -28,10 +33,18 @@ public class Start {
                 updateFile = arg;
             } else if (arg.equals("-i")) {
                 inlineImports = true;
+            } else if (arg.equals("--rule")) {
+                ruleString = "";
+            } else if (ruleString != null && ruleString.isEmpty()) {
+                ruleString = arg;
             } else {
                 filename = arg;
                 break;
             }
+        }
+        if (ruleString != null) {
+            r = new nz.mwh.wg.css.Parser(ruleString).parseRule();
+            System.out.println(r + "\n--------------------");
         }
         try {
             String source = Files.readString(Path.of(filename));
@@ -44,6 +57,9 @@ public class Start {
             } else if (updateFile != null) {
                 updateFile(ast, updateFile);
             } else {
+                if (r != null) {
+                    Evaluator.addRule(r);
+                }
                 Evaluator.evaluateProgram(ast);
             }
         } catch (IOException e) {

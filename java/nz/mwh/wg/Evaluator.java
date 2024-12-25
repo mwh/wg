@@ -7,12 +7,14 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import nz.mwh.wg.ast.*;
-
+import nz.mwh.wg.css.Rule;
 import nz.mwh.wg.runtime.*;
 
 public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
@@ -21,9 +23,27 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
 
     private Map<String, GraceObject> modules = new HashMap<>();
 
+    private static List<nz.mwh.wg.css.Rule> cssRules = new ArrayList<>();
+    private List<List<nz.mwh.wg.css.Rule>> activeRules = new ArrayList<>();
+    private List<List<nz.mwh.wg.css.Rule>> frameRules = new ArrayList<>();
+
+    public static void addRule(nz.mwh.wg.css.Rule rule) {
+        cssRules.add(rule);
+    }
+
+    public Evaluator() {
+        activeRules.add(cssRules);
+        frameRules.add(new ArrayList<>());
+    }
+
     @Override
     public GraceObject visit(GraceObject context, ObjectConstructor node) {
         BaseObject object = new BaseObject(context, false, true);
+        List<Rule> newRules = new ArrayList<>();
+        for (Rule r : activeRules.getLast()) {
+            newRules.addAll(r.successors(node, context));
+        }
+        activeRules.add(newRules);
         List<ASTNode> body = node.getBody();
         for (ASTNode part : body) {
             if (part instanceof DefDecl) {
@@ -43,6 +63,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
         for (ASTNode part : body) {
             visit(object, part);
         }
+        activeRules.removeLast();
         return object;
     }
 
@@ -106,9 +127,26 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
 
     @Override
     public GraceObject visit(GraceObject context, VarDecl node) {
-        if (node.getValue() != null) {
-            new LexicalRequest(new Cons<Part>(new Part(node.getName() + ":=", new Cons<ASTNode>(node.getValue(), Cons.<ASTNode>nil() )), Cons.<Part>nil())).accept(context, this);
+        List<Rule> newRules = new ArrayList<>();
+        for (Rule r : activeRules.getLast()) {
+            // System.out.println("at vardecl " + node + " with " + r);
+            newRules.addAll(r.successors(node, context));
         }
+
+        activeRules.add(newRules);
+        if (node.getValue() != null) {
+            List<GraceObject> argList = Collections.singletonList(node.getValue().accept(context, this));
+            String name = node.getName();
+            List<RequestPartR> parts = new ArrayList<>();
+            parts.add(new RequestPartR(name + ":=", argList));
+            Request request = new Request(this, parts);
+            for (Rule r : activeRules.getLast()) {
+                r.execute(node, context, argList.get(0));
+            }
+            context.request(request);
+            // new LexicalRequest(new Cons<Part>(new Part(node.getName() + ":=", new Cons<ASTNode>(node.getValue(), Cons.<ASTNode>nil() )), Cons.<Part>nil())).accept(context, this);
+        }
+        activeRules.removeLast();
         return done;
     }
 
@@ -116,11 +154,44 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
     public GraceObject visit(GraceObject context, MethodDecl node) {
         List<? extends Part> parts = node.getParts();
         String name = parts.stream().map(x -> x.getName() + "(" + x.getParameters().size() + ")").collect(Collectors.joining(""));
+        List<Rule> newRules = new ArrayList<>();
+        for (Rule r : activeRules.getLast()) {
+            newRules.addAll(r.successors(node, context));
+        }
+        newRules.addAll(frameRules.getLast());
         if (context instanceof BaseObject) {
             BaseObject object = (BaseObject) context;
             List<? extends ASTNode> body = node.getBody();
             object.addMethod(name, request -> {
+                List<Rule> dynRules = new ArrayList<>(newRules);
+                Set<Rule> seen = new HashSet<>(dynRules);
+                List<Rule> myFrameRules = new ArrayList<>();
+                for (Rule r : newRules) {
+                    List<Rule> succs = r.frameSuccessors(name, node, context);
+                    for (Rule s : succs) {
+                        if (!seen.contains(s)) {
+                            seen.add(s);
+                            myFrameRules.add(s);
+                        }
+                    }
+                }
+                for (Rule r : frameRules.getLast()) {
+                    List<Rule> succs = r.frameSuccessors(name, node, context);
+                    for (Rule s : succs) {
+                        if (!seen.contains(s)) {
+                            seen.add(s);
+                            myFrameRules.add(s);
+                        }
+                    }
+                }
+                dynRules.addAll(myFrameRules);
+                frameRules.add(myFrameRules);
+                // System.out.println("method " + name + " called; frame rules: " + frameRules);
+                // System.out.println("method " + name + " called; newrules: " + newRules);
                 BaseObject methodContext = new BaseObject(context, true);
+                final int baseRulesLength = activeRules.size();
+                final int frameRulesLength = frameRules.size();
+                activeRules.add(dynRules);
                 List<RequestPartR> requestParts = request.getParts();
                 for (int j = 0; j < requestParts.size(); j++) {
                     Part part = parts.get(j);
@@ -141,15 +212,31 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
                         methodContext.addField(var.getName());
                         methodContext.addFieldWriter(var.getName());
                     }
-                }        
+                }
                 try {
                     GraceObject last = null;
                     for (ASTNode part : body) {
                         last = visit(methodContext, part);
                     }
+                    activeRules.removeLast();
+                    while (activeRules.size() > baseRulesLength) {
+                        activeRules.removeLast();
+                    }
+                    frameRules.removeLast();
+                    while (frameRules.size() > frameRulesLength) {
+                        frameRules.removeLast();
+                    }
                     return last;
                 } catch(ReturnException re) {
                     if (re.context == methodContext) {
+                        activeRules.removeLast();
+                        while (activeRules.size() > baseRulesLength) {
+                            activeRules.removeLast();
+                        }
+                        frameRules.removeLast();
+                        while (frameRules.size() > frameRulesLength) {
+                            frameRules.removeLast();
+                        }
                         return re.getValue();
                     } else {
                         throw re;
@@ -177,13 +264,23 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
     @Override
     public GraceObject visit(GraceObject context, Assign node) {
         if (node.getTarget() instanceof LexicalRequest) {
+            List<Rule> newRules = new ArrayList<>();
+            for (Rule r : activeRules.getLast()) {
+                newRules.addAll(r.successors(node, context));
+            }
+            activeRules.add(newRules);
+            List<GraceObject> argList = Collections.singletonList(node.getValue().accept(context, this));
+            for (Rule r : activeRules.getLast()) {
+                r.execute(node, context, argList.get(0));
+            }
             LexicalRequest target = (LexicalRequest) node.getTarget();
             String name = target.getParts().get(0).getName();
             List<RequestPartR> parts = new ArrayList<>();
-            parts.add(new RequestPartR(name + ":=", Collections.singletonList(node.getValue().accept(context, this))));
+            parts.add(new RequestPartR(name + ":=", argList));
             Request request = new Request(this, parts);
             GraceObject receiver = context.findReceiver(request.getName());
             receiver.request(request);
+            activeRules.removeLast();
             return done;
         } else if (node.getTarget() instanceof ExplicitRequest) {
             ExplicitRequest target = (ExplicitRequest) node.getTarget();
