@@ -141,7 +141,6 @@ public class Rule {
     public void execute(VarDecl varDecl, GraceObject scope, GraceObject value) {
         if (selector.match(varDecl, scope)) {
             if (selector.getPseudoElement() != null) {
-                System.out.println("pseudo element " + selector.getPseudoElement().getElement());
                 PseudoElementSelector pseudoElement = selector.getPseudoElement();
                 if ("value".equals(pseudoElement.getElement())) {
                     tracePseudoElement("%2$s", varDecl, "value", Map.of(), value);
