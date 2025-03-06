@@ -897,7 +897,13 @@ method parseClassDeclaration(lxr) {
             lxr.advance
             var args := ast.nil
             while {(lxr.current.nature != "RPAREN") && (lxr.current.nature != "EOF")} do {
-                args := ast.cons(ast.identifierDeclaration(lxr.current.value), args)
+                var dtype := ast.nil
+                if (lxr.current.nature == "COLON") then {
+                    // Type annotation
+                    lxr.advance
+                    dtype := ast.cons(parseTypeExpression(lxr), ast.nil)
+                }
+                args := ast.cons(ast.identifierDeclaration(lxr.current.value, dtype), args)
                 lxr.advance
                 if (lxr.current.nature == "COMMA") then {
                     lxr.advance
