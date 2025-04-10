@@ -45,10 +45,12 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
                 visit(object, part);
             }
         }
+        object.incRefCount();
         for (ASTNode part : body) {
-            visit(object, part);
+            GraceObject ret = visit(object, part);
+            ret.discard();
         }
-        return object;
+        return object.beReturned();
     }
 
     @Override
@@ -157,17 +159,38 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
                     }
                 }
                 int top = callStack.size();
+                methodContext.incRefCount();
                 try {
                     GraceObject last = null;
                     for (ASTNode part : body) {
+                        if (last != null) {
+                            last.discard();
+                        }
                         last = visit(methodContext, part);
                     }
+                    for (GraceObject field : methodContext.getFields().values()) {
+                        if (field == last) {
+                            last.incRefCount();
+                            last.beReturned();
+                            break;
+                        }   
+                    }
+                    methodContext.decRefCount();    
                     return last;
                 } catch(ReturnException re) {
                     while (callStack.size() > top) {
                         callStack.pop();
                     }
                     if (re.context == methodContext) {
+                        GraceObject last = re.getValue();
+                        for (GraceObject field : methodContext.getFields().values()) {
+                            if (field == last) {
+                                last.beReturned();
+                                last.incRefCount();
+                                break;
+                            }
+                        }
+                        methodContext.decRefCount();    
                         return re.getValue();
                     } else {
                         throw re;
@@ -191,6 +214,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
         int top = callStack.size();
         callStack.push(request.getName() + " at " + request.getLocation());
         GraceObject ret = receiver.request(request);
+        receiver.discard();
         while (callStack.size() > top) {
             callStack.pop();
         }
@@ -209,8 +233,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             if (receiver == null) {
                 throw new GraceException(this, "No such method or variable in scope: " + request.getName());
             }    
-            receiver.request(request);
-            return done;
+            return receiver.request(request);
         } else if (node.getTarget() instanceof ExplicitRequest) {
             ExplicitRequest target = (ExplicitRequest) node.getTarget();
             String name = target.getParts().get(0).getName();
@@ -218,8 +241,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             parts.add(new RequestPartR(name + ":=", Collections.singletonList(node.getValue().accept(context, this))));
             Request request = new Request(this, parts);
             GraceObject receiver = target.getReceiver().accept(context, this);
-            receiver.request(request);
-            return done;
+            return receiver.request(request);
         }
         throw new GraceException(this, "Invalid assignment to non-lvalue " + node.getTarget().getClass().getName());
     }
@@ -275,8 +297,17 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
 
     static BaseObject basePrelude() {
         BaseObject lexicalParent = new BaseObject(null);
+        lexicalParent.addMethod("getRefCount(1)", request -> {
+            int count = switch (request.getParts().get(0).getArgs().get(0)) {
+                case BaseObject o -> o.getRefCount();
+                case GraceObject _ -> -1;
+            };
+            return new GraceNumber(count);
+        });
         lexicalParent.addMethod("print(1)", request -> {
-            System.out.println(request.getParts().get(0).getArgs().get(0).toString());
+            GraceObject obj = request.getParts().get(0).getArgs().get(0);
+            System.out.println(obj.toString());
+            obj.discard();
             return done;
         });
         lexicalParent.addMethod("true(0)", _ -> new GraceBoolean(true));

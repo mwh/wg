@@ -12,6 +12,9 @@ public class BaseObject implements GraceObject {
     private Map<String, GraceObject> fields = new HashMap<>();
     private Map<String, Function<Request, GraceObject>> methods = new HashMap<>();
 
+    private int refCount = 0;
+    private boolean notionalReference = false;
+
     protected static GraceDone done = GraceDone.done;
     protected static GraceUninitialised uninitialised = GraceUninitialised.uninitialised;
 
@@ -91,13 +94,19 @@ public class BaseObject implements GraceObject {
 
     public void addFieldWriter(String name) {
         methods.put(name + ":=(1)", request -> {
-            fields.put(name, request.getParts().get(0).getArgs().get(0));
-            return done;
+            GraceObject old = fields.get(name);
+            GraceObject newVal = request.getParts().get(0).getArgs().get(0);
+            fields.put(name, newVal);
+            newVal.incRefCount();
+            // Do not decrement the old value's count, as it is switched into a notional reference
+            // during the return.
+            return old.beReturned();
         });
     }
 
     public void setField(String name, GraceObject value) {
         fields.put(name, value);
+        value.incRefCount();
     }
 
     public GraceObject findReturnContext() {
@@ -108,6 +117,53 @@ public class BaseObject implements GraceObject {
             return ((BaseObject) lexicalParent).findReturnContext();
         }
         throw new RuntimeException("No return context found");
+    }
+
+    public GraceObject beReturned() {
+        notionalReference = true;
+        return this;
+    }
+
+    public boolean isBeingReturned() {
+        return notionalReference;
+    }
+
+    public void incRefCount() {
+        if (notionalReference) {
+            // If there is a notional reference (in the midst of being returned),
+            // we just take over that reference as real.
+            notionalReference = false;
+        } else {
+            refCount++;
+        }
+    }
+
+    public void decRefCount() {
+        refCount--;
+        if (refCount == 0) {
+            free();
+        }
+    }
+
+    public void discard() {
+        if (notionalReference) {
+            notionalReference = false;
+            decRefCount();
+        }
+    }
+
+    private void free() {
+        for (GraceObject field : fields.values()) {
+            field.decRefCount();
+        }
+    }
+
+    public int getRefCount() {
+        return refCount;
+    }
+
+    public Map<String, GraceObject> getFields() {
+        return fields;
     }
 
 }

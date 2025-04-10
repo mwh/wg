@@ -27,6 +27,7 @@ public class GraceBlock implements GraceObject {
 
     private GraceObject apply(Request request, RequestPartR part) {
         BaseObject blockContext = new BaseObject(lexicalParent);
+        blockContext.incRefCount();
         for (int i = 0; i < parameters.size(); i++) {
             ASTNode parameter = parameters.get(i);
             String name;
@@ -52,8 +53,20 @@ public class GraceBlock implements GraceObject {
         }
         GraceObject last = null;
         for (ASTNode node : body) {
+            if (last != null) {
+                last.discard();
+            }
             last = node.accept(blockContext, request.getVisitor());
         }
+        for (GraceObject field : blockContext.getFields().values()) {
+            if (field == last) {
+                last.incRefCount();
+                last.beReturned();
+                break;
+            }
+                
+        }
+        blockContext.decRefCount();
         return last;
     }
 
