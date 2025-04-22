@@ -90,7 +90,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
         StringNode sn = (StringNode) next;
         sb.append(sn.getValue());
 
-        return new GraceString(value + expression.accept(context, this) + next.accept(context, this));
+        return new GraceString(sb.toString());
     }
 
     @Override
