@@ -192,7 +192,6 @@ method lexer(code) {
         var column := 0
         var lineStart := 0
         var currentToken := nextToken
-        var pendingToken := nextToken
 
         method nextToken {
             if (index > source.size) then {
@@ -343,11 +342,32 @@ method lexer(code) {
         }
 
         method advance {
-            currentToken := pendingToken
-            pendingToken := nextToken
-            if ((currentToken.nature == "NEWLINE") && (pendingToken.column > indentColumn)) then {
-                advance
+            currentToken := nextToken
+            if (currentToken.nature == "NEWLINE") then {
+                def pendingToken = peek
+                if (pendingToken.column > indentColumn) then {
+                    advance
+                }
             }
+        }
+
+        method peek {
+            def oldIndex = index
+            def oldLine = line
+            def oldLineStart = lineStart
+            def oldColumn = column
+            def oldCurrentToken = currentToken
+
+            advance
+            def pending := currentToken
+
+            index := oldIndex
+            line := oldLine
+            lineStart := oldLineStart
+            column := oldColumn
+            currentToken := oldCurrentToken
+            
+            return pending
         }
 
         method lexString {
@@ -381,7 +401,6 @@ method lexer(code) {
         method startStringAt(pos) {
             index := pos
             currentToken := lexString
-            pendingToken := nextToken
         }
 
         method windback(pos) {
