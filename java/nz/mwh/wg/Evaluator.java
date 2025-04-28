@@ -279,8 +279,8 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             System.out.println(request.getParts().get(0).getArgs().get(0).toString());
             return done;
         });
-        lexicalParent.addMethod("true(0)", request -> new GraceBoolean(true));
-        lexicalParent.addMethod("false(0)", request -> new GraceBoolean(false));
+        lexicalParent.addMethod("true(0)", _ -> new GraceBoolean(true));
+        lexicalParent.addMethod("false(0)", _ -> new GraceBoolean(false));
         lexicalParent.addMethod("if(1)then(1)else(1)", request -> {
             GraceBoolean condition = (GraceBoolean) request.getParts().get(0).getArgs().get(0);
             List<RequestPartR> parts = Collections.singletonList(new RequestPartR("apply", Collections.emptyList()));

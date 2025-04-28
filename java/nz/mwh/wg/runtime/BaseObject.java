@@ -37,7 +37,7 @@ public class BaseObject implements GraceObject {
             return new GraceBoolean(this != other);
         });
         if (bindSelf) {
-            addMethod("self(0)", request -> this);
+            addMethod("self(0)", _ -> this);
         }
     }
 
