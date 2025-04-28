@@ -48,21 +48,26 @@ public class Start {
                 try {
                     Evaluator.evaluateProgram(ast);
                 } catch (GraceException e) {
-                    System.err.println("Crash during evaluation: " + e.getMessage());
+                    System.err.println("Crash during evaluation: " + e);
                     System.err.println("From call to:");
                     for (String entry : e.getCallStack()) {
                         System.err.println("  " + entry);
                     }
-                    System.err.println("Crash during evaluation: " + e.getMessage());
+                    System.err.println("Crash during evaluation: " + e);
                 }
             }
         } catch (GraceException e) {
-            System.err.println("Grace crash during parsing: " + e.getMessage());
+            var kind = e.getKind();
+            if (kind != null && "ParseError".equals(kind.getName())) {
+                System.err.println(e.getMessage());
+                System.exit(1);
+            }
+            System.err.println("Grace crash during parsing: " + e);
             System.err.println("At:");
             for (String entry : e.getCallStack()) {
                 System.err.println("  " + entry);
             }
-            System.err.println("Grace crash during parsing: " + e.getMessage());
+            System.err.println("Grace crash during parsing: " + e);
         } catch (IOException e) {
             throw new RuntimeException("Error reading file: " + filename);
         } catch (RuntimeException e) {

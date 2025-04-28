@@ -450,31 +450,28 @@ method lexer(code) {
         method expectToken(nature) {
             if (currentToken.nature != nature) then {
                 print("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
-                Exception.raise("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
+                parseError(currentToken.line, currentToken.column, "Expected " ++ nature ++ " but got " ++ currentToken.nature)
             }
         }
 
         method expectSymbol(nature) {
             if (currentToken.nature != nature) then {
-                print("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
-                Exception.raise("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
+                parseError(currentToken.line, currentToken.column, "Expected " ++ nature ++ " but got " ++ currentToken.nature)
             }
         }
 
         method expectKeyword(val) {
             if (currentToken.nature != "KEYWORD") then {
-                print("Expected KEYWORD but got " ++ currentToken.nature ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
-                Exception.raise("Expected KEYWORD but got " ++ currentToken.nature ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
+                parseError(currentToken.line, currentToken.column, "Expected KEYWORD but got " ++ currentToken.nature)
             }
             if (currentToken.value != val) then {
-                print("Expected " ++ val ++ " but got " ++ currentToken.value ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
-                Exception.raise("Expected " ++ val ++ " but got " ++ currentToken.value ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
+                parseError(currentToken.line, currentToken.column, "Expected " ++ val ++ " but got " ++ currentToken.value)
             }
         }
     }
 }
 
-method digitToNumber(c) {
+method digitToNumber(token, c) {
     if (c == "1") then {
         return 1
     }
@@ -505,8 +502,7 @@ method digitToNumber(c) {
     if (c == "0") then {
         return 0
     }
-    print("Unexpected digit: " ++ c.asString)
-    Exception.raise("Unexpected digit: " ++ c.asString)
+    parseError(token.line, token.column, "Unexpected digit: " ++ c.asString)
 }
 
 method parseNumber(lxr) {
@@ -521,13 +517,13 @@ method parseNumber(lxr) {
             var frac := 0
             var scale := 1
             while {index <= s.size} do {
-                frac := frac * 10 + digitToNumber(s.at(index))
+                frac := frac * 10 + digitToNumber(token, s.at(index))
                 scale := scale * 10
                 index := index + 1
             }
             val := val + (frac / scale)
         } else {
-            val := val * 10 + digitToNumber(s.at(index))
+            val := val * 10 + digitToNumber(token, s.at(index))
         }
         index := index + 1
     }
@@ -618,7 +614,7 @@ method parseTypeExpression(lxr) {
         return parselexicalRequestNoBlock(lxr, token.value)
     }
     print("Unexpected token: " ++ token.asString)
-    Exception.raise("Unexpected token: " ++ token.asString)
+    parseError(token.line, token.column, "Unexpected token: " ++ token.asString)
 }
 
 method parseExpressionNoOpNoDot(lxr) {
@@ -655,8 +651,7 @@ method parseExpressionNoOpNoDot(lxr) {
         def expr = parseExpressionNoOp(lxr)
         return ast.explicitRequest(pos, expr, ast.cons(ast.part("prefix" ++ token.value, ast.nil), ast.nil))
     }
-    print("Unexpected token: " ++ token.asString)
-    Exception.raise("Unexpected token: " ++ token.asString)
+    parseError(token.line, token.column, "Unexpected token: " ++ token.asString)
 }
 
 method parseExpressionNoOp(lxr) {
@@ -780,8 +775,7 @@ method parseblock(lxr) {
         while {lxr.current.nature != "RBRACE"} do {
             indentColumn := lxr.current.column
             if (indentColumn <= indentBefore) then {
-                print("Indentation must increase inside block body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
-                Exception.raise("Indentation must increase inside block body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
+                parseError(lxr.current.line, indentColumn, "Indentation must increase inside block body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
             }
             body := ast.cons(parseStatement(lxr), body)
             if (lxr.current.nature == "SEMICOLON") then {
@@ -875,8 +869,7 @@ method parseMethodBody(lxr) {
         } else {
             indentColumn := lxr.current.column
             if (indentColumn <= indentBefore) then {
-                print("Indentation must increase inside method body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
-                Exception.raise("Indentation must increase inside method body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
+                parseError(lxr.current.line, indentColumn, "Indentation must increase inside method body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
             }
             if (lxr.current.nature == "KEYWORD") then {
                 if (lxr.current.value == "var") then {
@@ -993,7 +986,7 @@ method parseImport(lxr) {
     lxr.advance
     lxr.expectToken("IDENTIFIER")
     if (lxr.current.value != "as") then {
-        Exception.raise "Expected 'as' in import"
+        parseError(lxr.current.line, lxr.current.column, "Expected 'as' in import")
     }
     lxr.advance
     lxr.expectToken("IDENTIFIER")
@@ -1020,8 +1013,7 @@ method parseObjectBody(lxr) {
     while { (token.nature != "EOF") && (token.nature != "RBRACE") } do {
         indentColumn := token.column
         if ((indentColumn <= indentBefore) && (token.nature != "NEWLINE")) then {
-            print("Indentation must increase inside object body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
-            Exception.raise("Indentation must increase inside object body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
+            parseError(lxr.current.line, indentColumn, "Indentation must increase inside object body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
         }
 
         if (token.nature == "SEMICOLON") then {
@@ -1076,6 +1068,11 @@ method parseObject(lxr) {
     def body = parseObjectBody(lxr)
     lxr.advance
     ast.objectConstructor(body, anns)
+}
+
+method parseError(line, column, message) {
+    print "Parse error: {message} at {modulePrefix}{line}:{column}"
+    Exception.refine "ParseError".raise(modulePrefix ++ line ++ ":" ++ column ++ ": " ++ message)
 }
 
 method parse(code) {
