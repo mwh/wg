@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -412,7 +413,14 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
 
     static GraceObject evaluateProgram(ASTNode program, BaseObject lexicalParent) {
         Evaluator evaluator = new Evaluator();
-        return evaluator.visit(lexicalParent, program);
+        try {
+            return evaluator.visit(lexicalParent, program);
+        } catch (GraceException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw new GraceException(evaluator, "Java-level runtime error: " + e.getMessage()
+                + " at " + String.join(" from ", Arrays.stream(e.getStackTrace()).map(x -> x.toString()).dropWhile(x -> x.startsWith("java.")).limit(2).collect(Collectors.joining(" from "))));
+        }
     }
 
 }
