@@ -383,6 +383,9 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             }
             return done;
         });
+        lexicalParent.addMethod("Exception(0)", _ -> {
+            return GraceExceptionKind.BASE;
+        });
         lexicalParent.addMethod("getFileContents(1)", request -> {
             String filename = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
             try {

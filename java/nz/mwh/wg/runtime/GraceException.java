@@ -6,11 +6,19 @@ import nz.mwh.wg.Visitor;
 
 public class GraceException extends RuntimeException implements GraceObject {
     private String message;
+    private GraceExceptionKind kind;
     private Iterable<String> callStack;
 
     public GraceException(Visitor<GraceObject> evaluator, String message) {
         this.callStack = evaluator.getStack();
         this.message = message;
+        this.kind = GraceExceptionKind.BASE;
+    }
+
+    public GraceException(Visitor<GraceObject> evaluator, GraceExceptionKind kind, String message) {
+        this.callStack = evaluator.getStack();
+        this.message = message;
+        this.kind = kind;
     }
 
     public String getMessage() {
@@ -20,10 +28,14 @@ public class GraceException extends RuntimeException implements GraceObject {
     public Iterable<String> getCallStack() {
         return callStack;
     }
+
+    public GraceExceptionKind getKind() {
+        return kind;
+    }
     
     @Override
     public String toString() {
-        return "GraceException: " + message;
+        return kind.getName() + ": " + message;
     }
 
     @Override
