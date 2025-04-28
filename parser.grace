@@ -1,5 +1,7 @@
 import "ast" as ast
 
+var modulePrefix := ""
+
 method EOFToken(line, column) {
     SymbolToken(line, column, "EOF")
 }
@@ -13,6 +15,10 @@ method NumberToken(ln, col, val) {
 
         method asString {
             nature ++ "(" ++ value ++ ")[" ++ line ++ ":" ++ column ++ "]"
+        }
+
+        method location {
+            modulePrefix ++ line ++ ":" ++ column
         }
     }
 }
@@ -39,7 +45,13 @@ method RBraceToken(ln, col, idx) {
         method asString {
             "RBRACE[" ++ line ++ ":" ++ column ++ "@" ++ index ++ "]"
         }
-    }}
+
+        method location {
+            modulePrefix ++ line ++ ":" ++ column
+        }
+
+    }
+}
 
 method CommaToken(line, column) {
     SymbolToken(line, column, "COMMA")
@@ -59,6 +71,10 @@ method IdentifierToken(ln, col, val) {
         method asString {
             nature ++ "(" ++ value ++ ")[" ++ line ++ ":" ++ column ++ "]"
         }
+
+        method location {
+            modulePrefix ++ line ++ ":" ++ column
+        }
     }
 }
 
@@ -71,6 +87,10 @@ method KeywordToken(ln, col, val) {
 
         method asString {
             nature ++ "(" ++ value ++ ")" ++ "[" ++ line ++ ":" ++ column ++ "]"
+        }
+
+        method location {
+            modulePrefix ++ line ++ ":" ++ column
         }
     }
 }
@@ -85,6 +105,10 @@ method OperatorToken(ln, col, val) {
         method asString {
             nature ++ "(" ++ value ++ ")" ++ "[" ++ line ++ ":" ++ column ++ "]"
         }
+
+        method location {
+            modulePrefix ++ line ++ ":" ++ column
+        }
     }
 }
 
@@ -98,6 +122,10 @@ method StringToken(ln, col, val) {
         method asString {
             nature ++ "(" ++ value ++ ")" ++ "[" ++ line ++ ":" ++ column ++ "]"
         }
+
+        method location {
+            modulePrefix ++ line ++ ":" ++ column
+        }
     }
 }
 
@@ -110,6 +138,10 @@ method InterpStringToken(ln, col, val) {
 
         method asString {
             nature ++ "(" ++ value ++ ")" ++ "[" ++ line ++ ":" ++ column ++ "]"
+        }
+
+        method location {
+            modulePrefix ++ line ++ ":" ++ column
         }
     }
 }
@@ -135,6 +167,10 @@ method SymbolToken(ln, col, nat) {
         method asString {
             nature ++ "[" ++ line ++ ":" ++ column ++ "]"
         }
+
+        method location {
+            modulePrefix ++ line ++ ":" ++ column
+        }
     }
 }
 
@@ -151,6 +187,10 @@ method CommentToken(ln, col, text) {
 
         method asString {
             nature ++ "(" ++ value ++ ")[" ++ line ++ ":" ++ column ++ "]"
+        }
+
+        method location {
+            modulePrefix ++ line ++ ":" ++ column
         }
     }
 }
@@ -509,13 +549,15 @@ method parseString(lxr) {
 }
 
 method parselexicalRequestNoBlock(lxr, id) {
+    def pos = lxr.current.location
     def parts = parseparts(lxr, false)
-    ast.lexicalRequest(parts)
+    ast.lexicalRequest(pos, parts)
 }
 
 method parselexicalRequest(lxr) {
+    def pos = lxr.current.location
     def parts = parseparts(lxr, true)
-    ast.lexicalRequest(parts)
+    ast.lexicalRequest(pos, parts)
 }
 
 method parseparts(lxr, allowBlock) {
@@ -558,14 +600,14 @@ method parseparts(lxr, allowBlock) {
 
 method parseexplicitRequestNoBlock(receiver, lxr) {
     lxr.advance
-    def pos = lxr.current.asString
+    def pos = lxr.current.location
     def parts = parseparts(lxr, false)
     ast.explicitRequest(pos, receiver, parts)
 }
 
 method parseexplicitRequest(receiver, lxr) {
     lxr.advance
-    def pos = lxr.current.asString
+    def pos = lxr.current.location
     def parts = parseparts(lxr, true)
     ast.explicitRequest(pos, receiver, parts)
 }
@@ -604,7 +646,7 @@ method parseExpressionNoOpNoDot(lxr) {
             return parseObject(lxr)
         } elseif { token.value == "self" } then {
             lxr.advance
-            return ast.lexicalRequest(ast.cons(ast.part("self", ast.nil), ast.nil))
+            return ast.lexicalRequest(token.location, ast.cons(ast.part("self", ast.nil), ast.nil))
         }
     }
     if (token.nature == "OPERATOR") then {
@@ -1037,6 +1079,14 @@ method parseObject(lxr) {
 }
 
 method parse(code) {
+    indentColumn := 0
+    def lxr = lexer(code)
+    def body = parseObjectBody(lxr)
+    ast.objectConstructor(body, ast.nil)
+}
+
+method parseModule(module, code) {
+    modulePrefix := module ++ ":"
     indentColumn := 0
     def lxr = lexer(code)
     def body = parseObjectBody(lxr)

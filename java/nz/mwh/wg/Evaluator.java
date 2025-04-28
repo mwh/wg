@@ -58,7 +58,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             List<GraceObject> args = part.getArgs().stream().map(x -> visit(context, x)).collect(Collectors.toList());
             parts.add(new RequestPartR(part.getName(), args));
         }
-        Request request = new Request(this, parts);
+        Request request = new Request(this, parts, node.getLocation());
         int top = callStack.size();
         callStack.push(request.getName() + " at " + request.getLocation());
         GraceObject receiver = context.findReceiver(request.getName());
@@ -121,7 +121,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
     @Override
     public GraceObject visit(GraceObject context, VarDecl node) {
         if (node.getValue() != null) {
-            new LexicalRequest(new Cons<Part>(new Part(node.getName() + ":=", new Cons<ASTNode>(node.getValue(), Cons.<ASTNode>nil() )), Cons.<Part>nil())).accept(context, this);
+            new LexicalRequest(node.getLocation(), new Cons<Part>(new Part(node.getName() + ":=", new Cons<ASTNode>(node.getValue(), Cons.<ASTNode>nil() )), Cons.<Part>nil())).accept(context, this);
         }
         return done;
     }
@@ -186,7 +186,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             List<GraceObject> args = part.getArgs().stream().map(x -> visit(context, x)).collect(Collectors.toList());
             parts.add(new RequestPartR(part.getName(), args));
         }
-        Request request = new Request(this, parts, node.location);
+        Request request = new Request(this, parts, node.getLocation());
         GraceObject receiver = node.getReceiver().accept(context, this);
         int top = callStack.size();
         callStack.push(request.getName() + " at " + request.getLocation());

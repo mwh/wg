@@ -5,6 +5,11 @@ import nz.mwh.wg.Visitor;
 public abstract class ASTNode{
 
     public abstract <T> T accept(T context, Visitor<T> visitor);
+    protected String location;
+
+    public String getLocation() {
+        return location;
+    }
 
     protected static String escapeString(String value) {
         

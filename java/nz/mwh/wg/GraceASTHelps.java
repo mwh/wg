@@ -54,6 +54,11 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
             Cons<Part> parts = (Cons<Part>) request.getParts().get(0).getArgs().get(0);
             return lexicalRequest(parts);
         });
+        lexicalParent.addMethod("lexicalRequest(2)", request -> {
+            String location = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
+            Cons<Part> parts = (Cons<Part>) request.getParts().get(0).getArgs().get(1);
+            return lexicalRequest(location, parts);
+        });
         lexicalParent.addMethod("block(2)", request -> {
             GraceObject params = request.getParts().get(0).getArgs().get(0);
             GraceObject body = request.getParts().get(0).getArgs().get(1);

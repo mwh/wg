@@ -47,11 +47,11 @@ public class ASTConstructors {
     }
 
     static LexicalRequest lexicalRequest(Cons<Part> parts) {
-        return new LexicalRequest(parts);
+        return new LexicalRequest("<unknown>", parts);
     }
 
     static LexicalRequest lexReq(Cons<Part> parts) {
-        return new LexicalRequest(parts);
+        return new LexicalRequest("<unknown>", parts);
     }
 
     static Part requestPart(String name, Cons<ASTNode> args) {

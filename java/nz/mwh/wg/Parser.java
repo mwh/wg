@@ -1,5 +1,6 @@
 package nz.mwh.wg;
 import java.util.Collections;
+import java.util.List;
 
 import nz.mwh.wg.ast.*;
 import nz.mwh.wg.runtime.GraceObject;
@@ -13,11 +14,15 @@ public class Parser {
     static Evaluator evaluator = new Evaluator();
 
     public static ASTNode parse(String input) {
+        return parse("", input);
+    }
+
+    public static ASTNode parse(String moduleName, String input) {
         if (theParser == null) {
             evaluator.bindModule("ast", GraceASTHelps.astModule(false));
             theParser = evaluator.evaluateModule(parserAST);
         }
-        Request request = new Request(new Evaluator(), Collections.singletonList(new RequestPartR("parse", Collections.singletonList(new GraceString(input)))));
+        Request request = new Request(new Evaluator(), Collections.singletonList(new RequestPartR("parseModule", List.of(new GraceString(moduleName), new GraceString(input)))));
         ASTNode ast = (ASTNode)theParser.request(request);
         return ast;
     }

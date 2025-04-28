@@ -19,7 +19,11 @@ public class ASTConstructors {
     }
 
     protected static LexicalRequest lexicalRequest(Cons<Part> parts) {
-        return new LexicalRequest(parts);
+        return new LexicalRequest("<unknown>", parts);
+    }
+
+    protected static LexicalRequest lexicalRequest(String location, Cons<Part> parts) {
+        return new LexicalRequest(location, parts);
     }
 
     protected static Part requestPart(String name, Cons<ASTNode> args) {

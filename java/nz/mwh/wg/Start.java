@@ -36,7 +36,7 @@ public class Start {
         }
         try {
             String source = Files.readString(Path.of(filename));
-            ASTNode ast = Parser.parse(source);
+            ASTNode ast = Parser.parse(Path.of(filename).getFileName().toString(), source);
             if (inlineImports) {
                 inlineImports((ObjectConstructor) ast);
             }
@@ -48,12 +48,12 @@ public class Start {
                 try {
                     Evaluator.evaluateProgram(ast);
                 } catch (GraceException e) {
-                    System.err.println("Grace crash during evaluation: " + e.getMessage());
-                    System.err.println("At:");
+                    System.err.println("Crash during evaluation: " + e.getMessage());
+                    System.err.println("From call to:");
                     for (String entry : e.getCallStack()) {
                         System.err.println("  " + entry);
                     }
-                    System.err.println("Grace crash during evaluation: " + e.getMessage());
+                    System.err.println("Crash during evaluation: " + e.getMessage());
                 }
             }
         } catch (GraceException e) {

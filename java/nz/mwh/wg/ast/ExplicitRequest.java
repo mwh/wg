@@ -7,7 +7,6 @@ import nz.mwh.wg.Visitor;
 public class ExplicitRequest extends ASTNode {
     ASTNode receiver;
     List<? extends Part> parts;
-    public String location;
 
     public ExplicitRequest(String location, ASTNode receiver, Cons<? extends Part> parts) {
         this.receiver = receiver;

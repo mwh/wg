@@ -5,8 +5,8 @@ import nz.mwh.wg.runtime.Request;
 
 public class LexicalRequest extends nz.mwh.wg.ast.LexicalRequest implements GraceObject {
     
-    public LexicalRequest(Cons<Part> parts) {
-        super(parts);
+    public LexicalRequest(String location, Cons<Part> parts) {
+        super(location, parts);
     }
 
     public GraceObject request(Request request) {

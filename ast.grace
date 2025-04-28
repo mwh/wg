@@ -124,6 +124,17 @@ method lexicalRequest(requestParts) {
     }
 }
 
+method lexicalRequest(pos, requestParts) {
+    object {
+        def parts is public = requestParts
+        def position is public = pos
+
+        method asString {
+            "lexReq(" ++ parts ++ ")"
+        }
+    }
+}
+
 method explicitRequest(pos, rec, requestParts) {
     object {
         def receiver is public = rec

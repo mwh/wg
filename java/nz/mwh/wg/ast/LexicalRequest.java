@@ -7,8 +7,9 @@ import nz.mwh.wg.Visitor;
 public class LexicalRequest extends ASTNode {
     List<? extends Part> parts;
 
-    public LexicalRequest(Cons<? extends Part> parts) {
+    public LexicalRequest(String location, Cons<? extends Part> parts) {
         this.parts = parts.toList();
+        this.location = location;
     }
 
     public <T> T accept(T context, Visitor<T> visitor) {
@@ -22,4 +23,6 @@ public class LexicalRequest extends ASTNode {
     public List<? extends Part> getParts() {
         return parts;
     }
+
+
 }
