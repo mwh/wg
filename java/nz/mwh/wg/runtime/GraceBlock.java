@@ -22,7 +22,7 @@ public class GraceBlock implements GraceObject {
                 return apply(request, request.parts.get(0));
             }
         }
-        throw new RuntimeException("No such method in Block(" + parameters.size() + "): " + request.getName());
+        throw new GraceException(request.getVisitor(), "No such method in Block(" + parameters.size() + "): " + request.getName());
     }
 
     private GraceObject apply(Request request, RequestPartR part) {
@@ -35,7 +35,7 @@ public class GraceBlock implements GraceObject {
             } else if (parameter instanceof LexicalRequest) {
                 name = ((LexicalRequest) parameter).getParts().get(0).getName();
             } else {
-                throw new RuntimeException("Invalid parameter in block: " + parameter);
+                throw new GraceException(request.getVisitor(), "Invalid parameter in block: " + parameter);
             }
             blockContext.addField(name);
             blockContext.setField(name, part.getArgs().get(i));
@@ -59,7 +59,7 @@ public class GraceBlock implements GraceObject {
 
     @Override
     public GraceObject findReceiver(String name) {
-        throw new RuntimeException("No such method in scope: " + name);
+        return null;
     }
 }
 

@@ -64,7 +64,7 @@ public class BaseObject implements GraceObject {
             fields.put(part.getName().substring(0, part.getName().length() - 5), part.getArgs().get(0));
             return done;
         }
-        throw new RuntimeException("No such method or field " + request.getName() + " in " + this.getClass().getName());
+        throw new GraceException(request.getVisitor(), "No such method or field " + request.getName() + " in object");
     }
 
     public GraceObject findReceiver(String name) {
@@ -75,7 +75,7 @@ public class BaseObject implements GraceObject {
         if (lexicalParent != null) {
             return lexicalParent.findReceiver(name);
         }
-        throw new RuntimeException("No such method in scope: " + name);
+        return null;
     }
 
     public void addField(String name) {
@@ -83,7 +83,7 @@ public class BaseObject implements GraceObject {
         methods.put(name + "(0)", request -> {
             GraceObject val = fields.get(name);
             if (val == uninitialised) {
-                throw new RuntimeException("Field " + name + " is not initialised; other fields are " + fields.keySet());
+                throw new GraceException(request.getVisitor(), "Field " + name + " is not initialised; other fields are " + fields.keySet());
             }
             return val;
         });

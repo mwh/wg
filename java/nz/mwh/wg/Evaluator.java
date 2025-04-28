@@ -4,11 +4,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Deque;
 import java.util.stream.Collectors;
 
 import nz.mwh.wg.ast.*;
@@ -20,6 +22,8 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
     private static GraceDone done = GraceDone.done;
 
     private Map<String, GraceObject> modules = new HashMap<>();
+
+    private Deque<String> callStack = new ArrayDeque<>();
 
     @Override
     public GraceObject visit(GraceObject context, ObjectConstructor node) {
@@ -54,8 +58,17 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             parts.add(new RequestPartR(part.getName(), args));
         }
         Request request = new Request(this, parts);
+        int top = callStack.size();
+        callStack.push(request.getName() + " at " + request.getLocation());
         GraceObject receiver = context.findReceiver(request.getName());
-        return receiver.request(request);
+        if (receiver == null) {
+            throw new GraceException(this, "No such method or variable in scope: " + request.getName());
+        }
+        GraceObject ret = receiver.request(request);
+        while (callStack.size() > top) {
+            callStack.pop();
+        }
+        return ret;
     }
 
     @Override
@@ -101,7 +114,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             object.setField(node.getName(), value);
             return done;
         }
-        throw new UnsupportedOperationException("def can only appear inside in-code context");
+        throw new GraceException(this, "def can only appear inside in-code context");
     }
 
     @Override
@@ -141,7 +154,8 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
                         methodContext.addField(var.getName());
                         methodContext.addFieldWriter(var.getName());
                     }
-                }        
+                }
+                int top = callStack.size();
                 try {
                     GraceObject last = null;
                     for (ASTNode part : body) {
@@ -149,6 +163,9 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
                     }
                     return last;
                 } catch(ReturnException re) {
+                    while (callStack.size() > top) {
+                        callStack.pop();
+                    }
                     if (re.context == methodContext) {
                         return re.getValue();
                     } else {
@@ -158,7 +175,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             });
             return done;
         }
-        throw new UnsupportedOperationException("method can only be defined in object context");
+        throw new GraceException(this, "method can only be defined in object context");
     }
 
     @Override
@@ -170,8 +187,13 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
         }
         Request request = new Request(this, parts, node.location);
         GraceObject receiver = node.getReceiver().accept(context, this);
-        return receiver.request(request);
-
+        int top = callStack.size();
+        callStack.push(request.getName() + " at " + request.getLocation());
+        GraceObject ret = receiver.request(request);
+        while (callStack.size() > top) {
+            callStack.pop();
+        }
+        return ret;
     }
 
     @Override
@@ -183,6 +205,9 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             parts.add(new RequestPartR(name + ":=", Collections.singletonList(node.getValue().accept(context, this))));
             Request request = new Request(this, parts);
             GraceObject receiver = context.findReceiver(request.getName());
+            if (receiver == null) {
+                throw new GraceException(this, "No such method or variable in scope: " + request.getName());
+            }    
             receiver.request(request);
             return done;
         } else if (node.getTarget() instanceof ExplicitRequest) {
@@ -195,7 +220,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             receiver.request(request);
             return done;
         }
-        throw new UnsupportedOperationException("Invalid assignment to " + node.getTarget().getClass().getName() + " node");
+        throw new GraceException(this, "Invalid assignment to non-lvalue " + node.getTarget().getClass().getName());
     }
 
     @Override
@@ -213,7 +238,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             GraceObject returnContext = ((BaseObject)context).findReturnContext();
             throw new ReturnException(returnContext, value);
         }
-        throw new UnsupportedOperationException("return can only appear inside method body");
+        throw new GraceException(this, "return can only appear inside method body");
     }
 
     @Override
@@ -240,11 +265,11 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
                 object.setField(node.getName(), mod);
                 return done;
             } catch (IOException e) {
-                throw new RuntimeException("Error reading file: " + filename);
+                throw new GraceException(this, "Error reading file for import: " + filename);
             }
         }
                   
-        throw new UnsupportedOperationException("imports can only appear inside in-code context");
+        throw new GraceException(this, "imports can only appear inside in-code context");
     }
 
     static BaseObject basePrelude() {
@@ -362,10 +387,14 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             try {
                 return new GraceString(new String(Files.readAllBytes(Paths.get(filename))));
             } catch (IOException e) {
-                throw new RuntimeException("Error reading file: " + filename);
+                throw new GraceException(request.getVisitor(), "Error reading file: " + filename);
             }
         });
         return lexicalParent;
+    }
+
+    public Deque<String> getStack() {
+        return new ArrayDeque<>(callStack);
     }
 
     public GraceObject evaluateModule(ObjectConstructor module) {
@@ -385,6 +414,5 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
         Evaluator evaluator = new Evaluator();
         return evaluator.visit(lexicalParent, program);
     }
-
 
 }

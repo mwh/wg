@@ -5,11 +5,11 @@ public class GraceUninitialised implements GraceObject {
     
     @Override
     public GraceObject request(Request request) {
-        throw new RuntimeException("Cannot request method on uninitialised value: " + request.getName());
+        throw new GraceException(request.getVisitor(), "Cannot request method on uninitialised value: " + request.getName());
     }
 
     @Override
     public GraceObject findReceiver(String name) {
-        throw new RuntimeException("No such method in scope: " + name);
+        return null;
     }
 }

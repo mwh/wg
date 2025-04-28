@@ -12,6 +12,7 @@ import nz.mwh.wg.ast.Cons;
 import nz.mwh.wg.ast.DefDecl;
 import nz.mwh.wg.ast.ImportStmt;
 import nz.mwh.wg.ast.ObjectConstructor;
+import nz.mwh.wg.runtime.GraceException;
 
 public class Start {
     public static void main(String[] args) {
@@ -44,10 +45,32 @@ public class Start {
             } else if (updateFile != null) {
                 updateFile(ast, updateFile);
             } else {
-                Evaluator.evaluateProgram(ast);
+                try {
+                    Evaluator.evaluateProgram(ast);
+                } catch (GraceException e) {
+                    System.err.println("Grace crash during evaluation: " + e.getMessage());
+                    System.err.println("At:");
+                    for (String entry : e.getCallStack()) {
+                        System.err.println("  " + entry);
+                    }
+                    System.err.println("Grace crash during evaluation: " + e.getMessage());
+                }
             }
+        } catch (GraceException e) {
+            System.err.println("Grace crash during parsing: " + e.getMessage());
+            System.err.println("At:");
+            for (String entry : e.getCallStack()) {
+                System.err.println("  " + entry);
+            }
+            System.err.println("Grace crash during parsing: " + e.getMessage());
         } catch (IOException e) {
             throw new RuntimeException("Error reading file: " + filename);
+        } catch (RuntimeException e) {
+            System.err.println("Java crash: " + e.getMessage());
+            for (StackTraceElement element : e.getStackTrace()) {
+                System.err.println("  " + element);
+            }
+            System.err.println("Java crash: " + e.getMessage());
         }
     }
 

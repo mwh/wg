@@ -36,11 +36,11 @@ public class GraceBoolean implements GraceObject {
                 return new GraceBoolean(value != ((GraceBoolean) parts.get(0).getArgs().get(0)).value);
             }
         }
-        throw new RuntimeException("No such method in Boolean: " + request.getName());
+        throw new GraceException(request.getVisitor(), "No such method in Boolean: " + request.getName());
     }
 
     @Override
     public GraceObject findReceiver(String name) {
-        throw new RuntimeException("No such method in scope: " + name);
+        return null;
     }
 }

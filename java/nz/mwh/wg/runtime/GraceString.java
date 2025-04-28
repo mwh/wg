@@ -54,12 +54,12 @@ public class GraceString implements GraceObject {
                 return new GraceString(value.substring(start - 1, end));
             }
         }
-        throw new RuntimeException("No such method in String: " + request.getName());
+        throw new GraceException(request.getVisitor(), "No such method in String: " + request.getName());
     }
 
     @Override
     public GraceObject findReceiver(String name) {
-        throw new RuntimeException("No such method in scope: " + name);
+        return null;
     }
 }
 

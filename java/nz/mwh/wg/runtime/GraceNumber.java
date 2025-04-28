@@ -28,10 +28,10 @@ public class GraceNumber implements GraceObject {
         if (parts.size() == 1) {
             String name = parts.get(0).getName();
             if (name.equals("+")) {
-                if (!(parts.get(0).getArgs().get(0) instanceof GraceNumber)) {
-                    System.out.println("invalid addition argument at " + request.getLocation());
-                }
-                return new GraceNumber(value + ((GraceNumber) parts.get(0).getArgs().get(0)).value);
+                return switch (parts.get(0).getArgs().get(0)) {
+                    case GraceNumber n -> new GraceNumber(value + n.value);
+                    default -> throw new GraceException(request.getVisitor(), "invalid addition argument at " + request.getLocation());
+                };
             } else if (name.equals("-")) {
                 return new GraceNumber(value - ((GraceNumber) parts.get(0).getArgs().get(0)).value);
             } else if (name.equals("*")) {
@@ -56,7 +56,7 @@ public class GraceNumber implements GraceObject {
                 return new GraceString(toString());
             }
         }
-        throw new RuntimeException("No such method in Number: " + request.getName());
+        throw new GraceException(request.getVisitor(), "No such method in Number: " + request.getName());
     }
 
     @Override
