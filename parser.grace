@@ -680,6 +680,11 @@ method parseExpression(lxr) {
         left := req
         token := lxr.current
     }
+    if (token.nature == "ASSIGN") then {
+        lxr.advance
+        def right = parseExpression(lxr)
+        left := ast.assign(left, right)
+    }
     return left
 }
 
