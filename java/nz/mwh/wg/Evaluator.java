@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.Deque;
 import java.util.stream.Collectors;
 
@@ -323,6 +324,29 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
                 case GraceObject _ -> -1;
             };
             return new GraceNumber(count);
+        });
+        lexicalParent.addMethod("spawn(1)", request -> {
+            GraceBlock block = (GraceBlock) request.getParts().get(0).getArgs().get(0);
+
+            // Pair 1
+            LinkedBlockingQueue<GraceObject> queue1a = new LinkedBlockingQueue<>();
+            LinkedBlockingQueue<GraceObject> queue1b = new LinkedBlockingQueue<>();
+            GracePort d1p1 = new GracePort(queue1a, queue1b);
+            GracePort d1p2 = new GracePort(queue1b, queue1a);
+
+            // Pair 2:
+            LinkedBlockingQueue<GraceObject> queue2a = new LinkedBlockingQueue<>();
+            LinkedBlockingQueue<GraceObject> queue2b = new LinkedBlockingQueue<>();
+            GracePort d2p1 = new GracePort(queue2a, queue2b);
+            GracePort d2p2 = new GracePort(queue2b, queue2a);
+
+            GraceChannel chan1 = new GraceChannel(d1p1, d2p2);
+            GraceChannel chan2 = new GraceChannel(d2p1, d1p2);
+            new Thread(() -> {
+                block.request(new Request(new Evaluator(),
+                        Collections.singletonList(new RequestPartR("apply", Collections.singletonList(chan1)))));
+            }).start();
+            return chan2;
         });
         lexicalParent.addMethod("print(1)", request -> {
             GraceObject obj = request.getParts().get(0).getArgs().get(0);
