@@ -2,6 +2,7 @@ package nz.mwh.wg.ast.grace;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 
 import nz.mwh.wg.runtime.GraceBoolean;
 import nz.mwh.wg.runtime.GraceNumber;
@@ -52,6 +53,15 @@ public class Cons<T> extends nz.mwh.wg.ast.Cons<T> implements GraceObject {
         GraceObject fResult = f.request(new Request(request.getVisitor(), Collections.singletonList(new RequestPartR("apply", Collections.singletonList(graceWrap(head))))));
         return cons(fResult, tail.isNil ? new Cons<GraceObject>() : tail.map(request));
     }
+
+    public <S> Cons<S> map(Function<T, S> f) {
+        if (isNil)
+            return new Cons<S>();
+        S result = f.apply(head);
+        Cons<S> tailResult = tail == null ? new Cons<S>() : tail.map(f);
+        return cons(result, tailResult);
+    }
+
 
     private Cons<GraceObject> reversed(Cons<GraceObject> next) {
         if (isNil)
