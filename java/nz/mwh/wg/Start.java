@@ -20,6 +20,14 @@ public class Start {
         boolean printAST = false;
         String updateFile = null;
         boolean inlineImports = false;
+
+        String isoWhen = null;
+        String isoMove = null;
+        String localWhen = null;
+        String capabilityWhere = null;
+        String capabilityChange = null;
+        String immWhen = null;
+
         for (String arg : args) {
             if (arg.equals("-p")) {
                 printAST = true;
@@ -29,10 +37,52 @@ public class Start {
                 updateFile = arg;
             } else if (arg.equals("-i")) {
                 inlineImports = true;
+            } else if (arg.equals("--iso-when")) {
+                isoWhen = "";
+            } else if (isoWhen != null && isoWhen.isEmpty()) {
+                isoWhen = arg;
+            } else if (arg.equals("--iso-move")) {
+                isoMove = "";
+            } else if (isoMove != null && isoMove.isEmpty()) {
+                isoMove = arg;
+            } else if (arg.equals("--local-when")) {
+                localWhen = "";
+            } else if (localWhen != null && localWhen.isEmpty()) {
+                localWhen = arg;
+            } else if (arg.equals("--capability-where")) {
+                capabilityWhere = "";
+            } else if (capabilityWhere != null && capabilityWhere.isEmpty()) {
+                capabilityWhere = arg;
+            } else if (arg.equals("--capability-change")) {
+                capabilityChange = "";
+            } else if (capabilityChange != null && capabilityChange.isEmpty()) {
+                capabilityChange = arg;
+            } else if (arg.equals("--imm-when")) {
+                immWhen = "";
+            } else if (immWhen != null && immWhen.isEmpty()) {
+                immWhen = arg;
             } else {
                 filename = arg;
                 break;
             }
+        }
+        if (isoWhen != null) {
+            Dala.setIsoWhen(isoWhen);
+        }
+        if (isoMove != null) {
+            Dala.setIsoMove(isoMove);
+        }
+        if (localWhen != null) {
+            Dala.setLocalWhen(localWhen);
+        }
+        if (capabilityWhere != null) {
+            Dala.setCapabilityWhere(capabilityWhere);
+        }
+        if (capabilityChange != null) {
+            Dala.setCapabilityChange(capabilityChange);
+        }
+        if (immWhen != null) {
+            Dala.setImmWhen(immWhen);
         }
         try {
             String source = Files.readString(Path.of(filename));

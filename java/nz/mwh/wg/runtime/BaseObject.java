@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+import nz.mwh.wg.Dala;
 import nz.mwh.wg.Evaluator;
 
 public class BaseObject implements GraceObject {
@@ -19,6 +20,8 @@ public class BaseObject implements GraceObject {
     protected static GraceUninitialised uninitialised = GraceUninitialised.uninitialised;
 
     private boolean returns = false;
+
+    private Dala.Flavour flavour = Dala.Flavour.UNSAFE;
 
     public BaseObject(GraceObject lexicalParent) {
         this(lexicalParent, false);
@@ -166,5 +169,24 @@ public class BaseObject implements GraceObject {
         return fields;
     }
 
+    public boolean isIso() {
+        return flavour == Dala.Flavour.ISO;
+    }
+
+    public boolean isUnsafe() {
+        return flavour == Dala.Flavour.UNSAFE;
+    }
+
+    public boolean isLocal() {
+        return flavour == Dala.Flavour.LOCAL;
+    }
+
+    public boolean isImm() {
+        return flavour == Dala.Flavour.IMM;
+    }
+
+    public void setFlavour(Dala.Flavour flavour) {
+        this.flavour = flavour;
+    }
 }
 

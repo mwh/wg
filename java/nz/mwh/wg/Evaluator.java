@@ -29,6 +29,17 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
     @Override
     public GraceObject visit(GraceObject context, ObjectConstructor node) {
         BaseObject object = new BaseObject(context, false, true);
+        if (Dala.getCapabilityWhere() == Dala.CapabilityWhere.STATIC || Dala.getCapabilityWhere() == Dala.CapabilityWhere.CONSTRUCTION) {
+            for (var ann : node.getAnnotations()) {
+                if ("iso".equals(ann)) {
+                    object.setFlavour(Dala.Flavour.ISO);
+                } else if ("local".equals(ann)) {
+                    object.setFlavour(Dala.Flavour.LOCAL);
+                } else if ("imm".equals(ann)) {
+                    object.setFlavour(Dala.Flavour.IMM);
+                }
+            }
+        }
         List<ASTNode> body = node.getBody();
         for (ASTNode part : body) {
             if (part instanceof DefDecl) {
