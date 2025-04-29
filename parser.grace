@@ -217,7 +217,7 @@ method ErrorToken(ln, col, val) {
         def column is public = col
 
         method asString {
-            nature ++ "(" ++ value ++ ")[" ++ line ++ ":" ++ column ++ "]"
+            nature ++ "(" ++ message ++ ")[" ++ line ++ ":" ++ column ++ "]"
         }
     }
 }
@@ -373,7 +373,7 @@ method lexer(code) {
                 return SymbolToken(line, column, "SEMICOLON")
             }
 
-            ErrorToken(line, column, "Unknown character: " ++ c.asString ++ "(" ++ c.firstCodepoint.asString ++ ")")
+            parseError(line, column, "Unknown character: " ++ c.asString ++ " (" ++ c.firstCodepoint.asString ++ ")")
         
         }
 
