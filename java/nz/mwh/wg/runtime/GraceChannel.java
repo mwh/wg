@@ -1,5 +1,7 @@
 package nz.mwh.wg.runtime;
 
+import nz.mwh.wg.Dala;
+
 public class GraceChannel implements GraceObject {
     private final GracePort sendPort;
     private final GracePort receivePort;
@@ -30,7 +32,19 @@ public class GraceChannel implements GraceObject {
     public GraceObject request(Request request) {
         if ("send(1)".equals(request.getName())) {
             try {
-                send(request.getParts().get(0).getArgs().get(0));
+                GraceObject obj = request.getParts().get(0).getArgs().get(0);
+                switch (obj) {
+                    case BaseObject b:
+                        b.incRefCount();
+                        if (b.isIso() && (Dala.getIsoWhen() == Dala.IsoWhen.THREAD || Dala.getIsoWhen() == Dala.IsoWhen.DEREFERENCE_THREAD) && b.getRefCount() > 1) {
+                            throw new GraceException(request.getVisitor(), GraceExceptionKind.BASE, "aliased iso object sent across thread boundary");
+                        }
+                        b.decRefCount();
+                        obj = b.beReturned();
+                        break;
+                    default:
+                }
+                send(obj);
                 return GraceDone.done;
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
