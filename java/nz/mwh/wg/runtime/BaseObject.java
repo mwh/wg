@@ -60,6 +60,9 @@ public class BaseObject implements GraceObject {
     @Override
     public GraceObject request(Request request) {
         Function<Request, GraceObject> method = methods.get(request.getName());
+        if (isIso() && (Dala.getIsoWhen() == Dala.IsoWhen.DEREFERENCE || Dala.getIsoWhen() == Dala.IsoWhen.DEREFERENCE_THREAD) && refCount > 1) {
+            throw new GraceException(request.getVisitor(), "iso object dereferenced with multiple references");
+        }
         if (method != null) {
             return method.apply(request);
         }
