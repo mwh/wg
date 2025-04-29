@@ -7,6 +7,7 @@ import java.util.function.Function;
 
 import nz.mwh.wg.Dala;
 import nz.mwh.wg.Evaluator;
+import nz.mwh.wg.Visitor;
 
 public class BaseObject implements GraceObject {
     private GraceObject lexicalParent;
@@ -99,12 +100,24 @@ public class BaseObject implements GraceObject {
         methods.put(name + ":=(1)", request -> {
             GraceObject old = fields.get(name);
             GraceObject newVal = request.getParts().get(0).getArgs().get(0);
-            fields.put(name, newVal);
-            newVal.incRefCount();
+            setField(request.getVisitor(), name, newVal);
             // Do not decrement the old value's count, as it is switched into a notional reference
             // during the return.
             return old.beReturned();
         });
+    }
+
+    public void setField(Visitor<GraceObject> visitor, String name, GraceObject value) {
+        fields.put(name, value);
+        value.incRefCount();
+        switch (value) {
+            case BaseObject o:
+                if (o.isIso() && (Dala.getIsoWhen() == Dala.IsoWhen.ASSIGNMENT) && (o.getRefCount() > 1)) {
+                    throw new GraceException(visitor, "illegal alias created to iso object");
+                }
+                break;
+            default:
+        }
     }
 
     public void setField(String name, GraceObject value) {

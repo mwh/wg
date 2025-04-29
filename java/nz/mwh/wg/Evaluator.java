@@ -126,6 +126,15 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             BaseObject object = (BaseObject) context;
             GraceObject value = node.getValue().accept(context, this);
             object.setField(node.getName(), value);
+            switch (value) {
+                case BaseObject o:
+                    if (o.isIso() && (Dala.getIsoWhen() == Dala.IsoWhen.ASSIGNMENT) && (o.getRefCount() > 1)) {
+                        this.callStack.push("def " + node.getName() + " at " + node.getLocation());
+                        throw new GraceException(this, "illegal alias created to iso object");
+                    }
+                    break;
+                default:
+            }    
             return done;
         }
         throw new GraceException(this, "def can only appear inside in-code context");
@@ -156,7 +165,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
                     for (int i = 0; i < parameters.size(); i++) {
                         IdentifierDeclaration parameter = (IdentifierDeclaration) parameters.get(i);
                         methodContext.addField(parameter.getName());
-                        methodContext.setField(parameter.getName(), rpart.getArgs().get(i));
+                        methodContext.setField(this, parameter.getName(), rpart.getArgs().get(i));
                     }
                 }
                 for (ASTNode part : body) {
@@ -243,7 +252,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             GraceObject receiver = context.findReceiver(request.getName());
             if (receiver == null) {
                 throw new GraceException(this, "No such method or variable in scope: " + request.getName());
-            }    
+            }
             return receiver.request(request);
         } else if (node.getTarget() instanceof ExplicitRequest) {
             ExplicitRequest target = (ExplicitRequest) node.getTarget();
