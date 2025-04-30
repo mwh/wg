@@ -321,6 +321,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
         lexicalParent.addMethod("getRefCount(1)", request -> {
             int count = switch (request.getParts().get(0).getArgs().get(0)) {
                 case BaseObject o -> o.getRefCount();
+                case IsoProxy p -> p.getRefCount();
                 case GraceObject _ -> -1;
             };
             return new GraceNumber(count);

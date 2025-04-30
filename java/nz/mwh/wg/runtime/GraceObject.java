@@ -13,4 +13,22 @@ public interface GraceObject {
     default void discard() {};
     default void incRefCount() {};
     default void decRefCount() {};
+    default GraceObject beAssigned(GraceObject container, String name) {
+        return this;
+    };
+    default int getRefCount() {
+        return -1;
+    };
+    default boolean isIso() {
+        return false;
+    };
+    default boolean isUnsafe() {
+        return false;
+    };
+    default boolean isLocal() {
+        return false;
+    };
+    default boolean isImm() {
+        return false;
+    };
 }

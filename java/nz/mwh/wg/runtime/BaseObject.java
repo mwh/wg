@@ -111,15 +111,12 @@ public class BaseObject implements GraceObject {
     }
 
     public void setField(Visitor<GraceObject> visitor, String name, GraceObject value) {
+        value = value.beAssigned(this, name);
         fields.put(name, value);
         value.incRefCount();
-        switch (value) {
-            case BaseObject o:
-                if (o.isIso() && (Dala.getIsoWhen() == Dala.IsoWhen.ASSIGNMENT) && (o.getRefCount() > 1)) {
-                    throw new GraceException(visitor, "illegal alias created to iso object");
-                }
-                break;
-            default:
+        
+        if (value.isIso() && (Dala.getIsoWhen() == Dala.IsoWhen.ASSIGNMENT) && (value.getRefCount() > 1)) {
+            throw new GraceException(visitor, "illegal alias created to iso object");
         }
     }
 
@@ -203,6 +200,13 @@ public class BaseObject implements GraceObject {
 
     public void setFlavour(Dala.Flavour flavour) {
         this.flavour = flavour;
+    }
+
+    public GraceObject beAssigned(GraceObject container, String name) {
+        if (isIso() && (Dala.getIsoMove() == Dala.IsoMove.MOVE)) {
+            return new IsoProxy(this, null);
+        }
+        return this;
     }
 }
 
