@@ -364,6 +364,7 @@ method lexer(code) {
                         cp := c.firstCodepoint
                         index := index + 1
                     }
+                    index := index - 1
                     return CommentToken(line, column, text)
                 }
                 return OperatorToken(line, column, op)
@@ -702,6 +703,9 @@ method parseStatement(lxr) {
         }
     } elseif {token.nature == "COMMENT"} then {
         lxr.advance
+        if (lxr.current.nature == "NEWLINE") then {
+            lxr.advance
+        }
         return ast.comment(token.value)
     }
     var exp := parseExpression(lxr)
