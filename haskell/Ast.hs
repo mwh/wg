@@ -1,6 +1,6 @@
 module Ast where
 
-data ASTNode = ObjectConstructor [ASTNode]
+data ASTNode = ObjectConstructor [ASTNode] [String]
              | VarDecl String [ASTNode] [String] [ASTNode]
              | DefDecl String [ASTNode] [String] ASTNode
              | ExplicitRequest ASTNode [Part]
@@ -12,7 +12,9 @@ data ASTNode = ObjectConstructor [ASTNode]
              | ReturnStmt ASTNode
              | IdentifierDeclaration String [ASTNode]
              | StringNode String
+             | InterpString String ASTNode ASTNode
              | Comment String
+             | ImportStmt String ASTNode
         deriving Show
 
 data Part = Part String [ASTNode]
@@ -25,7 +27,7 @@ nil = []
 no = nil
 
 
-objCons (l) = ObjectConstructor l
+objCons (l, a) = ObjectConstructor l a
 varDec (name, dtype, anns, val) = VarDecl name dtype anns val
 defDec (name, dtype, anns, val) = DefDecl name dtype anns val
 methDec (parts, rtype, anns, body) = MethodDecl parts rtype anns body
@@ -33,14 +35,35 @@ dotReq (receiver, req) = ExplicitRequest receiver req
 lexReq = LexicalRequest
 numLit = NumberNode
 strLit = StringNode
+interpStr (before, expr, next) = InterpString before expr next
 assn (lhs, rhs) = Assign lhs rhs
 returnStmt = ReturnStmt
 identifierDeclaration (name, dtype) = IdentifierDeclaration name dtype
 block (params, body) = Block params body
 comment = Comment
+importStmt (name, binding) = ImportStmt name binding
 
 
 part (name, params) = Part name params
+
+safeStr (l, m, r) = l ++ m ++ r
+
+charDollar = "$";
+charBackslash = "\\";
+charDQuote = "\"";
+charLF = "\n";
+charCR = "\r";
+charLBrace = "{";
+charStar = "*";
+charTilde = "~";
+charBacktick = "`";
+charCaret = "^";
+charAt = "@";
+charPercent = "%";
+charAmp = "&";
+charHash = "#";
+charExclam = "!";
+
 
 ppPart (Part name params) = "part(\"" ++ name ++ "\", " ++ ppASTList params ++ ")"
 
@@ -55,7 +78,7 @@ ppASTList l = case l of
              (h:t) -> "cons(" ++ (prettyPrint h) ++ ", " ++ (ppASTList t) ++ ")"
 
 prettyPrint :: ASTNode -> String
-prettyPrint (ObjectConstructor body) = "objCons(" ++ (ppASTList body) ++ ")"
+prettyPrint (ObjectConstructor body anns) = "objCons(" ++ (ppASTList body) ++ ", " ++(ppStrList anns) ++ ")"
 prettyPrint (VarDecl name dtype anns val) =
         "varDec(\"" ++
                 name ++ "\", " ++
