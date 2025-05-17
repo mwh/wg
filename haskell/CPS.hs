@@ -97,7 +97,8 @@ toFunc (Assign lhs rhs) =
                 rhsFunc = toFunc rhs
             in \ctx ->
                     let slf = localScope ctx
-                        setter = getMethod (name ++ ":=(1)") slf
+                        receiver = findReceiver (name ++ ":=(1)") ctx
+                        setter = getMethod (name ++ ":=(1)") receiver
                     in
                         rhsFunc $ withCont ctx (\val ->
                             do
