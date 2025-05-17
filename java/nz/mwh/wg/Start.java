@@ -16,7 +16,7 @@ import nz.mwh.wg.runtime.GraceException;
 
 public class Start {
     public static void main(String[] args) {
-        String filename = "test.grace";
+        String filename = null;
         boolean printAST = false;
         String updateFile = null;
         boolean inlineImports = false;
@@ -29,10 +29,28 @@ public class Start {
                 updateFile = arg;
             } else if (arg.equals("-i")) {
                 inlineImports = true;
+            } else if (arg.equals("--help")) {
+                System.out.println("""
+                Usage: java nz.mwh.wg.Start [--help] [-p] [-i] [-u other.lang] FILE.grace
+                By default, executes FILE.grace.
+
+                Options:
+                  -p            Print the serialised AST of the program
+                  -i            Inline any imported modules into the produced AST
+                  -u other.lang Update file other.lang with the AST of FILE.grace,
+                                finding and replacing a line containing
+                                    program =
+                  --help        Display this help
+                """);
+                System.exit(0);
             } else {
                 filename = arg;
                 break;
             }
+        }
+        if (filename == null) {
+            System.out.println("Usage: java nz.mwh.wg.Start [--help] [-p] [-i] [-u other.lang] FILE.grace");
+            System.exit(0);
         }
         try {
             String source = Files.readString(Path.of(filename));
