@@ -111,6 +111,22 @@ document.getElementById('java').addEventListener('click', async () => {
     document.getElementById('status').replaceChildren(a)
 })
 
+document.getElementById('haskell').addEventListener('click', async () => {
+    if (!theAST)
+        await doParse()
+    let text = theAST
+    let f = await fetch("flat-template.hs")
+    let base = await f.text()
+    document.getElementById('ast').value = base + `\nprogram = ${text}\n`
+    let blob = new Blob([document.getElementById('ast').value], {type: "text/plain"})
+    let url = URL.createObjectURL(blob)
+    let a = document.createElement('a')
+    a.href = url
+    a.download = "GraceProgram.hs"
+    a.textContent = 'Download GraceProgram.hs'
+    document.getElementById('status').replaceChildren(a)
+})
+
 let steps = document.getElementById('steps')
 let r = evaluator.evaluateModule(
     cont,
