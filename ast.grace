@@ -262,7 +262,7 @@ method importStmt(src, nm) {
 method escapeString(value) {
     var i := 1
     def len = value.size
-    while { i < len } do {
+    while { i <= len } do {
         def c = value.at(i)
         if (c == "\\") then {
             return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charBackslash, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
