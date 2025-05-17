@@ -65,7 +65,6 @@ instance Show GraceObject where
     show (GraceErrorObject s) = "Error: " ++ s
     show (GraceBlock params _ _ _) = "Block" ++ (show params)
     show (BaseObject _ m) = "BaseObject(" ++ (show $ Data.Map.keys m) ++ ")"
-    show o = "GraceObject"
 
 partsToName :: [Part] -> String
 partsToName [] = ""

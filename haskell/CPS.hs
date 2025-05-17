@@ -44,8 +44,8 @@ toFunc (ObjectConstructor body anns) =
             let obj = BaseObject (localScope ctx) methsSelf
             writeIORef self obj
             let selfCtx = withSelf ctx obj
-            let bodyFuncs :: [Context -> IO ()] = map toFunc body
-            let retCont :: Context = withCont selfCtx (\_ -> (continuation ctx) obj)
+            let bodyFuncs = map toFunc body
+            let retCont = withCont selfCtx (\_ -> (continuation ctx) obj)
 
             let folded = Prelude.foldr
                     (\f acc ctx' -> f (withCont ctx' (\_ -> acc ctx')))
@@ -150,7 +150,7 @@ toFunc (ReturnStmt expr) =
             )
 
 toFunc (Block params body) =
-    let bodyFuncs :: [Context -> IO ()] = map toFunc body
+    let bodyFuncs = map toFunc body
     in
         \ctx ->
             let folded =
@@ -227,7 +227,7 @@ makeMethods (stmt:rest) self =
                     restMeths <- makeMethods rest self
                     return $ insert getterName getter $ insert setterName setter restMeths
             MethodDecl parts _ _ body ->
-                let bodyFuncs :: [Context -> IO ()] = map toFunc body
+                let bodyFuncs = map toFunc body
                     name = partsToName parts
                 in
                     do
@@ -244,7 +244,7 @@ makeMethods (stmt:rest) self =
                                             selfCtx = withSelf ctx selfObj
                                             selfScope = LocalScope selfObj scopeMap
                                             selfCtx' = withScope selfCtx selfScope
-                                            retCont :: Context = withReturn selfCtx' $ continuation ctx
+                                            retCont = withReturn selfCtx' $ continuation ctx
                                             folded = if length bodyFuncs > 0
                                                     then Prelude.foldr1
                                                         (\f acc ctx' -> f (withCont ctx' (\_ -> acc ctx')))
