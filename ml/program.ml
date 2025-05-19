@@ -15,6 +15,8 @@ and astNode =
     | ReturnStmt of astNode
     | IdentifierDeclaration of string * astNode list
     | StringNode of string
+    | InterpString of string * astNode * astNode
+    | ImportStmt of string * astNode
     | Comment of string
 
 
@@ -33,12 +35,32 @@ let dotReq (receiver, req) = ExplicitRequest (receiver, req)
 let lexReq parts = LexicalRequest parts
 let numLit value = NumberNode value
 let strLit value = StringNode value
+let interpStr (left, expr, rest) = InterpString (left, expr, rest)
 let assn (lhs, rhs) = Assign (lhs, rhs)
 let returnStmt value = ReturnStmt value
 let identifierDeclaration (name, dtype) = IdentifierDeclaration (name, dtype)
 let block (parameters, body) = Block (parameters, body)
 let comment text = Comment text
+let importStmt (path, binding) = ImportStmt (path, binding)
 
 let part (name, parameters) = Part (name, parameters)
 
-let program = objCons(cons(methDec(one(part("succ", one(identifierDeclaration("x", one(lexReq(one(part("Number", nil)))))))), cons(lexReq(one(part("Number", nil))), nil), one("public"), one(dotReq(lexReq(one(part("x", nil))), one(part("+", one(numLit(1))))))), cons(defDec("a", nil, nil, numLit(1)), cons(varDec("b", nil, nil, one(lexReq(one(part("succ", one(lexReq(one(part("a", nil))))))))), one(dotReq(block(nil, one(lexReq(one(part("print", one(lexReq(one(part("b", nil))))))))), one(part("apply", nil))))))))
+let safeStr (s, a, b) = s ^ a ^ b
+
+let charDollar = "$";
+let charBackslash = "\\";
+let charDQuote = "\"";
+let charLF = "\n";
+let charCR = "\r";
+let charLBrace = "\{";
+let charStar = "*";
+let charTilde = "~";
+let charBacktick = "`";
+let charCaret = "^";
+let charAt = "@";
+let charPercent = "%";
+let charAmp = "&";
+let charHash = "#";
+let charExclam = "!";
+
+let program = objCons(cons(importStmt("ast", identifierDeclaration("ast", nil)), cons(comment(" This file makes use of all AST nodes"), cons(defDec("x", nil, nil, objCons(cons(varDec("y", one(lexReq(one(part("Number", nil)))), nil, one(numLit(1))), one(methDec(cons(part("foo", one(identifierDeclaration("arg", one(lexReq(one(part("Action", nil))))))), one(part("bar", one(identifierDeclaration("n", nil))))), one(lexReq(one(part("String", nil)))), nil, cons(assn(dotReq(lexReq(one(part("self", nil))), one(part("y", nil))), dotReq(dotReq(lexReq(one(part("arg", nil))), one(part("apply", nil))), one(part("+", one(lexReq(one(part("n", nil)))))))), one(returnStmt(interpStr(safeStr("y ", charAt, " "), lexReq(one(part("y", nil))), strLit(safeStr("", charExclam, ""))))))))), nil)), one(lexReq(one(part("print", one(dotReq(lexReq(one(part("x", nil))), cons(part("foo", one(block(nil, one(numLit(2))))), one(part("bar", one(numLit(3)))))))))))))), nil)

@@ -247,5 +247,26 @@ func comment(_ value : String) -> Node {
     return Comment(value)
 }
 
-let program = objCons(cons(importStmt("ast", identifierDeclaration("ast", nil)), cons(comment(" a comment"), cons(defDec("x", nil, nil, objCons(cons(varDec("y", nil, nil, one(numLit(1))), one(methDec(one(part("foo", one(identifierDeclaration("arg", nil)))), nil, nil, cons(assn(dotReq(lexReq(one(part("self", nil))), one(part("y", nil))), dotReq(lexReq(one(part("arg", nil))), one(part("apply", nil)))), cons(lexReq(one(part("print", one(lexReq(one(part("y", nil))))))), one(returnStmt(interpStr("y: ", lexReq(one(part("y", nil))), strLit("!"))))))))), nil)), one(dotReq(lexReq(one(part("x", nil))), one(part("foo", one(block(nil, one(numLit(2))))))))))), nil)
+func safeStr(_ before : String, _ middle : String, _ after : String) -> String {
+    return before + middle + after
+}
 
+let charDollar = "$";
+let charBackslash = "\\";
+let charDQuote = "\"";
+let charLF = "\n";
+let charCR = "\r";
+let charLBrace = "{";
+let charStar = "*";
+let charTilde = "~";
+let charBacktick = "`";
+let charCaret = "^";
+let charAt = "@";
+let charPercent = "%";
+let charAmp = "&";
+let charHash = "#";
+let charExclam = "!";
+
+let program = objCons(cons(importStmt("ast", identifierDeclaration("ast", nil)), cons(comment(" This file makes use of all AST nodes"), cons(defDec("x", nil, nil, objCons(cons(varDec("y", one(lexReq(one(part("Number", nil)))), nil, one(numLit(1))), one(methDec(cons(part("foo", one(identifierDeclaration("arg", one(lexReq(one(part("Action", nil))))))), one(part("bar", one(identifierDeclaration("n", nil))))), one(lexReq(one(part("String", nil)))), nil, cons(assn(dotReq(lexReq(one(part("self", nil))), one(part("y", nil))), dotReq(dotReq(lexReq(one(part("arg", nil))), one(part("apply", nil))), one(part("+", one(lexReq(one(part("n", nil)))))))), one(returnStmt(interpStr(safeStr("y ", charAt, " "), lexReq(one(part("y", nil))), strLit(safeStr("", charExclam, ""))))))))), nil)), one(lexReq(one(part("print", one(dotReq(lexReq(one(part("x", nil))), cons(part("foo", one(block(nil, one(numLit(2))))), one(part("bar", one(numLit(3)))))))))))))), nil)
+
+print(program)
