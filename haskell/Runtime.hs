@@ -1,6 +1,7 @@
 module Runtime where
 
 import Ast
+--import {-# SOURCE #-} qualified CPS as CPS
 import Data.Map (insert, empty, Map, fromList)
 import qualified Data.Map as Data.Map
 import Data.IORef
@@ -70,6 +71,8 @@ data GraceObject = BaseObject GraceObject (Map String (Context -> [GraceObject] 
                    | GraceDone
                    | GraceErrorObject String
                    | GraceAstObject ASTNode
+                   | GracePartObject Part
+                   | GraceAstList [GraceObject]
 
 instance Show GraceObject where
     show (GraceNumber f) = show f
@@ -81,6 +84,49 @@ instance Show GraceObject where
     show (GraceBlock params _ _ _) = "Block" ++ (show params)
     show (BaseObject _ m) = "BaseObject(" ++ (show $ Data.Map.keys m) ++ ")"
     show (GraceAstObject node) = "AstObject(" ++ (show node) ++ ")"
+    show (GracePartObject part) = "PartObject(" ++ (show part) ++ ")"
+
+astModule :: GraceObject
+astModule = BaseObject GraceDone $ fromList [
+    ("asString(0)", \ctx [] -> continuation ctx $ GraceString "AstModule")
+    , ("nil(0)", \ctx [] -> continuation ctx $ GraceAstList [])
+    , ("one(1)", \ctx [v] -> continuation ctx $ GraceAstList [v])
+    , ("cons(2)", \ctx [h, (GraceAstList t)] -> continuation ctx $ GraceAstList (h:t))
+    , ("objectConstructor(2)", \ctx [(GraceAstList body), anns] -> continuation ctx $ GraceAstObject (ObjectConstructor [n | GraceAstObject n <- body] []))
+    , ("numberNode(1)", \ctx [GraceNumber n] -> continuation ctx $ GraceAstObject (NumberNode n))
+    , ("stringNode(1)", \ctx [GraceString s] -> continuation ctx $ GraceAstObject (StringNode s))
+    , ("part(2)", \ctx [GraceString name, (GraceAstList params)] -> continuation ctx $ GracePartObject (Part name [n | GraceAstObject n <- params]))
+    , ("lexicalRequest(1)", \ctx [(GraceAstList parts)] -> continuation ctx $ GraceAstObject (LexicalRequest [n | GracePartObject n <- parts]))
+    , ("lexicalRequest(2)", \ctx [_, (GraceAstList parts)] -> continuation ctx $ GraceAstObject (LexicalRequest [n | GracePartObject n <- parts]))
+    , ("explicitRequest(3)", \ctx [_, (GraceAstObject receiver), (GraceAstList parts)] -> continuation ctx $ GraceAstObject (ExplicitRequest receiver [n | GracePartObject n <- parts]))
+    , ("block(2)", \ctx [GraceAstList params, GraceAstList body] -> continuation ctx $ GraceAstObject (Block [n | GraceAstObject n <- params] [n | GraceAstObject n <- body]))
+    , ("methodDecl(4)", \ctx [GraceAstList parts, GraceAstList rtype, GraceAstList anns, GraceAstList body] -> continuation ctx $ GraceAstObject (MethodDecl [n | GracePartObject n <- parts] [n | GraceAstObject n <- rtype] [n | GraceString n <- anns] [n | GraceAstObject n <- body]))
+    , ("varDecl(4)", \ctx [GraceString name, GraceAstList rtype, GraceAstList anns, GraceAstList init] -> continuation ctx $ GraceAstObject (VarDecl name [n | GraceAstObject n <- rtype] [n | GraceString n <- anns] [n | GraceAstObject n <- init]))
+    , ("defDecl(4)", \ctx [GraceString name, GraceAstList rtype, GraceAstList anns, GraceAstObject init] -> continuation ctx $ GraceAstObject (DefDecl name [n | GraceAstObject n <- rtype] [n | GraceString n <- anns] init))
+    , ("assign(2)", \ctx [GraceAstObject lhs, GraceAstObject rhs] -> continuation ctx $ GraceAstObject (Assign lhs rhs))
+    , ("returnStmt(1)", \ctx [GraceAstObject expr] -> continuation ctx $ GraceAstObject (ReturnStmt expr))
+    , ("identifierDeclaration(2)", \ctx [GraceString name, GraceAstList dtype] -> continuation ctx $ GraceAstObject (IdentifierDeclaration name [n | GraceAstObject n <- dtype]))
+    , ("interpString(3)", \ctx [GraceString before, GraceAstObject expr, GraceAstObject after] -> continuation ctx $ GraceAstObject (InterpString before expr after))
+    , ("comment(1)", \ctx [GraceString s] -> continuation ctx $ GraceAstObject (Comment s))
+    , ("importStmt(2)", \ctx [GraceString name, GraceAstObject binding] -> continuation ctx $ GraceAstObject (ImportStmt name binding))
+    ]
+
+astObjectToAstNode :: GraceObject -> ASTNode
+astObjectToAstNode (GraceAstObject node@(ObjectConstructor _ _)) = node
+astObjectToAstNode (GraceAstObject node@(NumberNode _)) = node
+astObjectToAstNode (GraceAstObject node@(StringNode _)) = node
+astObjectToAstNode (GraceAstObject node@(Block _ _)) = node
+astObjectToAstNode (GraceAstObject node@(MethodDecl _ _ _ _)) = node
+astObjectToAstNode (GraceAstObject node@(VarDecl _ _ _ _)) = node
+astObjectToAstNode (GraceAstObject node@(DefDecl _ _ _ _)) = node
+astObjectToAstNode (GraceAstObject node@(ExplicitRequest _ _)) = node
+astObjectToAstNode (GraceAstObject node@(LexicalRequest _)) = node
+astObjectToAstNode (GraceAstObject node@(Assign _ _)) = node
+astObjectToAstNode (GraceAstObject node@(ReturnStmt _)) = node
+astObjectToAstNode (GraceAstObject node@(IdentifierDeclaration _ _)) = node
+astObjectToAstNode (GraceAstObject node@(InterpString _ _ _)) = node
+astObjectToAstNode (GraceAstObject node@(Comment _)) = node
+astObjectToAstNode (GraceAstObject node@(ImportStmt _ _)) = node
 
 partsToName :: [Part] -> String
 partsToName [] = ""
@@ -200,6 +246,27 @@ getMethod n (GraceBlock params body vars creationContext) =
                 let selfCtx = withScope (withCont creationContext $ continuation ctx) scope
                 body selfCtx
 
+getMethod n (GraceAstObject node) =
+    case n of
+        "asString(0)" -> \ctx [] -> continuation ctx $ GraceString (show node)
+        -- Cyclic dependency: only for testing
+        --"run(0)" -> \ctx [] -> CPS.toFunc node ctx
+        _ -> \ctx _ ->
+            do
+                putStrLn $ "Ast method not found: " ++ n
+                return ()
+
+getMethod n (GraceAstList items) =
+    case n of
+        "asString(0)" -> \ctx [] -> continuation ctx $ GraceString (show items)
+        "reversed(1)" -> \ctx [_] ->
+            do
+                let reversed = reverse items
+                continuation ctx $ GraceAstList reversed
+        _ -> \ctx _ ->
+            do
+                putStrLn $ "AstList method not found: " ++ n
+                return ()
 
 getMethod n o =
     \ctx _ ->
@@ -560,7 +627,9 @@ dropContext = Context {
     , localScope = gracePrelude
     , returnCont = \obj -> do
         putStrLn $ "Illegal top-level return of " ++ (show obj)
-    , importModules = empty
+    , importModules = fromList [
+        ("ast", astModule)
+        ]
 }
 
 resultContext func = Context {
@@ -569,5 +638,7 @@ resultContext func = Context {
     , localScope = gracePrelude
     , returnCont = \obj -> do
         putStrLn $ "Illegal top-level return of " ++ (show obj)
-    , importModules = empty
+    , importModules = fromList [
+        ("ast", astModule)
+        ]
 }

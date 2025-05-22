@@ -29,3 +29,19 @@ runParse s =
                         --return ()
                     )
                 ) [string]
+
+parseExecute s =
+    do
+        let func = toFunc program
+        func $ resultContext $ \val ->
+            let parse = getMethod "parse(1)" val
+                string = GraceString s
+            in
+                parse (resultContext (\result ->
+                    do
+                        case result of
+                            GraceAstObject n -> do
+                                toFunc n $ dropContext
+                            _ -> putStrLn $ "Parse result was not an AST object: " ++ (show result)
+                    )
+                ) [string]
