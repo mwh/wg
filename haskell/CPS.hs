@@ -166,7 +166,16 @@ toFunc (Block params body) =
 toFunc (ImportStmt name binding) =
     \ctx ->
         do
-            putStrLn $ "Cannot import " ++ name ++ ": imports not supported in this version of Grace (use -i option of Java version to inline)"
+            let scope = localScope ctx
+                mods = importModules ctx
+                mod = Data.Map.lookup name mods
+            case mod of
+                Just modObj ->
+                    do
+                        let setter = getMethod ("import " ++ name) scope
+                        setter ctx [modObj]
+                Nothing ->
+                    putStrLn $ "Cannot import " ++ name ++ ": external imports not supported in this version of Grace (use -i option of Java version to inline)"
 
 toFunc (InterpString before expr next) =
     let exprFunc = toFunc expr
@@ -189,6 +198,7 @@ varNames (h:t) =
     case h of
         VarDecl name _ _ _ -> name : varNames t
         DefDecl name _ _ _ -> name : varNames t
+        ImportStmt name _ -> name : varNames t
         _ -> varNames t
 
 makeMethods :: [ASTNode] -> IORef GraceObject -> IO (Map String (Context -> [GraceObject] -> IO ()))
@@ -215,6 +225,20 @@ makeMethods (stmt:rest) self =
             DefDecl name _ _ init ->
                 do
                     let setterName = "def " ++ name
+                        getterName = name ++ "(0)"
+                        getter = \ctx args ->
+                            do
+                                val <- readIORef cell
+                                (continuation ctx) $ val
+                        setter = \ctx [val] ->
+                            do
+                                writeIORef cell val
+                                (continuation ctx) $ GraceDone
+                    restMeths <- makeMethods rest self
+                    return $ insert getterName getter $ insert setterName setter restMeths
+            ImportStmt _ (IdentifierDeclaration name _) ->
+                do
+                    let setterName = "import " ++ name
                         getterName = name ++ "(0)"
                         getter = \ctx args ->
                             do

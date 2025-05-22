@@ -12,6 +12,7 @@ data Context = Context {
     , self :: GraceObject
     , localScope :: GraceObject
     , returnCont :: GraceObject -> IO ()
+    , importModules :: Map String GraceObject
 }
 
 withCont :: Context -> ( GraceObject -> IO () ) -> Context
@@ -20,6 +21,7 @@ withCont ctx cont = Context {
     self = self ctx
     , localScope = localScope ctx
     , returnCont = returnCont ctx
+    , importModules = importModules ctx
 }
 
 withSelf :: Context -> GraceObject -> Context
@@ -28,6 +30,7 @@ withSelf ctx slf = Context {
     , self = slf
     , localScope = slf
     , returnCont = returnCont ctx
+    , importModules = importModules ctx
 }
 
 withScope :: Context -> GraceObject -> Context
@@ -36,6 +39,7 @@ withScope ctx scope = Context {
     , self = self ctx
     , localScope = scope
     , returnCont = returnCont ctx
+    , importModules = importModules ctx
 }
 
 withReturn :: Context -> (GraceObject -> IO ()) -> Context
@@ -44,6 +48,16 @@ withReturn ctx cont = Context {
     , self = self ctx
     , localScope = localScope ctx
     , returnCont = cont
+    , importModules = importModules ctx
+}
+
+withImport :: Context -> String -> GraceObject -> Context
+withImport ctx name obj = Context {
+    continuation = continuation ctx
+    , self = self ctx
+    , localScope = localScope ctx
+    , returnCont = returnCont ctx
+    , importModules = insert name obj (importModules ctx)
 }
 
 
@@ -55,6 +69,7 @@ data GraceObject = BaseObject GraceObject (Map String (Context -> [GraceObject] 
                    | GraceBlock [String] (Context -> IO ()) [String] Context
                    | GraceDone
                    | GraceErrorObject String
+                   | GraceAstObject ASTNode
 
 instance Show GraceObject where
     show (GraceNumber f) = show f
@@ -65,6 +80,7 @@ instance Show GraceObject where
     show (GraceErrorObject s) = "Error: " ++ s
     show (GraceBlock params _ _ _) = "Block" ++ (show params)
     show (BaseObject _ m) = "BaseObject(" ++ (show $ Data.Map.keys m) ++ ")"
+    show (GraceAstObject node) = "AstObject(" ++ (show node) ++ ")"
 
 partsToName :: [Part] -> String
 partsToName [] = ""
@@ -534,6 +550,7 @@ printContext = Context {
     , localScope = gracePrelude
     , returnCont = \obj -> do
         putStrLn $ "Illegal top-level return of " ++ (show obj)
+    , importModules = empty
 }
 
 dropContext = Context {
@@ -543,6 +560,7 @@ dropContext = Context {
     , localScope = gracePrelude
     , returnCont = \obj -> do
         putStrLn $ "Illegal top-level return of " ++ (show obj)
+    , importModules = empty
 }
 
 resultContext func = Context {
@@ -551,4 +569,5 @@ resultContext func = Context {
     , localScope = gracePrelude
     , returnCont = \obj -> do
         putStrLn $ "Illegal top-level return of " ++ (show obj)
+    , importModules = empty
 }
