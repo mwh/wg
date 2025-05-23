@@ -127,6 +127,52 @@ document.getElementById('haskell').addEventListener('click', async () => {
     document.getElementById('status').replaceChildren(a)
 })
 
+document.getElementById('javascript').addEventListener('click', async () => {
+    if (!theAST)
+        await doParse()
+    let text = theAST
+    text = `
+let cont = {
+    go(v) {return null},
+    of(v) {
+        this.result = v;
+        return this;
+    },
+    toString() {return "END"}
+}
+function evaluate(cont) {
+    cont = cont.go(undefined);
+    if (!cont)
+        return
+    setTimeout(() => evaluate(cont), 0)
+}
+
+const program = ${text}
+
+evaluate(evaluateModule(cont, program))
+`
+    let f = await fetch("ast.js")
+    let astText = await f.text()
+    f = await fetch("evaluator.js")
+    let evalText = await f.text()
+    f = await fetch("program.js")
+    let programText = await f.text()
+    programText = programText.replace(/const program = .*/g, "")
+    let base = '// Run as `node GraceProgram.js`\n' + astText + evalText + programText
+    base = base.replace(/^import .*/gm, "")
+    base = base.replace(/^export default .*/gm, "")
+    base = base.replace(/^export /gm, "")
+    base = base.replace(/ast\./g, "")
+    document.getElementById('ast').value = base + text
+    let blob = new Blob([document.getElementById('ast').value], {type: "text/plain"})
+    let url = URL.createObjectURL(blob)
+    let a = document.createElement('a')
+    a.href = url
+    a.download = "GraceProgram.js"
+    a.textContent = 'Download GraceProgram.js'
+    document.getElementById('status').replaceChildren(a)
+})
+
 let steps = document.getElementById('steps')
 let r = evaluator.evaluateModule(
     cont,

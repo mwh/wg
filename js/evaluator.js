@@ -506,7 +506,9 @@ function ifThenElseIfs(cont, args) {
 export const prelude = new GraceObject({
     'print(1)': (cont, args) => {
         console.log(args[0]);
-        document.getElementById('output').append(args[0], document.createElement('br'));
+        if (typeof document !== 'undefined') {
+            document.getElementById('output').append(args[0], document.createElement('br'));
+        }
         return cont.of(undefined);
     },
     'if(1)then(1)': (cont, args) => {
