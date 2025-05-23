@@ -4,6 +4,7 @@
     ],
     "java.project.referencedLibraries": [],
     "files.exclude": {
-        "haskell/*.{hi,o}{,-boot}": true
+        "haskell/*.{hi,o}{,-boot}": true,
+        "java/**/*.{class}": true,
     }
 }
