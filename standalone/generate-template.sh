@@ -6,7 +6,7 @@ files=(../java/nz/mwh/wg/{Evaluator,Visitor,ASTConstructors}.java ../java/nz/mwh
     grep -hE '^import' "${files[@]}" | grep -v 'nz.mwh.wg' | sort -u
     cat <<'EOT'
 
-public class Runner {
+public class GraceProgram {
     public static void main(String[] args) {
         Evaluator.evaluateProgram(TheProgram.program);
     }

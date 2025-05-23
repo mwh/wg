@@ -106,8 +106,8 @@ document.getElementById('java').addEventListener('click', async () => {
     let url = URL.createObjectURL(blob)
     let a = document.createElement('a')
     a.href = url
-    a.download = "Runner.java"
-    a.textContent = 'Download Runner.java'
+    a.download = "GraceProgram.java"
+    a.textContent = 'Download GraceProgram.java'
     document.getElementById('status').replaceChildren(a)
 })
 
