@@ -636,6 +636,21 @@ method parseTypeExpression(lxr) {
     parseError(token.line, token.column, "Unexpected token: " ++ token.asString)
 }
 
+method parseTypeExpressionOrPattern(lxr) {
+    def token = lxr.current
+    if (token.nature == "IDENTIFIER") then {
+        return parseTypeExpression(lxr, token.value)
+    }
+    if (token.nature == "NUMBER") then {
+        return parseExpression(lxr)
+    }
+    if (token.nature == "STRING") then {
+        return parseExpression(lxr)
+    }
+    print("Unexpected token: " ++ token.asString)
+    parseError(token.line, token.column, "Unexpected token: " ++ token.asString)
+}
+
 method parseExpressionNoOpNoDot(lxr) {
     def token = lxr.current
     if (token.nature == "NUMBER") then {
@@ -749,7 +764,7 @@ method parseParamOrStatement(lxr) {
         }
         if (nt.nature == "COLON") then {
             lxr.advance
-            def tp = parseTypeExpression(lxr)
+            def tp = parseTypeExpressionOrPattern(lxr)
             return ast.identifierDeclaration(ident.value, ast.cons(tp, ast.nil))
         }
         lxr.restore(memo)
