@@ -52,6 +52,14 @@ public class GraceNumber implements GraceObject {
                 return new GraceBoolean(value == ((GraceNumber) parts.get(0).getArgs().get(0)).value);
             } else if (name.equals("!=")) {
                 return new GraceBoolean(value != ((GraceNumber) parts.get(0).getArgs().get(0)).value);
+            } else if (name.equals("|")) {
+                return new GracePatternOr(this, parts.get(0).getArgs().get(0));
+            } else if (name.equals("match")) {
+                GraceObject target = parts.get(0).getArgs().get(0);
+                if (target instanceof GraceNumber num && value == num.value) {
+                    return new GraceMatchResult(true, this);
+                }
+                return new GraceMatchResult(false, target);
             } else if (name.equals("asString")) {
                 return new GraceString(toString());
             }

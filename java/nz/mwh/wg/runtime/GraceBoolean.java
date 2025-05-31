@@ -34,6 +34,21 @@ public class GraceBoolean implements GraceObject {
                 return new GraceBoolean(value == ((GraceBoolean) parts.get(0).getArgs().get(0)).value);
             } else if (name.equals("!=")) {
                 return new GraceBoolean(value != ((GraceBoolean) parts.get(0).getArgs().get(0)).value);
+            } else if (name.equals("ifTrue")) {
+                if (value) {
+                    parts.get(0).getArgs().get(0).request(new Request(request.getVisitor(), List.of(new RequestPartR("apply", List.of()))));
+                }
+                return GraceDone.done;
+            } else if (name.equals("value")) {
+                return this;
+            }
+        } else if (parts.size() == 2) {
+            String name = request.getName();
+            if (name.equals("ifTrue(1)ifFalse(1)")) {
+                if (value) {
+                    return parts.get(0).getArgs().get(0).request(new Request(request.getVisitor(), List.of(new RequestPartR("apply", List.of()))));
+                }
+                return parts.get(1).getArgs().get(0).request(new Request(request.getVisitor(), List.of(new RequestPartR("apply", List.of()))));
             }
         }
         throw new GraceException(request.getVisitor(), "No such method in Boolean: " + request.getName());

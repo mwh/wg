@@ -282,22 +282,17 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
         lexicalParent.addMethod("true(0)", _ -> new GraceBoolean(true));
         lexicalParent.addMethod("false(0)", _ -> new GraceBoolean(false));
         lexicalParent.addMethod("if(1)then(1)else(1)", request -> {
-            GraceBoolean condition = (GraceBoolean) request.getParts().get(0).getArgs().get(0);
-            List<RequestPartR> parts = Collections.singletonList(new RequestPartR("apply", Collections.emptyList()));
+            GraceObject condition = request.getParts().get(0).getArgs().get(0);
+            List<RequestPartR> parts = List.of(new RequestPartR("ifTrue", List.of(request.getParts().get(1).getArgs().get(0))),
+                                               new RequestPartR("ifFalse", List.of(request.getParts().get(2).getArgs().get(0))));
             Request req = new Request(request.getVisitor(), parts);
-            if (condition.getValue()) {
-                return request.getParts().get(1).getArgs().get(0).request(req);
-            } else {
-                return request.getParts().get(2).getArgs().get(0).request(req);
-            }
+            return condition.request(req);
         });
         lexicalParent.addMethod("if(1)then(1)", request -> {
-            GraceBoolean condition = (GraceBoolean) request.getParts().get(0).getArgs().get(0);
-            List<RequestPartR> parts = Collections.singletonList(new RequestPartR("apply", Collections.emptyList()));
+            GraceObject condition = request.getParts().get(0).getArgs().get(0);
+            List<RequestPartR> parts = Collections.singletonList(new RequestPartR("ifTrue", List.of(request.getParts().get(1).getArgs().get(0))));
             Request req = new Request(request.getVisitor(), parts);
-            if (condition.getValue()) {
-                return request.getParts().get(1).getArgs().get(0).request(req);
-            }
+            condition.request(req);
             return done;
         });
         lexicalParent.addMethod("if(1)then(1)elseif(1)then(1)", request -> {

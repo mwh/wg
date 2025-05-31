@@ -22,4 +22,8 @@ public class IdentifierDeclaration extends ASTNode {
     public String getName() {
         return name;
     }
+
+    public ASTNode getType() {
+        return type;
+    }
 }
