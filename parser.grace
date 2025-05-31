@@ -742,7 +742,6 @@ method parseblock(lxr) {
                     lxr.advance
                     tp := parseTypeExpression(lxr)
                 }
-                //prm := ast.identifierDeclaration(prm, tp)
                 params := ast.cons(prm, params)
                 while { (lxr.current.nature != "ARROW") && (lxr.current.nature != "RBRACE") } do {
                     lxr.advance
@@ -755,7 +754,6 @@ method parseblock(lxr) {
                             lxr.advance
                             tp := parseTypeExpression(lxr)
                         }
-                        //prm := ast.identifierDeclaration(prm, tp)
                         params := ast.cons(prm, params)
                     }
                 }
@@ -790,9 +788,9 @@ method parseblock(lxr) {
                 lxr.advance
             }
         }
+        indentColumn := indentBefore
         lxr.advance
     }
-    indentColumn := indentBefore
     ast.block(params.reversed(ast.nil), body.reversed(ast.nil))
 
 }
