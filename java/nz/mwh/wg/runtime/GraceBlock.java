@@ -81,6 +81,10 @@ public class GraceBlock implements GraceObject {
         } else {
             throw new GraceException(request.getVisitor(), "Invalid parameter in matching block: " + firstParameter);
         }
+        if (patternExpr == null) {
+            GraceObject result = apply(request, part);
+            return new GraceMatchResult(true, result);
+        }
         GraceObject pattern = patternExpr.accept(lexicalParent, request.getVisitor());
 
         GraceObject target = part.getArgs().get(0);
