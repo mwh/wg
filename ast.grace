@@ -259,6 +259,16 @@ method importStmt(src, nm) {
     }
 }
 
+method dialectStmt(src) {
+    object {
+        def source is public = src
+
+        method asString {
+            "dialectStmt(\"" ++ source ++ "\")"
+        }
+    }
+}
+
 method escapeString(value) {
     var i := 1
     def len = value.size

@@ -340,7 +340,7 @@ method lexer(code) {
                         c := source.at(index)
                     }
                 }
-                if ((value == "var") || (value == "def") || (value == "method") || (value == "object") || (value == "is") || (value == "return") || (value == "class") || (value == "type") || (value == "import") || (value == "self")) then {
+                if ((value == "var") || (value == "def") || (value == "method") || (value == "object") || (value == "is") || (value == "return") || (value == "class") || (value == "type") || (value == "import") || (value == "self") || (value == "dialect")) then {
                     return KeywordToken(line, column, value)
                 }
                 return IdentifierToken(line, column, value)
@@ -1058,12 +1058,23 @@ method parseImport(lxr) {
     ast.importStmt(src, ident)
 }
 
+method parseDialect(lxr) {
+    lxr.expectKeyword("dialect")
+    lxr.advance
+    lxr.expectToken("STRING")
+    def src = lxr.current.value
+    lxr.advance
+    ast.dialectStmt(src)
+}
+
 method parseObjectBody(lxr) {
     var body := ast.nil
     
     var token := lxr.current
 
     def indentBefore = indentColumn
+
+    var first := true
 
     while { (token.nature != "EOF") && (token.nature != "RBRACE") } do {
         indentColumn := token.column
@@ -1095,12 +1106,24 @@ method parseObjectBody(lxr) {
                 if (token.value == "import") then {
                     def imp = parseImport(lxr)
                     body := ast.cons(imp, body)
+                } elseif { token.value == "dialect" } then {
+                    if (first) then {
+                        def dia = parseDialect(lxr)
+                        body := ast.cons(dia, body)
+                    } else {
+                        parseError(lxr.current.line, indentColumn, "dialect declaration can only appear as first statement")
+                    }
                 } else {
                     def stmt = parseStatement(lxr)
                     body := ast.cons(stmt, body)
                 }
             } 
         } else {
+            if (first) then {
+                if (lxr.current.nature != "COMMENT") then {
+                    first := false
+                }
+            }
             def stmt = parseStatement(lxr)
             body := ast.cons(stmt, body)
         }
