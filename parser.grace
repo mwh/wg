@@ -233,6 +233,24 @@ method lexer(code) {
         var lineStart := 0
         var currentToken := nextToken
 
+        method save {
+            object {
+                def i = index
+                def l = line
+                def c = column
+                def s = lineStart
+                def t = currentToken
+            }
+        }
+
+        method restore(memo) {
+            index := memo.i
+            line := memo.l
+            column := memo.c
+            lineStart := memo.s
+            currentToken := memo.t
+        }
+
         method nextToken {
             if (index > source.size) then {
                 return EOFToken(line, column)
@@ -720,6 +738,27 @@ method parseStatement(lxr) {
     exp
 }
 
+method parseParamOrStatement(lxr) {
+    if (lxr.current.nature == "IDENTIFIER") then {
+        def memo = lxr.save
+        def ident = lxr.current
+        lxr.advance
+        def nt = lxr.current
+        if ((nt.nature == "ARROW") || (nt.nature == "COMMA")) then {
+            return ast.identifierDeclaration(ident.value, ast.nil)
+        }
+        if (nt.nature == "COLON") then {
+            lxr.advance
+            def tp = parseTypeExpression(lxr)
+            return ast.identifierDeclaration(ident.value, ast.cons(tp, ast.nil))
+        }
+        lxr.restore(memo)
+        parseStatement(lxr)
+    } else {
+        parseStatement(lxr)
+    }
+}
+
 method parseblock(lxr) {
     var params := ast.nil
     var body := ast.nil
@@ -732,28 +771,27 @@ method parseblock(lxr) {
         if (lxr.current.nature != "RBRACE") then {
             def firstTok = lxr.current
             indentColumn := firstTok.column
-            def first = parseStatement(lxr)
+            def first = parseParamOrStatement(lxr)
             def after = lxr.current
-            if ((after.nature == "COLON") || (after.nature == "ARROW") || (after.nature == "COMMA")) then {
+            if ((after.nature == "ARROW") || (after.nature == "COMMA")) then {
                 // Parameter list
                 var prm := first
                 var tp := ast.nil
-                if (after.nature == "COLON") then {
-                    lxr.advance
-                    tp := parseTypeExpression(lxr)
-                }
                 params := ast.cons(prm, params)
                 while { (lxr.current.nature != "ARROW") && (lxr.current.nature != "RBRACE") } do {
                     lxr.advance
                     if (lxr.current.nature == "NEWLINE") then {
                         lxr.advance
                     } else {
-                        prm := parseExpressionNoOpNoDot(lxr)
+                        lxr.expectToken "IDENTIFIER"
+                        def ident = lxr.current
+                        lxr.advance
                         tp := ast.nil
                         if (lxr.current.nature == "COLON") then {
                             lxr.advance
                             tp := parseTypeExpression(lxr)
                         }
+                        prm := ast.identifierDeclaration(ident.value, tp)
                         params := ast.cons(prm, params)
                     }
                 }
