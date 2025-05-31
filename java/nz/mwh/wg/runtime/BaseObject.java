@@ -110,5 +110,11 @@ public class BaseObject implements GraceObject {
         throw new RuntimeException("No return context found");
     }
 
+    public void setDialect(GraceObject dialect) {
+        // TODO: this should be an intransitive link and so needs
+        // to be distinguished from the lexical parent.
+        lexicalParent = dialect;
+    }
+
 }
 

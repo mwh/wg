@@ -6,6 +6,7 @@ import nz.mwh.wg.ast.Block;
 import nz.mwh.wg.ast.Cons;
 import nz.mwh.wg.ast.Comment;
 import nz.mwh.wg.ast.DefDecl;
+import nz.mwh.wg.ast.DialectStmt;
 import nz.mwh.wg.ast.ExplicitRequest;
 import nz.mwh.wg.ast.IdentifierDeclaration;
 import nz.mwh.wg.ast.ImportStmt;
@@ -148,6 +149,10 @@ public class ASTConstructors {
 
     protected static ImportStmt importStmt(String source, IdentifierDeclaration binding) {
         return new ImportStmt(source, binding);
+    }
+
+    protected static DialectStmt DialectStmt(String source) {
+        return new DialectStmt(source);
     }
 
     protected static final String charDollar = "$";

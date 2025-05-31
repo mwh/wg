@@ -273,6 +273,30 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
         throw new GraceException(this, "imports can only appear inside in-code context");
     }
 
+    @Override
+    public GraceObject visit(GraceObject context, DialectStmt node) {
+        if (context instanceof BaseObject object) {
+
+            if (modules.containsKey(node.getSource())) {
+                object.setDialect(modules.get(node.getSource()));
+                return done;
+            }
+
+            String filename = node.getSource() + ".grace";
+            try {
+                String source = Files.readString(Path.of(filename));
+                ObjectConstructor ast = (ObjectConstructor) Parser.parse(source);
+                GraceObject mod =  this.evaluateModule(ast);
+                modules.put(node.getSource(), mod);
+                object.setDialect(mod);
+                return done;
+            } catch (IOException e) {
+                throw new GraceException(this, "Error reading file for dialect import: " + filename);
+            }
+        }
+        throw new GraceException(this, "dialect statements can only appear inside in-code context");
+    }
+
     static BaseObject basePrelude() {
         BaseObject lexicalParent = new BaseObject(null);
         lexicalParent.addMethod("print(1)", request -> {

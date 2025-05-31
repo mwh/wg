@@ -94,6 +94,10 @@ public class ASTConstructors {
         return new ImportStmt(source, bnd);
     }
 
+    protected static DialectStmt dialectStmt(String source) {
+        return new DialectStmt(source);
+    }
+
     protected static final String charDollar = "$";
     protected static final String charBacklash = "\\";
     protected static final String charLF = "\n";
