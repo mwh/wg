@@ -378,6 +378,18 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             }
             return done;
         });
+        String matchCase = "match(1)";
+        for (int i = 0; i < 10; i++) {
+            matchCase += "case(1)";
+            lexicalParent.addMethod(matchCase, request -> {
+                GraceObject target = request.getParts().get(0).getArgs().get(0);
+                GraceObject pattern = request.getParts().get(1).getArgs().get(0);
+                for (int j = 2; j < request.getParts().size(); j++) {
+                    pattern = new GracePatternOr(pattern, request.getParts().get(j).getArgs().get(0));
+                }
+                return pattern.request(new Request(request.getVisitor(), List.of(new RequestPartR("match", List.of(target)))));
+            });
+        }
         lexicalParent.addMethod("Exception(0)", _ -> {
             return GraceExceptionKind.BASE;
         });
