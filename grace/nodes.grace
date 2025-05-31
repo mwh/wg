@@ -227,6 +227,19 @@ class importStmt(src, bnd) {
     }
 }
 
+class dialectStmt(src) {
+    def kind is public = "dialectStmt"
+    def source is public = src
+
+    method evaluate(context) {
+        
+    }
+
+    method evaluateDeclaration(ctx) {
+        Exception.raise("Dialect import statements not currently implemented in this evaluator.")
+    }
+}
+
 class comment(text) {
     def kind is public = "comment"
     def value is public = text
