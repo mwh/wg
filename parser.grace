@@ -340,7 +340,7 @@ method lexer(code) {
                         c := source.at(index)
                     }
                 }
-                if ((value == "var") || (value == "def") || (value == "method") || (value == "object") || (value == "is") || (value == "return") || (value == "class") || (value == "type") || (value == "import") || (value == "self") || (value == "dialect")) then {
+                if ((value == "var") || (value == "def") || (value == "method") || (value == "object") || (value == "is") || (value == "return") || (value == "class") || (value == "type") || (value == "import") || (value == "self") || (value == "dialect") || (value == "interface")) then {
                     return KeywordToken(line, column, value)
                 }
                 return IdentifierToken(line, column, value)
@@ -627,13 +627,80 @@ method parseexplicitRequest(receiver, lxr) {
     ast.explicitRequest(pos, receiver, parts)
 }
 
-method parseTypeExpression(lxr) {
+method parseInterface(lxr) {
+    lxr.expectKeyword "interface"
+    lxr.advance
+    lxr.expectSymbol "LBRACE"
+    lxr.advance
+
+    var body := ast.nil
+
+    while { lxr.current.nature == "IDENTIFIER" } do {
+        var parts := ast.nil
+        while { lxr.current.nature == "IDENTIFIER" } do {
+            def id = lxr.current.value
+            lxr.advance
+            if (lxr.current.nature == "LPAREN") then {
+                lxr.advance
+                var args := ast.nil
+                while {(lxr.current.nature != "RPAREN") && (lxr.current.nature != "EOF")} do {
+                    lxr.expectToken "IDENTIFIER"
+                    def idToken = lxr.current
+                    var dtype := ast.nil
+                    lxr.advance
+                    if (lxr.current.nature == "COLON") then {
+                        // Type annotation
+                        lxr.advance
+                        dtype := ast.cons(parseTypeExpression(lxr), ast.nil)
+                    }
+                    args := ast.cons(ast.identifierDeclaration(idToken.value, dtype), args)
+                    if (lxr.current.nature == "COMMA") then {
+                        lxr.advance
+                    }
+                }
+                lxr.advance
+                def part = ast.part(id, args.reversed(ast.nil))
+                parts := ast.cons(part, parts)
+            } else {
+                def part = ast.part(id, ast.nil)
+                parts := ast.cons(part, parts)
+            }
+        }
+        var dtype := ast.nil
+        if (lxr.current.nature == "ARROW") then {
+            // Type annotation
+            lxr.advance
+            dtype := ast.cons(parseTypeExpression(lxr), ast.nil)
+        }
+        body := ast.cons(ast.methSig(parts, dtype), body)
+    }
+
+    lxr.expectSymbol "RBRACE"
+    lxr.advance
+    ast.interfaceCons(body)
+}
+
+method parseTypeTerm(lxr) {
     def token = lxr.current
     if (token.nature == "IDENTIFIER") then {
         return parselexicalRequestNoBlock(lxr, token.value)
     }
+    if ((token.nature == "KEYWORD") && (token.value == "interface")) then {
+        return parseInterface(lxr)
+    }
     print("Unexpected token: " ++ token.asString)
     parseError(token.line, token.column, "Unexpected token: " ++ token.asString)
+}
+
+method parseTypeExpression(lxr) {
+    var expr := parseTypeTerm(lxr)
+    if (lxr.current.nature == "OPERATOR") then {
+        def op = lxr.current
+        lxr.advance
+        def term2 = parseTypeExpression(lxr)
+        expr := ast.explicitRequest(op.location, expr, ast.cons(ast.part(op.value, ast.cons(term2, ast.nil)), ast.nil))
+    }
+    expr
 }
 
 method parseTypeExpressionOrPattern(lxr) {
@@ -733,6 +800,9 @@ method parseStatement(lxr) {
         }
         if (token.value == "def") then {
             return parsedefDeclaration(lxr)
+        }
+        if (token.value == "type") then {
+            return parseTypeDeclaration(lxr)
         }
     } elseif {token.nature == "COMMENT"} then {
         lxr.advance
@@ -859,6 +929,18 @@ method parseAnnotations(lxr) {
         }
     }
     anns.reversed(ast.nil)
+}
+
+method parseTypeDeclaration(lxr) {
+    lxr.expectKeyword "type"
+    lxr.advance
+    lxr.expectToken "IDENTIFIER"
+    def ident = lxr.current
+    lxr.advance
+    lxr.expectSymbol "EQUALS"
+    lxr.advance
+    def typeExpr = parseTypeExpression(lxr)
+    ast.typeDecl(ident.value, typeExpr)
 }
 
 method parsedefDeclaration(lxr) {

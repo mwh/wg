@@ -101,6 +101,39 @@ method defDecl(id, dtype, anns, val) {
     }
 }
 
+
+method typeDecl(id, val) {
+    object {
+        def name is public = id
+        def value is public = val
+
+        method asString {
+            "typeDec(\"" ++ name ++ "\", " ++ value ++ ")"
+        }
+    }
+}
+
+method interfaceCons(bd) {
+    object {
+        def body is public = bd
+
+        method asString {
+            "interfaceCons(" ++ body ++ ")"
+        }
+    }
+}
+
+method methSig(pts, rType) {
+    object {
+        def parts is public = pts
+        def returnType is public = rType
+
+        method asString {
+            "methSig(" ++ parts ++ ", " ++ returnType ++ ")"
+        }
+    }
+}
+
 method varDecl(id, dtype, anns, val) {
     object {
         def name is public = id
