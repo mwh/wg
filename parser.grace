@@ -633,11 +633,14 @@ method parseInterface(lxr) {
     lxr.expectSymbol "LBRACE"
     lxr.advance
 
+    def indentBefore = indentColumn
+    indentColumn := lxr.current.column
     var body := ast.nil
-
-    while { lxr.current.nature == "IDENTIFIER" } do {
+    while { (lxr.current.nature == "IDENTIFIER") || (lxr.current.nature == "OPERATOR") } do {
         var parts := ast.nil
-        while { lxr.current.nature == "IDENTIFIER" } do {
+        var first := true
+        while { (lxr.current.nature == "IDENTIFIER") || (first && (lxr.current.nature == "OPERATOR")) } do {
+            first := false
             def id = lxr.current.value
             lxr.advance
             if (lxr.current.nature == "LPAREN") then {
@@ -672,12 +675,16 @@ method parseInterface(lxr) {
             lxr.advance
             dtype := ast.cons(parseTypeExpression(lxr), ast.nil)
         }
-        body := ast.cons(ast.methSig(parts, dtype), body)
+        body := ast.cons(ast.methSig(parts.reversed(ast.nil), dtype), body)
+        while { lxr.current.nature == "NEWLINE" } do {
+            lxr.advance
+        }
     }
 
     lxr.expectSymbol "RBRACE"
     lxr.advance
-    ast.interfaceCons(body)
+    indentColumn := indentBefore
+    ast.interfaceCons(body.reversed(ast.nil))
 }
 
 method parseTypeTerm(lxr) {
@@ -685,10 +692,14 @@ method parseTypeTerm(lxr) {
     if (token.nature == "IDENTIFIER") then {
         return parselexicalRequestNoBlock(lxr, token.value)
     }
-    if ((token.nature == "KEYWORD") && (token.value == "interface")) then {
-        return parseInterface(lxr)
+    if (token.nature == "KEYWORD") then {
+        if (token.value == "interface") then {
+            return parseInterface(lxr)
+        }
     }
-    print("Unexpected token: " ++ token.asString)
+    if (token.nature == "LBRACE") then {
+        parseError(token.line, token.column, "Unexpected token: " ++ token.asString ++ "; did you omit 'interface' before the '\{'?")
+    }
     parseError(token.line, token.column, "Unexpected token: " ++ token.asString)
 }
 
@@ -1199,7 +1210,12 @@ method parseObjectBody(lxr) {
                     def stmt = parseStatement(lxr)
                     body := ast.cons(stmt, body)
                 }
-            } 
+            }
+            if (first) then {
+                if (lxr.current.nature != "COMMENT") then {
+                    first := false
+                }
+            }
         } else {
             if (first) then {
                 if (lxr.current.nature != "COMMENT") then {
