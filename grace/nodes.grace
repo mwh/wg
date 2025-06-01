@@ -13,6 +13,10 @@ class evaluationContext(newScope) {
         scope.findReceiver(req.name)
     }
 
+    method findReturnScope {
+        scope.findReturnScope
+    }
+
 }
 
 method nil {
@@ -198,6 +202,7 @@ class methDec(pts, dtype, anns, bd) {
         def selfBinding = ctx.scope
         ctx.scope.addMethod(name) body { req ->
             def scope = objects.graceObject(selfBinding)
+            scope.canReturn := true
             def context = ctx.withScope(scope)
             def paramNames = parts.flatMap { pt -> pt.arguments.map { arg -> arg.name } }
             def args = req.parts.flatMap { pt -> pt.arguments }
@@ -205,8 +210,16 @@ class methDec(pts, dtype, anns, bd) {
                 scope.addMethod(p ++ "(0)") body { req -> a }
             }
             var lastValue := objects.graceDone
-            body.each { item ->
-                lastValue := item.evaluate(context)
+            try {
+                body.each { item ->
+                    lastValue := item.evaluate(context)
+                }
+            } catch { e : objects.Return ->
+                if (scope.hasReturned) then {
+                    lastValue := scope.returnedValue
+                } else {
+                    e.reraise
+                }
             }
             lastValue
         }
@@ -271,8 +284,10 @@ class returnStmt(val) {
 
     method evaluate(context) {
         def evaluatedValue = value.evaluate(context)
-        print "Return statements currently non-functional in this evaluator; consider tail return if possible."
-        objects.Return.raise(evaluatedValue)
+        def returnScope = context.findReturnScope
+        returnScope.hasReturned := true
+        returnScope.returnedValue := evaluatedValue
+        objects.Return.raise "Return outside of method extent"
     }
 
     method evaluateDeclaration(ctx) { }

@@ -51,6 +51,10 @@ class graceObject(scp) {
     def methods = collections.dictionary
     def surroundingScope is public = scp
 
+    var canReturn is public := false
+    var returnedValue is public
+    var hasReturned is public := false
+
     method request(req) {
         def name = req.name
         if (!methods.has(name)) then {
@@ -73,6 +77,13 @@ class graceObject(scp) {
 
     method addMethod(name) body(body) {
         methods.at(name) put(body)
+    }
+
+    method findReturnScope {
+        if (canReturn) then {
+            return self
+        }
+        return surroundingScope.findReturnScope
     }
 }
 
