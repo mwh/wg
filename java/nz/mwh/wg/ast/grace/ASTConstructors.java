@@ -62,6 +62,18 @@ public class ASTConstructors {
         return new MethodDecl(parts, type.isNil() ? null : type.getHead(), annotations, body);
     }
 
+    protected static MethodSignature methodSignature(Cons<Part> parts, Cons<ASTNode> type) {
+        return new MethodSignature(parts, type.isNil() ? null : type.getHead());
+    }
+
+    protected static InterfaceConstructor interfaceCons(Cons<ASTNode> body) {
+        return new InterfaceConstructor(body.toList());
+    }
+
+    protected static TypeDecl typeDecl(String name, ASTNode type) {
+        return new TypeDecl(name, type);
+    }
+
     protected static Part declarationPart(String name, Cons<IdentifierDeclaration> parameters) {
         return new Part(name, parameters);
     }

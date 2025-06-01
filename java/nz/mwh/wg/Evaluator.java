@@ -31,6 +31,12 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
         BaseObject object = new BaseObject(context, false, true);
         List<ASTNode> body = node.getBody();
         for (ASTNode part : body) {
+            if (part instanceof TypeDecl type) {
+                object.addField(type.getName());
+                object.setField(type.getName(), new GraceTypeReference(type.getName(), null));
+            }
+        }
+        for (ASTNode part : body) {
             if (part instanceof DefDecl) {
                 DefDecl def = (DefDecl) part;
                 object.addField(def.getName());
@@ -43,6 +49,14 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
                 object.addField(imp.getName());
             } else if (part instanceof MethodDecl) {
                 visit(object, part);
+            } else if (part instanceof TypeDecl type) {
+                GraceObject actual = type.getType().accept(object, this);
+                GraceObject ref = object.getField(type.getName());
+                if (ref instanceof GraceTypeReference typeRef) {
+                    typeRef.setType(actual);
+                } else {
+                    object.setField(type.getName(), actual);
+                }
             }
         }
         for (ASTNode part : body) {
@@ -260,7 +274,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             String filename = node.getSource() + ".grace";
             try {
                 String source = Files.readString(Path.of(filename));
-                ObjectConstructor ast = (ObjectConstructor) Parser.parse(source);
+                ObjectConstructor ast = (ObjectConstructor) Parser.parse(node.getSource(), source);
                 GraceObject mod =  this.evaluateModule(ast);
                 modules.put(node.getSource(), mod);
                 object.setField(node.getName(), mod);
@@ -295,6 +309,38 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             }
         }
         throw new GraceException(this, "dialect statements can only appear inside in-code context");
+    }
+
+    @Override
+    public GraceObject visit(GraceObject context, InterfaceConstructor node) {
+        List<GraceMethodSignature> methods = new ArrayList<>();
+        for (MethodSignature meth : node.getBody()) {
+            List<RequestPartR> parts = new ArrayList<>();
+            for (var part : meth.getParts()) {
+                List<GraceObject> args = part.getArgs().stream().map(x -> {
+                    if (x instanceof IdentifierDeclaration id) {
+                        if (id.getType() != null) {
+                            return new GraceParameter(id.getName(), id.getType().accept(context, this));
+                        } else {
+                            return new GraceParameter(id.getName(), null);
+                        }
+                    }
+                    throw new GraceException(this, "Invalid part in method signature: " + x.getClass().getName());
+                }).collect(Collectors.toList());
+                parts.add(new RequestPartR(part.getName(), args));
+            }
+            GraceObject returnType = null;
+            if (meth.getReturnType() != null) {
+                returnType = meth.getReturnType().accept(context, this);
+            }
+            methods.add(new GraceMethodSignature("", parts, returnType));
+        }
+        return new GraceType(methods);
+    }
+
+    @Override
+    public GraceObject visit(GraceObject context, TypeDecl node) {
+        return done;
     }
 
     static BaseObject basePrelude() {

@@ -103,6 +103,11 @@ public class BaseObject implements GraceObject {
         fields.put(name, value);
     }
 
+    public GraceObject getField(String name) {
+        GraceObject value = fields.get(name);
+        return value;
+    }
+
     public GraceObject findReturnContext() {
         if (returns) {
             return this;

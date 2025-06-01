@@ -40,4 +40,21 @@ public class GracePatternOr implements GraceObject {
     public GraceObject findReceiver(String name) {
         throw new RuntimeException("No such method in scope: " + name);
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        if (left instanceof GraceTypeReference tr) {
+            sb.append(tr.getName());
+        } else {
+            sb.append(left.toString());
+        }
+        sb.append(" | ");
+        if (right instanceof GraceTypeReference tr) {
+            sb.append(tr.getName());
+        } else {
+            sb.append(right.toString());
+        }
+        return sb.toString();
+    }
 }

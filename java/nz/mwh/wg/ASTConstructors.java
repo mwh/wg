@@ -10,14 +10,17 @@ import nz.mwh.wg.ast.DialectStmt;
 import nz.mwh.wg.ast.ExplicitRequest;
 import nz.mwh.wg.ast.IdentifierDeclaration;
 import nz.mwh.wg.ast.ImportStmt;
+import nz.mwh.wg.ast.InterfaceConstructor;
 import nz.mwh.wg.ast.InterpString;
 import nz.mwh.wg.ast.LexicalRequest;
 import nz.mwh.wg.ast.MethodDecl;
+import nz.mwh.wg.ast.MethodSignature;
 import nz.mwh.wg.ast.NumberNode;
 import nz.mwh.wg.ast.ObjectConstructor;
 import nz.mwh.wg.ast.Part;
 import nz.mwh.wg.ast.ReturnStmt;
 import nz.mwh.wg.ast.StringNode;
+import nz.mwh.wg.ast.TypeDecl;
 import nz.mwh.wg.ast.VarDecl;
 
 public class ASTConstructors {
@@ -109,6 +112,18 @@ public class ASTConstructors {
 
     static MethodDecl methDec(Cons<Part> parts, Cons<ASTNode> type, Cons<String> annotations, Cons<ASTNode> body) {
         return new MethodDecl(parts, type.isNil() ? null : type.getHead(), annotations, body);
+    }
+
+    static MethodSignature methSig(Cons<Part> parts, ASTNode type) {
+        return new MethodSignature(parts, type);
+    }
+
+    static InterfaceConstructor interfaceCons(Cons<ASTNode> body) {
+        return new InterfaceConstructor(body);
+    }
+
+    static TypeDecl typeDecl(String name, ASTNode type) {
+        return new TypeDecl(name, type);
     }
 
     static Part declarationPart(String name, Cons<IdentifierDeclaration> parameters) {

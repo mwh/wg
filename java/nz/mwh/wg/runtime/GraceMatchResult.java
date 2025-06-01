@@ -82,10 +82,10 @@ public class GraceMatchResult implements GraceObject {
                 }
                 return parts.get(1).getArgs().get(0).request(new Request(request.getVisitor(), List.of(new RequestPartR("apply", List.of()))));
             } else if (name.equals("ifSuccess(1)otherwise(1)")) {
-                GraceObject succcessBlock = parts.get(0).getArgs().get(0);
+                GraceObject successBlock = parts.get(0).getArgs().get(0);
                 GraceObject otherwisePattern = parts.get(1).getArgs().get(0);
                 if (success) {
-                    GraceObject result = parts.get(0).getArgs().get(0).request(new Request(request.getVisitor(), List.of(new RequestPartR("apply", List.of(value)))));
+                    GraceObject result = successBlock.request(new Request(request.getVisitor(), List.of(new RequestPartR("apply", List.of(value)))));
                     return new GraceMatchResult(true, result);
                 }
                 return otherwisePattern.request(new Request(request.getVisitor(), List.of(new RequestPartR("match", List.of(value)))));
