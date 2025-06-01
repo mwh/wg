@@ -460,6 +460,25 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
                 return pattern.request(new Request(request.getVisitor(), List.of(new RequestPartR("match", List.of(target)))));
             });
         }
+        String tryCatch = "try(1)";
+        for (int i = 0; i < 3; i++) {
+            tryCatch += "catch(1)";
+            lexicalParent.addMethod(tryCatch, request -> {
+                GraceObject block = request.getParts().get(0).getArgs().get(0);
+                GraceObject result;
+                try {
+                    result = block.request(Request.nullary(request.getVisitor(), "apply"));
+                } catch (GraceException e) {
+                    GraceObject target = e;
+                    GraceObject pattern = request.getParts().get(1).getArgs().get(0);
+                    for (int j = 2; j < request.getParts().size(); j++) {
+                        pattern = new GracePatternOr(pattern, request.getParts().get(j).getArgs().get(0));
+                    }
+                    return pattern.request(new Request(request.getVisitor(), List.of(new RequestPartR("match", List.of(target)))));
+                }
+                return done;
+            });
+        }
         lexicalParent.addMethod("Exception(0)", _ -> {
             return GraceExceptionKind.BASE;
         });

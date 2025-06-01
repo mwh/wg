@@ -40,7 +40,13 @@ public class GraceException extends RuntimeException implements GraceObject {
 
     @Override
     public GraceObject request(Request request) {
-        throw new UnsupportedOperationException("Unimplemented method 'request'");
+        switch (request.getName()) {
+            case "asString(0)":
+                return new GraceString(toString());
+            case "reraise(0)":
+                throw this;
+        }
+        throw new GraceException(request.getVisitor(), "No such method in ExceptionPacket: " + request.getName());
     }
 
     @Override
