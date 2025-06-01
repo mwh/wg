@@ -333,7 +333,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             if (meth.getReturnType() != null) {
                 returnType = meth.getReturnType().accept(context, this);
             }
-            methods.add(new GraceMethodSignature("", parts, returnType));
+            methods.add(new GraceMethodSignature(parts, returnType));
         }
         return new GraceType(methods);
     }

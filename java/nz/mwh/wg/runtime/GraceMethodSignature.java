@@ -9,10 +9,12 @@ public class GraceMethodSignature {
     private List<RequestPartR> parts;
     private GraceObject returnType;
 
-    public GraceMethodSignature(String name, List<RequestPartR> parts, GraceObject returnType) {
-        this.name = name;
+    public GraceMethodSignature(List<RequestPartR> parts, GraceObject returnType) {
         this.parts = parts;
         this.returnType = returnType;
+        this.name = parts.stream()
+                         .map(p -> p.getName() + "(" + p.getArgs().size() + ")")
+                         .collect(Collectors.joining(""));
     }
 
     public String getName() {

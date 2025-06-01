@@ -1,10 +1,6 @@
 package nz.mwh.wg.runtime;
 
 import java.util.List;
-import java.util.stream.Collectors;
-
-import nz.mwh.wg.ast.IdentifierDeclaration;
-import nz.mwh.wg.ast.MethodSignature;
 
 public class GraceType  implements GraceObject {
 
@@ -21,6 +17,14 @@ public class GraceType  implements GraceObject {
         switch(request.getName()) {
             case "asString(0)":
                 return new GraceString(toString());
+            case "match(1)":
+                GraceObject obj = request.getParts().get(0).getArgs().get(0);
+                for (var method : methods) {
+                    if (!obj.hasMethod(method.getName())) {
+                        return new GraceMatchResult(false, obj);
+                    }
+                }
+                return new GraceMatchResult(true, obj);
             default:
                 throw new RuntimeException("Cannot request method on GraceType: " + request.getName());
         }
