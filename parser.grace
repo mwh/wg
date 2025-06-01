@@ -690,7 +690,15 @@ method parseInterface(lxr) {
 method parseTypeTerm(lxr) {
     def token = lxr.current
     if (token.nature == "IDENTIFIER") then {
-        return parselexicalRequestNoBlock(lxr, token.value)
+        var ret := parselexicalRequestNoBlock(lxr, token.value)
+        if (lxr.current.nature == "DOT") then {
+            var token := lxr.current
+            while { token.nature == "DOT" } do {
+                ret := parseexplicitRequest(ret, lxr)
+                token := lxr.current
+            }
+        }
+        return ret
     }
     if (token.nature == "KEYWORD") then {
         if (token.value == "interface") then {
@@ -717,7 +725,7 @@ method parseTypeExpression(lxr) {
 method parseTypeExpressionOrPattern(lxr) {
     def token = lxr.current
     if (token.nature == "IDENTIFIER") then {
-        return parseTypeExpression(lxr, token.value)
+        return parseTypeExpression(lxr)
     }
     if (token.nature == "NUMBER") then {
         return parseExpression(lxr)
