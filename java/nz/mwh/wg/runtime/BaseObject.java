@@ -37,6 +37,7 @@ public class BaseObject implements GraceObject {
             GraceObject other = request.getParts().get(0).getArgs().get(0);
             return new GraceBoolean(this != other);
         });
+        addMethod("asString(0)", _ -> new GraceString("object {" + String.join("; ", methods.keySet()) + "}"));
         if (bindSelf) {
             addMethod("self(0)", _ -> this);
         }
