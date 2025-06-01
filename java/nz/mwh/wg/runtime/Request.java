@@ -36,4 +36,20 @@ public class Request {
     public Visitor<GraceObject> getVisitor() {
         return visitor;
     }
+
+    public static Request nullary(Visitor<GraceObject> visitor, String name) {
+        return new Request(visitor, List.of(new RequestPartR(name, List.of())));
+    }
+
+    public static Request unary(Visitor<GraceObject> visitor, String name, GraceObject arg) {
+        return new Request(visitor, List.of(new RequestPartR(name, List.of(arg))));
+    }
+
+    public static Request binary(Visitor<GraceObject> visitor, String name, GraceObject arg1, GraceObject arg2) {
+        return new Request(visitor, List.of(new RequestPartR(name, List.of(arg1, arg2))));
+    }
+
+    public static Request twoPart(Visitor<GraceObject> visitor, String name1, String name2, GraceObject arg1, GraceObject arg2) {
+        return new Request(visitor, List.of(new RequestPartR(name1, List.of(arg1)), new RequestPartR(name2, List.of(arg2))));
+    }
 }
