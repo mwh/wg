@@ -9,6 +9,7 @@ import nz.mwh.wg.Evaluator;
 
 public class BaseObject implements GraceObject {
     private GraceObject lexicalParent;
+    private GraceObject dialectParent = null;
     private Map<String, GraceObject> fields = new HashMap<>();
     private Map<String, Function<Request, GraceObject>> methods = new HashMap<>();
 
@@ -68,9 +69,11 @@ public class BaseObject implements GraceObject {
     }
 
     public GraceObject findReceiver(String name) {
-        //System.out.println("searching for receiver for " + name + ", this object has methods " + methods.keySet());
         if (methods.containsKey(name) || fields.containsKey(name)) {
             return this;
+        }
+        if (dialectParent != null && dialectParent.hasMethod(name)) {
+            return dialectParent;
         }
         if (lexicalParent != null) {
             return lexicalParent.findReceiver(name);
@@ -110,10 +113,13 @@ public class BaseObject implements GraceObject {
         throw new RuntimeException("No return context found");
     }
 
+    @Override
+    public boolean hasMethod(String name) {
+        return methods.containsKey(name);
+    }
+
     public void setDialect(GraceObject dialect) {
-        // TODO: this should be an intransitive link and so needs
-        // to be distinguished from the lexical parent.
-        lexicalParent = dialect;
+        dialectParent = dialect;
     }
 
 }
