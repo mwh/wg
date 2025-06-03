@@ -57,6 +57,20 @@ class list {
         current.value
     }
 
+    method first {
+        if (size == 0) then {
+            Exception.raise("List is empty")
+        }
+        firstItem.value
+    }
+
+    method last {
+        if (size == 0) then {
+            Exception.raise("List is empty")
+        }
+        lastItem.value
+    }
+
     method each(block) {
         var current := firstItem
         while {current != endList} do {
@@ -66,6 +80,9 @@ class list {
     }
 
     method map(transform) {
+        if (size == 0) then {
+            return list
+        }
         var result := list
         var current := firstItem
         while {current != endList} do {
@@ -76,6 +93,9 @@ class list {
     }
 
     method map(transform) combine(combiner) {
+        if (size == 0) then {
+            return list
+        }
         var result := transform.apply(firstItem.value)
         var current := firstItem.next
         while {current != endList} do {
@@ -152,6 +172,14 @@ class dictionary {
             }
         }
         return false
+    }
+
+    method keys {
+        var result := list
+        items.each { item ->
+            result.append(item.key)
+        }
+        result
     }
 
 }
