@@ -13,11 +13,13 @@ public class GraceExceptionKind implements GraceObject {
     public GraceExceptionKind(String name) {
         this.name = name;
         this.parent = BASE;
+        addDescendant(this);
     }
 
     public GraceExceptionKind(GraceExceptionKind parent, String name) {
         this.name = name;
         this.parent = parent;
+        addDescendant(this);
     }
 
     @Override
@@ -59,6 +61,11 @@ public class GraceExceptionKind implements GraceObject {
 
     public String getName() {
         return name;
+    }
+
+    @Override
+    public String toString() {
+        return "ExceptionKind[" + name + "]";
     }
 
     private void addDescendant(GraceExceptionKind child) {
