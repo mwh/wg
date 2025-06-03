@@ -18,6 +18,10 @@ public class GraceMatchResult implements GraceObject {
         return "FailedMatch";
     }
 
+    public boolean isSuccess() {
+        return success;
+    }
+    
     public boolean getValue() {
         return value != null;
     }
