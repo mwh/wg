@@ -449,7 +449,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             return done;
         });
         String matchCase = "match(1)";
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 20; i++) {
             matchCase += "case(1)";
             lexicalParent.addMethod(matchCase, request -> {
                 GraceObject target = request.getParts().get(0).getArgs().get(0);
