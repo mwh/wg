@@ -130,6 +130,29 @@ class list {
             current2 := current2.next
         }
     }
+
+    method reversed {
+        var result := list
+        var current := lastItem
+        while {current != endList} do {
+            result.append(current.value)
+            current := current.prev
+        }
+        result
+    }
+
+    method tail {
+        if (size == 0) then {
+            Exception.raise("List is empty")
+        }
+        var result := list
+        var current := firstItem.next
+        while {current != endList} do {
+            result.append(current.value)
+            current := current.next
+        }
+        result
+    }
 }
 
 class keyValuePair(k, v) {
