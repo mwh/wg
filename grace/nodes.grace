@@ -158,7 +158,7 @@ method defDec(nm, dtype, anns, val) {
         def value is public = val
 
         method evaluate(context) {
-            context.scope.request(requests.request(one(part("def " ++ name, one(value.evaluate(context))))))
+            context.scope.request(requests.unary("def " ++ name, value.evaluate(context)))
         }
 
         method evaluateDeclaration(ctx) {
@@ -208,6 +208,9 @@ class methDec(pts, dtype, anns, bd) {
             def args = req.parts.flatMap { pt -> pt.arguments }
             paramNames.zip(args) each { p, a ->
                 scope.addMethod(p ++ "(0)") body { req -> a }
+            }
+            body.each { item ->
+                item.evaluateDeclaration(context)
             }
             var lastValue := objects.graceDone
             try {
@@ -306,6 +309,10 @@ class block(params, bd) {
             def args = req.at(1).arguments
             parameters.zip(args) each { p, a ->
                 scope.addMethod(p.name ++ "(0)") body { req -> a }
+            }
+
+            body.each { item ->
+                item.evaluateDeclaration(ctx)
             }
 
             var lastValue := objects.graceDone
