@@ -767,7 +767,7 @@ method parseExpressionNoOpNoDot(lxr) {
     }
     if (token.nature == "OPERATOR") then {
         lxr.advance
-        def pos = lxr.current.asString
+        def pos = token.location
         def expr = parseExpressionNoOp(lxr)
         return ast.explicitRequest(pos, expr, ast.cons(ast.part("prefix" ++ token.value, ast.nil), ast.nil))
     }
@@ -789,7 +789,7 @@ method parseExpression(lxr) {
     var left := parseExpressionNoOp(lxr)
     var token := lxr.current
     while { token.nature == "OPERATOR" } do {
-        def pos = token.asString
+        def pos = token.location
         lxr.advance
         def right = parseExpressionNoOp(lxr)
         def args = ast.cons(right, ast.nil)
