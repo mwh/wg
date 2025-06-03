@@ -1051,34 +1051,57 @@ method parseMethodBody(lxr) {
 method parseMethodDeclaration(lxr) {
     lxr.advance
     var parts := ast.nil
-    while { lxr.current.nature == "IDENTIFIER" } do {
+    if (lxr.current.nature == "IDENTIFIER") then {
+        while { lxr.current.nature == "IDENTIFIER" } do {
+            def id = lxr.current.value
+            lxr.advance
+            if (lxr.current.nature == "LPAREN") then {
+                lxr.advance
+                var args := ast.nil
+                while {(lxr.current.nature != "RPAREN") && (lxr.current.nature != "EOF")} do {
+                    lxr.expectToken "IDENTIFIER"
+                    def idToken = lxr.current
+                    var dtype := ast.nil
+                    lxr.advance
+                    if (lxr.current.nature == "COLON") then {
+                        // Type annotation
+                        lxr.advance
+                        dtype := ast.cons(parseTypeExpression(lxr), ast.nil)
+                    }
+                    args := ast.cons(ast.identifierDeclaration(idToken.value, dtype), args)
+                    if (lxr.current.nature == "COMMA") then {
+                        lxr.advance
+                    }
+                }
+                lxr.advance
+                def part = ast.part(id, args.reversed(ast.nil))
+                parts := ast.cons(part, parts)
+            } else {
+                def part = ast.part(id, ast.nil)
+                parts := ast.cons(part, parts)
+            }
+        }
+    } elseif { lxr.current.nature == "OPERATOR" } then {
         def id = lxr.current.value
         lxr.advance
-        if (lxr.current.nature == "LPAREN") then {
+        lxr.expectSymbol "LPAREN"
+        lxr.advance
+        var args := ast.nil
+        lxr.expectToken "IDENTIFIER"
+        def idToken = lxr.current
+        var dtype := ast.nil
+        lxr.advance
+        if (lxr.current.nature == "COLON") then {
+            // Type annotation
             lxr.advance
-            var args := ast.nil
-            while {(lxr.current.nature != "RPAREN") && (lxr.current.nature != "EOF")} do {
-                lxr.expectToken "IDENTIFIER"
-                def idToken = lxr.current
-                var dtype := ast.nil
-                lxr.advance
-                if (lxr.current.nature == "COLON") then {
-                    // Type annotation
-                    lxr.advance
-                    dtype := ast.cons(parseTypeExpression(lxr), ast.nil)
-                }
-                args := ast.cons(ast.identifierDeclaration(idToken.value, dtype), args)
-                if (lxr.current.nature == "COMMA") then {
-                    lxr.advance
-                }
-            }
-            lxr.advance
-            def part = ast.part(id, args.reversed(ast.nil))
-            parts := ast.cons(part, parts)
-        } else {
-            def part = ast.part(id, ast.nil)
-            parts := ast.cons(part, parts)
+            dtype := ast.cons(parseTypeExpression(lxr), ast.nil)
         }
+        args := ast.cons(ast.identifierDeclaration(idToken.value, dtype), args)
+        lxr.advance
+        def part = ast.part(id, args.reversed(ast.nil))
+        parts := ast.cons(part, parts)
+    } else {
+        parseError(lxr.current.line, lxr.current.column, "Expected method name or operator")
     }
     var dtype := ast.nil
     if (lxr.current.nature == "ARROW") then {
