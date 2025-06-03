@@ -299,7 +299,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             String filename = node.getSource() + ".grace";
             try {
                 String source = Files.readString(Path.of(filename));
-                ObjectConstructor ast = (ObjectConstructor) Parser.parse(source);
+                ObjectConstructor ast = (ObjectConstructor) Parser.parse(node.getSource(), source);
                 GraceObject mod =  this.evaluateModule(ast);
                 modules.put(node.getSource(), mod);
                 object.setDialect(mod);
