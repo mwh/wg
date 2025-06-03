@@ -239,7 +239,13 @@ class importStmt(src, bnd) {
     }
 
     method evaluateDeclaration(ctx) {
-        Exception.raise("Import statements not currently implemented in this evaluator.")
+        if (source == "ast") then {
+            ctx.scope.addMethod("ast(0)") body { req ->
+                astModule
+            }
+        } else {
+            Exception.raise("Import statements not currently implemented in this evaluator.")
+        }
     }
 }
 
@@ -351,5 +357,87 @@ method objCons(bd, anns) {
         }
 
         method evaluateDeclaration(ctx) { }
+    }
+}
+
+class listWrapper(l) {
+    def list = l
+    
+    method size { list.size }
+    method firstItem { list.firstItem }
+    method lastItem { list.lastItem }
+    method append(item) { list.append(item)}
+    method prepend(item) { list.prepend(item) }
+    method at(index) { list.at(index) }
+    method first { list.first }
+    method last { list.last }
+    method each(block) { list.each(block) }
+    method map(transform) { listWrapper(list.map(transform)) }
+    method flatMap(transform) { listWrapper(list.flatMap(transform)) }
+    method map(transform) combine(combiner) {
+        list.map(transform) combine(combiner)
+    }
+    method zip(otherList) each(block) {
+        list.zip(otherList) each(block)
+    }
+
+    method request(req) {
+        match (req.name)
+            case { "map(1)" -> 
+                def blk = req.at(1).arguments.at(1)
+                return listWrapper(list.map { x ->
+                    def applyReq = requests.unary("apply", x)
+                    blk.request(applyReq)
+                    }
+                    )
+            }
+            case { "reversed(1)" ->
+                // Only nil is ever passed by user code, ignore argument
+                return listWrapper(list.reversed)
+            }
+            case { "asString(0)" ->
+                if (list.size == 0) then {
+                    return objects.graceString("nil")
+                }
+                if (list.size == 1) then {
+                    return objects.graceString("one(" ++ list.first.request(requests.nullary "asString").value ++ ")")
+                }
+                return "cons(" ++ list.first.request(requests.nullary "asString").value ++ ", " ++ list.tail.request(requests.nullary "asString").value ++ ")"
+            }
+    }
+
+    method asString {
+        "listWrapper of {list}"
+    }
+}
+
+def astModule = object {
+    method request(req) {
+        match (req.name)
+            case { "cons(2)" -> 
+                req.at(1).arguments.at(2).prepend(req.at(1).arguments.at(1))
+                return req.at(1).arguments.at(2)
+            }
+            case { "nil(0)" -> return listWrapper(nil) }
+            case { "one(1)" -> return listWrapper(one(req.at(1).arguments.at(1))) }
+            case { "numberNode(1)" -> return numLit(req.at(1).arguments.at(1).value) }
+            case { "stringNode(1)" -> return strLit(req.at(1).arguments.at(1).value) }
+            case { "interpString(3)" -> return interpStr(req.at(1).arguments.at(1).value, req.at(1).arguments.at(2), req.at(1).arguments.at(3)) }
+            case { "block(2)" -> return block(req.at(1).arguments.at(1), req.at(1).arguments.at(2)) }
+            case { "defDecl(4)" -> return defDec(req.at(1).arguments.at(1).value, req.at(1).arguments.at(2), req.at(1).arguments.at(3), req.at(1).arguments.at(4)) }
+            case { "varDecl(4)" -> return varDec(req.at(1).arguments.at(1).value, req.at(1).arguments.at(2), req.at(1).arguments.at(3), req.at(1).arguments.at(4)) }
+            case { "lexicalRequest(2)" -> return lexReq(req.at(1).arguments.at(2)) }
+            case { "explicitRequest(2)" -> return dotReq(req.at(1).arguments.at(1), req.at(1).arguments.at(2)) }
+            case { "explicitRequest(3)" -> return dotReq(req.at(1).arguments.at(2), req.at(1).arguments.at(3)) }
+            case { "part(2)" -> return part(req.at(1).arguments.at(1).value, req.at(1).arguments.at(2)) }
+            case { "methodDecl(4)" -> return methDec(req.at(1).arguments.at(1), req.at(1).arguments.at(2), req.at(1).arguments.at(3), req.at(1).arguments.at(4)) }
+            case { "objectConstructor(2)" -> return objCons(req.at(1).arguments.at(1), req.at(1).arguments.at(2)) }
+            case { "assign(2)" -> return assn(req.at(1).arguments.at(1), req.at(1).arguments.at(2)) }
+            case { "returnStmt(1)" -> return returnStmt(req.at(1).arguments.at(1)) }
+            case { "identifierDeclaration(2)" -> return identifierDeclaration(req.at(1).arguments.at(1).value, req.at(1).arguments.at(2)) }
+            case { "comment(1)" -> return comment(req.at(1).arguments.at(1).value) }
+            case { "importStmt(2)" -> return importStmt(req.at(1).arguments.at(1).value, req.at(1).arguments.at(2)) }
+            case { "dialectStmt(1)" -> return dialectStmt(req.at(1).arguments.at(1).value) }
+            case { other -> Exception.raise "Unknown request on mocked ast module: {other}" }
     }
 }
