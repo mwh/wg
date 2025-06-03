@@ -66,7 +66,7 @@ public class BaseObject implements GraceObject {
             fields.put(part.getName().substring(0, part.getName().length() - 5), part.getArgs().get(0));
             return done;
         }
-        throw new GraceException(request.getVisitor(), "No such method or field " + request.getName() + " in object");
+        throw new GraceException(request.getVisitor(), "No such method or field " + request.getName() + " in object with methods " + methods.keySet());
     }
 
     public GraceObject findReceiver(String name) {
