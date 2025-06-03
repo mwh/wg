@@ -1,5 +1,6 @@
 import "objects" as objects
 import "nodes" as nodes
+import "requests" as requests
 
 method nil { nodes.nil }
 method one(item) { nodes.one(item) }
@@ -43,4 +44,33 @@ method safeStr(before, char, after) {
 
 method run(node) {
     node.evaluate(nodes.evaluationContext(objects.terminalObject))
+}
+
+method requestMethod(name) on(receiver) {
+    def req = requests.nullary(name)
+    return receiver.request(req)
+}
+
+method requestMethod(name) on(receiver) args(a) {
+    def req = requests.unary(name, a)
+    return receiver.request(req)
+}
+
+method requestMethod(name) on(receiver) args(a, b) {
+    def req = requests.binary(name, a, b)
+    return receiver.request(req)
+}
+
+method stringify(obj) {
+    def result = obj.request(requests.nullary("asString"))
+    return result.value
+}
+
+def lifter = object {
+    method string(s) {
+        return objects.graceString(s)
+    }
+    method number(n) {
+        return objects.graceNumber(n)
+    }
 }
