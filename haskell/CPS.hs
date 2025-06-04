@@ -177,6 +177,11 @@ toFunc (ImportStmt name binding) =
                 Nothing ->
                     putStrLn $ "Cannot import " ++ name ++ ": external imports not supported in this version of Grace (use -i option of Java version to inline)"
 
+toFunc (DialectStmt name) =
+    \ctx ->
+        do
+            putStrLn $ "Cannot use dialect " ++ name ++ ": external imports not supported in this version of Grace"
+
 toFunc (InterpString before expr next) =
     let exprFunc = toFunc expr
         nextFunc = toFunc next

@@ -109,6 +109,7 @@ astModule = BaseObject GraceDone $ fromList [
     , ("interpString(3)", \ctx [GraceString before, GraceAstObject expr, GraceAstObject after] -> continuation ctx $ GraceAstObject (InterpString before expr after))
     , ("comment(1)", \ctx [GraceString s] -> continuation ctx $ GraceAstObject (Comment s))
     , ("importStmt(2)", \ctx [GraceString name, GraceAstObject binding] -> continuation ctx $ GraceAstObject (ImportStmt name binding))
+    , ("dialectStmt(1)", \ctx [GraceString name] -> continuation ctx $ GraceAstObject (DialectStmt name))
     ]
 
 astObjectToAstNode :: GraceObject -> ASTNode

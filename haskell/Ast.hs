@@ -15,6 +15,7 @@ data ASTNode = ObjectConstructor [ASTNode] [String]
              | InterpString String ASTNode ASTNode
              | Comment String
              | ImportStmt String ASTNode
+             | DialectStmt String
         deriving Show
 
 data Part = Part String [ASTNode]
@@ -42,6 +43,7 @@ identifierDeclaration (name, dtype) = IdentifierDeclaration name dtype
 block (params, body) = Block params body
 comment = Comment
 importStmt (name, binding) = ImportStmt name binding
+dialectStmt name = DialectStmt name
 
 
 part (name, params) = Part name params
