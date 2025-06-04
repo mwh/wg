@@ -383,7 +383,7 @@ method lexer(code) {
                         index := index + 1
                     }
                     if ((cp == 10) || (cp == 13)) then {
-                    index := index - 1
+                        index := index - 1
                     }
                     return CommentToken(line, column, text)
                 }
@@ -790,16 +790,22 @@ method parseExpressionNoOp(lxr) {
 method parseExpression(lxr) {
     var left := parseExpressionNoOp(lxr)
     var token := lxr.current
-    while { token.nature == "OPERATOR" } do {
-        def pos = token.location
-        lxr.advance
-        def right = parseExpressionNoOp(lxr)
-        def args = ast.cons(right, ast.nil)
-        def part = ast.part(token.value, args)
-        def parts = ast.cons(part, ast.nil)
-        def req = ast.explicitRequest(pos, left, parts.reversed(ast.nil))
-        left := req
-        token := lxr.current
+    if (token.nature == "OPERATOR") then {
+        var theOperator := token.value
+        while { token.nature == "OPERATOR" } do {
+            if (token.value != theOperator) then {
+                parseError(token.line, token.column, "Multiple operators mixed without parentheses: found " ++ token.value ++ "; expected only further " ++ theOperator ++ ". Use parentheses to group distinct operators.")
+            }
+            def pos = token.location
+            lxr.advance
+            def right = parseExpressionNoOp(lxr)
+            def args = ast.cons(right, ast.nil)
+            def part = ast.part(token.value, args)
+            def parts = ast.cons(part, ast.nil)
+            def req = ast.explicitRequest(pos, left, parts.reversed(ast.nil))
+            left := req
+            token := lxr.current
+        }
     }
     return left
 }
