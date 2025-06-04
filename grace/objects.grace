@@ -2,6 +2,7 @@ import "collections" as collections
 import "requests" as requests
 
 def Return = Exception.refine "Return"
+def GraceException = Exception.refine "Grace-Exception"
 
 def terminalObject = object {
 
@@ -133,6 +134,9 @@ def terminalObject = object {
                 def fileName = req.at(1).arguments.at(1)
                 def contents = getFileContents(fileName.value)
                 return graceString(contents)
+            }
+            case { "Exception(0)" ->
+                return graceExceptionKind(GraceException)
             }
             case { other ->
                 Exception.raise("Method not found in scope: {other}")
@@ -415,5 +419,31 @@ class graceBlock(blk) {
             return self
         }
         Exception.raise("Method not found in block: " ++ name)
+    }
+}
+
+class graceExceptionKind(kind) {
+    def exceptionKind is public = kind
+
+    method request(req) {
+        match (req.name)
+            case { "asString(0)" ->
+                return graceString("Exception of kind: " ++ exceptionKind.name)
+            }
+            case { "raise(1)" ->
+                def message = req.at(1).arguments.at(1).value
+                exceptionKind.raise(message)
+            }
+            case { "refine(1)" ->
+                def newName = req.at(1).arguments.at(1)
+                return graceExceptionKind(exceptionKind.refine("Grace-" ++ newName.value))
+            }
+            case { other ->
+                Exception.raise("Method not found in exception kind: {other}")
+            }
+    }
+
+    method asString {
+        return "graceExceptionKind(\"{exceptionKind.name}\")"
     }
 }
