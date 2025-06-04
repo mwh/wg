@@ -108,6 +108,9 @@ prettyPrint (LexicalRequest req) =
                 ppList (map ppPart req) ++ ")"
 prettyPrint (NumberNode val) = "numLit(" ++ (show val) ++ ")"
 prettyPrint (StringNode val) = "strLit(\"" ++ val ++ "\")"
+prettyPrint (InterpString before expr next) =
+        "interpStr(\"" ++ before ++ "\", " ++
+                prettyPrint expr ++ ", \"" ++ prettyPrint next ++ "\")"
 prettyPrint (Assign lhs rhs) =
         "assn(" ++ prettyPrint lhs ++ ", " ++ prettyPrint rhs ++ ")"
 prettyPrint (ReturnStmt val) = "returnStmt(" ++ prettyPrint val ++ ")"
@@ -120,3 +123,7 @@ prettyPrint (Block params body) =
                 ppASTList params ++ ", " ++
                 ppASTList body ++ ")"
 prettyPrint (Comment text) = "comment(\"" ++ text ++ "\")"
+prettyPrint (ImportStmt name binding) =
+        "importStmt(\"" ++ name ++ "\", " ++ prettyPrint binding ++ ")"
+prettyPrint (DialectStmt name) =
+        "dialectStmt(\"" ++ name ++ "\")"
