@@ -16,9 +16,14 @@ data ASTNode = ObjectConstructor [ASTNode] [String]
              | Comment String
              | ImportStmt String ASTNode
              | DialectStmt String
+             | TypeDecl String ASTNode
+             | InterfaceConstructor [MethodSignature]
         deriving Show
 
 data Part = Part String [ASTNode]
+        deriving Show
+
+data MethodSignature = MethodSignature [Part] (Maybe ASTNode)
         deriving Show
 
 

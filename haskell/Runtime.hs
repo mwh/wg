@@ -72,6 +72,7 @@ data GraceObject = BaseObject GraceObject (Map String (Context -> [GraceObject] 
                    | GraceErrorObject String
                    | GraceAstObject ASTNode
                    | GracePartObject Part
+                   | GraceMethodSignatureObject MethodSignature
                    | GraceAstList [GraceObject]
 
 instance Show GraceObject where
@@ -110,6 +111,9 @@ astModule = BaseObject GraceDone $ fromList [
     , ("comment(1)", \ctx [GraceString s] -> continuation ctx $ GraceAstObject (Comment s))
     , ("importStmt(2)", \ctx [GraceString name, GraceAstObject binding] -> continuation ctx $ GraceAstObject (ImportStmt name binding))
     , ("dialectStmt(1)", \ctx [GraceString name] -> continuation ctx $ GraceAstObject (DialectStmt name))
+    , ("typeDecl(2)", \ctx [GraceString name, GraceAstObject value] -> continuation ctx $ GraceAstObject (TypeDecl name value))
+    , ("methSig(2)", \ctx [GraceAstList parts, GraceAstList rtype] -> continuation ctx $ GraceMethodSignatureObject (MethodSignature [n | GracePartObject n <- parts] (case rtype of { [] -> Nothing ; [GraceAstObject o] -> Just o } )))
+    , ("interfaceCons(1)", \ctx [GraceAstList meths] -> continuation ctx $ GraceAstObject (InterfaceConstructor [m | GraceMethodSignatureObject m <- meths]))
     ]
 
 astObjectToAstNode :: GraceObject -> ASTNode
@@ -128,6 +132,10 @@ astObjectToAstNode (GraceAstObject node@(IdentifierDeclaration _ _)) = node
 astObjectToAstNode (GraceAstObject node@(InterpString _ _ _)) = node
 astObjectToAstNode (GraceAstObject node@(Comment _)) = node
 astObjectToAstNode (GraceAstObject node@(ImportStmt _ _)) = node
+astObjectToAstNode (GraceAstObject node@(DialectStmt _)) = node
+astObjectToAstNode (GraceAstObject node@(TypeDecl _ _)) = node
+astObjectToAstNode (GraceAstObject node@(InterfaceConstructor _)) = node
+
 
 partsToName :: [Part] -> String
 partsToName [] = ""

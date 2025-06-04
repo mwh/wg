@@ -197,6 +197,20 @@ toFunc (InterpString before expr next) =
                     ) ) []
             )
 
+toFunc (InterfaceConstructor meths) =
+    \ctx -> continuation ctx $ GraceDone
+
+toFunc (TypeDecl name init) =
+    \ctx ->
+        do
+            let slf = localScope ctx
+                setter = getMethod ("type " ++ name) slf
+                initFunc = toFunc init
+            initFunc $ withCont ctx (\val ->
+                    do
+                        setter ctx [val]
+                    )
+
 varNames :: [ASTNode] -> [String]
 varNames [] = []
 varNames (h:t) =
@@ -204,6 +218,7 @@ varNames (h:t) =
         VarDecl name _ _ _ -> name : varNames t
         DefDecl name _ _ _ -> name : varNames t
         ImportStmt name _ -> name : varNames t
+        TypeDecl name _ -> name : varNames t
         _ -> varNames t
 
 makeMethods :: [ASTNode] -> IORef GraceObject -> IO (Map String (Context -> [GraceObject] -> IO ()))
@@ -230,6 +245,20 @@ makeMethods (stmt:rest) self =
             DefDecl name _ _ init ->
                 do
                     let setterName = "def " ++ name
+                        getterName = name ++ "(0)"
+                        getter = \ctx args ->
+                            do
+                                val <- readIORef cell
+                                (continuation ctx) $ val
+                        setter = \ctx [val] ->
+                            do
+                                writeIORef cell val
+                                (continuation ctx) $ GraceDone
+                    restMeths <- makeMethods rest self
+                    return $ insert getterName getter $ insert setterName setter restMeths
+            TypeDecl name init ->
+                do
+                    let setterName = "type " ++ name
                         getterName = name ++ "(0)"
                         getter = \ctx args ->
                             do
