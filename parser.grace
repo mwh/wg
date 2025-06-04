@@ -1278,7 +1278,7 @@ method parseObject(lxr) {
 }
 
 method parseError(line, column, message) {
-    print "Parse error: {message} at {modulePrefix}{line}:{column}"
+    print("Parse error: " ++ message ++ " at " ++ modulePrefix ++ line ++ ":" ++ column)
     Exception.refine "ParseError".raise(modulePrefix ++ line ++ ":" ++ column ++ ": " ++ message)
 }
 
