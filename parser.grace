@@ -538,13 +538,13 @@ method parseNumber(lxr) {
             var frac := 0
             var scale := 1
             while {index <= s.size} do {
-                frac := frac * 10 + digitToNumber(token, s.at(index))
+                frac := (frac * 10) + digitToNumber(token, s.at(index))
                 scale := scale * 10
                 index := index + 1
             }
             val := val + (frac / scale)
         } else {
-            val := val * 10 + digitToNumber(token, s.at(index))
+            val := (val * 10) + digitToNumber(token, s.at(index))
         }
         index := index + 1
     }
