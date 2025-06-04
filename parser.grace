@@ -382,7 +382,9 @@ method lexer(code) {
                         cp := c.firstCodepoint
                         index := index + 1
                     }
+                    if ((cp == 10) || (cp == 13)) then {
                     index := index - 1
+                    }
                     return CommentToken(line, column, text)
                 }
                 return OperatorToken(line, column, op)
