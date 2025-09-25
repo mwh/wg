@@ -145,6 +145,18 @@ typedef struct {
     ASTNode *params[];
 } BlockNode;
 
+typedef struct {
+    char nodetype;
+    char *path;
+    char *as_name;
+} ImportNode;
+
+struct ImportRecord {
+    char *path;
+    GraceObject *module;
+    struct ImportRecord *next;
+};
+
 #define FLAG_LIVING 1
 #define FLAG_FRESH 2
 #define FLAG_WRITER 4
@@ -214,6 +226,8 @@ const char *origin_name(int origin) {
 }
 
 struct AllocatedObject *allocated_objects_list = NULL;
+
+struct ImportRecord *imported_modules = NULL;
 
 /// START OBJECTS
 void GraceObject__cleanup(GraceObject *obj) {
@@ -1048,6 +1062,7 @@ GraceObject *graceBlock(BlockNode *bn, Context *context) {
 /// START REQUESTS
 GraceObject *do_request(Context *ctx, GraceObject *receiver, char *name) {
     int i;
+    // fprintf(stderr, "request of %s\n", name);
     GraceObject *ret = 0;
     GraceObject *args[cc_argc];
     int argc = cc_argc;
@@ -1090,7 +1105,7 @@ GraceObject *do_request(Context *ctx, GraceObject *receiver, char *name) {
         exit(1);
     }
     if (ret != receiver) ref_dec(receiver);
-    if (GC_DEBUG) fprintf(stderr, "do_request returning %p\n", (void *)ret);
+    if (GC_DEBUG) fprintf(stderr, "do_request returning %p (rc %i) from %s\n", (void *)ret, ret->refcount, name);
     // TODO: errors
     // fprintf(stderr, "pre-return validate %s\n", name);
     ref_validate(ret);
@@ -1265,7 +1280,7 @@ ASTNode *objCons(ConsCell *body, ConsCell *annotations) {
         ASTNode *node = tmp->head;
         if (node->nodetype == 'v')
             vars++;
-        if (node->nodetype == 'd')
+        if (node->nodetype == 'd' || node->nodetype == 'I')
             defs++;
         if (node->nodetype == 'm')
             methods++;
@@ -1294,6 +1309,8 @@ ASTNode *objCons(ConsCell *body, ConsCell *annotations) {
             names[i++] = ((DefNode*)node)->name;
         if (node->nodetype == 'm')
             names[i++] = ((MethDecNode*)node)->name;
+        if (node->nodetype == 'I')
+            names[i++] = ((ImportNode*)node)->as_name;
         tmp = tmp->tail;
     }
 
@@ -1435,6 +1452,20 @@ ASTNode *returnStmt(ASTNode *expr) {
     return (ASTNode*)ret;
 }
 
+ASTNode *importStmt(char *path, ASTNode *as_name) {
+    ImportNode *ret = malloc(sizeof(ImportNode));
+    ret->nodetype = 'I';
+    ret->path = path;
+    IdentNode *as_name_node = (IdentNode*)as_name;
+    if (as_name_node && as_name_node->nodetype == 'i')
+        ret->as_name = as_name_node->name;
+    else {
+        fprintf(stderr, "Error: import ... as requires an identifier\n");
+        exit(1);
+    }
+    return (ASTNode*)ret;
+}
+
 
 ConsCell *cons(void *value, ConsCell *next) {
     cons_count++;
@@ -1557,6 +1588,10 @@ GraceObject *evaluateObject(ObjectNode *obj, Context *context) {
             //fprintf(stderr, "creating method with name at %x\n", obj->names[index]);
             MethDecNode *method = (MethDecNode*)obj->body[i];
             add_method(ret, index, method->name, method, context);
+            index += 1;
+        } else if (obj->body[i]->nodetype == 'I') {
+            ImportNode *importnode = (ImportNode*)obj->body[i];
+            add_field(ret, index, obj->names[index]);
             index += 1;
         } else {
             //fprintf(stderr, "unhandled nodetype %c\n", obj->body[i]->nodetype);
@@ -1748,6 +1783,25 @@ GraceObject *evaluateBlock(BlockNode *bn, Context *context) {
     return graceBlock(bn, context);
 }
 
+GraceObject *evaluateImport(ImportNode *in, Context *context) {
+    struct ObjectMember *field = findField(context, in->as_name);
+    if (!field) {
+        fprintf(stderr, "Error: could not find field for import %s\n", in->as_name);
+        exit(1);
+    }
+    struct ImportRecord *rec = imported_modules;
+    while (rec) {
+        if (strcmp(rec->path, in->path) == 0) {
+            field->data = rec->module;
+            ref_inc(rec->module);
+            return Done;
+        }
+        rec = rec->next;
+    }
+    fprintf(stderr, "Error: no built-in import '%s' and no file import support yet\n", in->path);
+    exit(1);
+}
+
 GraceObject *evaluate(ASTNode *node, Context *context) {
     switch(node->nodetype) {
         case 'n':
@@ -1777,6 +1831,8 @@ GraceObject *evaluate(ASTNode *node, Context *context) {
             return evaluateReturn((ReturnNode*)node, context);
         case 'b':
             return evaluateBlock((BlockNode*)node, context);
+        case 'I':
+            return evaluateImport((ImportNode*)node, context);
     }
     fprintf(stderr, "Error: could not evaluate node type %c\n", node->nodetype);
     exit(1);
@@ -1996,30 +2052,8 @@ void dump_object(GraceObject *obj) {
     fprintf(stderr, "--end\n");
 }
 
-void do_parse(Context ctx) {
-    GraceObject *module = evaluate(program, &ctx);
-    ref_inc(module);
 
-    FILE *f = fopen("../parser.grace", "r");
-    if (!f) {
-        perror("Could not open ../parser.grace");
-        exit(1);
-    }
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    char *string = malloc(fsize + 1);
-    fread(string, 1, fsize, f);
-    fclose(f);
-    string[fsize] = 0;
-
-    GraceObject *parseTree = request(&ctx, module, "parse(1)", graceString(string), 0);
-    GraceObject *asString = request(&ctx, parseTree, "asString", 0);
-    struct GraceStringData *sd = asString->data;
-    printf("%s\n", sd->str);
-}
-
-int main(int argc, char **argv) {
+int grace_setup() {
     if (getenv("GC_DEBUG"))
         GC_DEBUG = 1;
     if (getenv("GC_DISABLE"))
@@ -2034,19 +2068,10 @@ int main(int argc, char **argv) {
     prelude->flags |= FLAG_IMMORTAL;
 
     if (GC_DEBUG) fprintf(stderr, "Done is %p. Prelude is %p\n", (void *)Done, (void *)prelude);
+    return 0;
+}
 
-    program = objCons(cons(defDec("name", nil, nil, strLit("world")), one(lexReq(one(part("print", one(interpStr("Hello, ", lexReq(one(part("name", nil))), strLit(safeStr("", charExclam, ""))))))))), nil);
-
-    Context ctx;
-    ctx.scope = prelude;
-    ctx.self = prelude;
-
-    do_parse(ctx);
-
-    // GraceObject *module = evaluate(program, &ctx);
-    // ref_inc(module);
-
-    // ref_dec(module);
+int grace_teardown(int with_diagnostics) {
     graceBool__false->refcount = 0;
     graceBool__false->flags &= ~FLAG_IMMORTAL;
     graceBool__true->refcount = 0;
@@ -2059,7 +2084,7 @@ int main(int argc, char **argv) {
     ref_discard(graceBool__false);
     ref_discard(Done);
     ref_discard(prelude);
-    if (allocated_objects != freed_objects || GC_DEBUG)
+    if (with_diagnostics && allocated_objects != freed_objects || GC_DEBUG)
         fprintf(stderr, "Allocated: %i  Freed: %i\n", allocated_objects, freed_objects);
     if (GC_DEBUG) {
         if (allocated_objects != freed_objects) {
@@ -2072,4 +2097,25 @@ int main(int argc, char **argv) {
             }
         }
     }
+    return 0;
 }
+
+#ifndef GRACE_RUNTIME_NO_MAIN
+int main(int argc, char **argv) {
+    grace_setup();
+
+    program = objCons(cons(defDec("name", nil, nil, strLit("world")), one(lexReq(one(part("print", one(interpStr("Hello, ", lexReq(one(part("name", nil))), strLit(safeStr("", charExclam, ""))))))))), nil);
+
+    Context ctx;
+    ctx.scope = prelude;
+    ctx.self = prelude;
+
+    GraceObject *module = evaluate(program, &ctx);
+    ref_inc(module);
+
+    ref_dec(module);
+
+    grace_teardown(0);
+    return 0;
+}
+#endif
