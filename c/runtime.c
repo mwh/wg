@@ -2103,18 +2103,13 @@ int grace_teardown(int with_diagnostics) {
 #ifndef GRACE_RUNTIME_NO_MAIN
 int main(int argc, char **argv) {
     grace_setup();
-
-    program = objCons(cons(defDec("name", nil, nil, strLit("world")), one(lexReq(one(part("print", one(interpStr("Hello, ", lexReq(one(part("name", nil))), strLit(safeStr("", charExclam, ""))))))))), nil);
-
     Context ctx;
     ctx.scope = prelude;
     ctx.self = prelude;
 
+    program = objCons(cons(defDec("name", nil, nil, strLit("world")), one(lexReq(one(part("print", one(interpStr("Hello, ", lexReq(one(part("name", nil))), strLit(safeStr("", charExclam, ""))))))))), nil);
+
     GraceObject *module = evaluate(program, &ctx);
-    ref_inc(module);
-
-    ref_dec(module);
-
     grace_teardown(0);
     return 0;
 }
