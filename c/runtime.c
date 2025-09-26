@@ -320,17 +320,13 @@ GraceObject *alloc_userobject(int numMembers);
 void add_method(GraceObject *userobject, int index, char *name, MethDecNode *method, Context *context);
 
 GraceObject *userobject_field(GraceObject *self, int memberIndex, Context *ctx) {
-    //fprintf(stderr, "userobject_field %i\n", memberIndex);
     if (self->members[memberIndex].flags & FLAG_WRITER) {
-        //fprintf(stderr, "it's a writer %s\n", self->members[memberIndex].name);
         struct ObjectMember *other = self->members[memberIndex].data;
         GraceObject *old = other->data;
         ref_inc(cc_args[0]);
         ref_dec(old);
         other->data = cc_args[0];
         cc_args[0]->flags &= ~FLAG_FRESH;
-        // fprintf(stderr, "writer setting field %s to %p %i\n", other->name, (void *)cc_args[0], cc_args[0]->refcount);
-        // fprintf(stderr, "old value was %p %i\n", (void *)old, old->refcount);
         return Done;
     } else {
         return self->members[memberIndex].data;
@@ -342,7 +338,6 @@ struct ObjectMember *add_field(GraceObject *userobject, int index, char *name) {
     userobject->members[index].func = &userobject_field;
     userobject->members[index].flags = FLAG_FIELD;
     userobject->members[index].data = Done;
-    //fprintf(stderr, "created reader %s at %x\n", name, userobject->members[index].func);
     return &userobject->members[index];
 }
 
@@ -351,7 +346,6 @@ void add_writer(GraceObject *userobject, int index, char *name, struct ObjectMem
     userobject->members[index].data = reader;
     userobject->members[index].func = &userobject_field;
     userobject->members[index].flags = FLAG_WRITER;
-    //fprintf(stderr, "created writer %s at %i: %x\n", name, index, userobject->members[index].func);
 }
 
 void add_var(GraceObject *userobject, int index, char *name1, char *name2) {
@@ -367,7 +361,6 @@ GraceObject *userobject_method(GraceObject *self, int memberIndex, Context *ctx)
     jmp_buf *oldReturnBuf;
     oldReturnBuf = ctx->return_buf;
     char *oldName = ctx->name;
-    // fprintf(stderr, "invoking method %s with %i params\n", method->name, method->n_params);
     if (self->origin == OBJECT_BLOCK) {
         // Blocks get their context from their data field
         Context *blockContext = self->data;
@@ -473,20 +466,15 @@ GraceObject *userobject_method(GraceObject *self, int memberIndex, Context *ctx)
             index++;
         }
     }
-    // fprintf(stderr, "method %s pre-body with scope refcount %i\n", method->name, scope->refcount);
 
     GraceObject *prev = 0;
     GraceObject *ret = Done;
     for (int i = 0; i < body->n_items; i++) {
-        // fprintf(stderr, "about to evaluate body item %i/%i of type %c\n", i, body->n_items, body->items[i]->nodetype);
         ret = evaluate(body->items[i], ctx);
-        // fprintf(stderr, "method %s post-body %i with scope refcount %i\n", method->name, i, scope->refcount);
-        // fprintf(stderr, "evaluated body item %i/%i of type %c\n", i, body->n_items, body->items[i]->nodetype);
         if (GC_DEBUG) fprintf(stderr, "evaluated body %i, got %i %p\n", i, ret->origin, (void *)ret);
         if (prev != 0)
             ref_discard(prev);
         prev = ret;
-        //fprintf(stderr, "after dec %i\n", i);
     }
     if (GC_DEBUG) fprintf(stderr, "end of scope for %s: %p\n", method->name, (void *)scope);
     ctx->self = oldSelf;
@@ -496,7 +484,6 @@ GraceObject *userobject_method(GraceObject *self, int memberIndex, Context *ctx)
     ref_inc(ret);
     ref_dec(scope);
     ret->refcount--; // compensate for the inc above
-    // fprintf(stderr, "method %s exits with scope refcount %i\n", method->name, scope->refcount);
     return ret;
 }
 
@@ -1046,7 +1033,6 @@ GraceObject *graceBlock(BlockNode *bn, Context *context) {
     }
     block->members[0].func = &userobject_method;
     block->members[0].data = bn;
-    //block->data = context;
     ref_inc(context->self);
     ref_inc(context->scope);
     Context *ctxCopy = malloc(sizeof(Context));
@@ -1062,41 +1048,27 @@ GraceObject *graceBlock(BlockNode *bn, Context *context) {
 /// START REQUESTS
 GraceObject *do_request(Context *ctx, GraceObject *receiver, char *name) {
     int i;
-    // fprintf(stderr, "request of %s\n", name);
     GraceObject *ret = 0;
     GraceObject *args[cc_argc];
     int argc = cc_argc;
     if (GC_DEBUG) fprintf(stderr, "do_request %s on %p with %i args\n", name, (void *)receiver, argc);
     ref_validate(ctx->self);
-    // fprintf(stderr, "pre-scope val %s\n", name);
     ref_validate(ctx->scope);
-    // fprintf(stderr, "post-scope val %s\n", name);
     ref_validate(receiver);
     ref_inc(receiver);
     for (i = 0; i < cc_argc; i++) {
-        // fprintf(stderr, "ref_inc arg %i: %p %i %s\n", i, (void *)cc_args[i], cc_args[i]->refcount, name);
         args[i] = cc_args[i];
         ref_inc(args[i]);
-        if (args[i]->n_members == 23) {
-            //fprintf(stderr, "lexer as arg to %s with rc %i\n", name, args[i]->refcount);
-        }
     }
     int found = 0;
-    // fprintf(stderr, "requesting %s on %s object\n", name, origin_name(receiver->origin));
     for (i = 0; i < receiver->n_members; i++) {
-        // fprintf(stderr, "  checking member %i: %s\n", i, receiver->members[i].name);
         if (strcmp(name, receiver->members[i].name) == 0) {
-            // fprintf(stderr, "found member at index %i: %x\n", i, receiver->members[i].func);
             ret = receiver->members[i].func(receiver, i, ctx);
             found = 1;
             break;
-        } else {
-            //fprintf(stderr, "no match at %i: %s != %s\n", i, name, receiver->members[i].name);
         }
     }
     for (i = 0; i < argc; i++) {
-        // fprintf(stderr, "ref_dec arg %i: %p %i %s\n", i, (void *)args[i], args[i]->refcount, name);
-        // fprintf(stderr, "ref_dec done\n");
         if (args[i] != ret)
             ref_dec(args[i]);
     }
@@ -1107,9 +1079,7 @@ GraceObject *do_request(Context *ctx, GraceObject *receiver, char *name) {
     if (ret != receiver) ref_dec(receiver);
     if (GC_DEBUG) fprintf(stderr, "do_request returning %p (rc %i) from %s\n", (void *)ret, ret->refcount, name);
     // TODO: errors
-    // fprintf(stderr, "pre-return validate %s\n", name);
     ref_validate(ret);
-    // fprintf(stderr, "post-return validate %s\n", name);
     return ret;
 }
 
@@ -1117,7 +1087,6 @@ GraceObject *request(Context *ctx, GraceObject *receiver, char *name, ...) {
     va_list args;
     int i;
     va_start(args, name);
-    //fprintf(stderr, "requesting %s\n", name);
     for (i = 0; ; i++) {
         GraceObject *next = va_arg(args, GraceObject*);
         if (next == 0)
@@ -1127,7 +1096,6 @@ GraceObject *request(Context *ctx, GraceObject *receiver, char *name, ...) {
     cc_argc = i;
     va_end(args);
 
-    //fprintf(stderr, "about to do request %s on %x\n", name, receiver);
     return do_request(ctx, receiver, name);
 }
 /// END REQUESTS
@@ -1201,7 +1169,6 @@ MethodPart *part(char *name, ConsCell *args) {
         tmp = tmp->tail;
     }
     MethodPart *ret = malloc(sizeof(MethodPart) + sizeof(ASTNode*) * size);
-    // fprintf(stderr, "creating method part %s with %i args at %p\n", name, size, (void *)ret);
     ret->name = name;
     ret->n_arguments = size;
     tmp = args;
@@ -1511,11 +1478,9 @@ GraceObject *findReceiver(Context *ctx, char *name) {
     GraceObject *scope = ctx->scope;
 
     while (scope) {
-        // fprintf(stderr, "looking for receiver of %s in scope %p\n", name, scope);
         if (scope->origin & (OBJECT_USER | OBJECT_PRELUDE | OBJECT_SCOPE)) {
             int i;
             for (i = 0; i < scope->n_members; i++) {
-                // fprintf(stderr, "  checking member %s\n", scope->members[i].name);
                 if (strcmp(scope->members[i].name, name) == 0) {
                     return scope;
                 }
@@ -1564,7 +1529,6 @@ GraceObject *evaluateStrLit(StringNode *str, Context *context) {
 }
 
 GraceObject *evaluateObject(ObjectNode *obj, Context *context) {
-    //fprintf(stderr, "evaluating object, size %i\n", obj->size);
     GraceObject *ret = alloc_userobject(obj->methods + obj->defs + obj->vars * 2);
     ref_inc(ret);
     ret->flags &= ~FLAG_FRESH;
@@ -1575,17 +1539,14 @@ GraceObject *evaluateObject(ObjectNode *obj, Context *context) {
     int index = 0;
     for (i = 0; i < obj->size; i++) {
         if (obj->body[i]->nodetype == 'v') {
-            //fprintf(stderr, "creating var with name at %x\n", obj->names[index]);
             VarNode *varnode = (VarNode*)obj->body[i];
             add_writer(ret, index + 1, obj->names[index + 1], add_field(ret, index, obj->names[index]));
             index += 2;
         } else if (obj->body[i]->nodetype == 'd') {
-            //fprintf(stderr, "creating def with name at %x\n", obj->names[index]);
             DefNode *defnode = (DefNode*)obj->body[i];
             add_field(ret, index, obj->names[index]);
             index += 1;
         } else if (obj->body[i]->nodetype == 'm') {
-            //fprintf(stderr, "creating method with name at %x\n", obj->names[index]);
             MethDecNode *method = (MethDecNode*)obj->body[i];
             add_method(ret, index, method->name, method, context);
             index += 1;
@@ -1593,8 +1554,6 @@ GraceObject *evaluateObject(ObjectNode *obj, Context *context) {
             ImportNode *importnode = (ImportNode*)obj->body[i];
             add_field(ret, index, obj->names[index]);
             index += 1;
-        } else {
-            //fprintf(stderr, "unhandled nodetype %c\n", obj->body[i]->nodetype);
         }
     }
     GraceObject *oldSelf = context->self;
@@ -1616,7 +1575,6 @@ GraceObject *evaluateObject(ObjectNode *obj, Context *context) {
 }
 
 GraceObject *evaluateVar(VarNode *vn, Context *context) {
-    // fprintf(stderr, "evaluating var %s\n", vn->name);
     struct ObjectMember *field = findField(context, vn->name);
     if (!field) {
         fprintf(stderr, "Error: could not find field for var %s\n", vn->name);
@@ -1626,10 +1584,8 @@ GraceObject *evaluateVar(VarNode *vn, Context *context) {
         return Done;
     }
     GraceObject *value = evaluate(vn->initialiser, context);
-    // fprintf(stderr, "evaluated var %s initialiser to %i %p\n", vn->name, value->origin, (void *)value);
     ref_inc(value);
     field->data = value;
-    // fprintf(stderr, "initialized var %s to %i %p\n", vn->name, value->origin, (void *)value);
     return Done;
 }
 
@@ -1637,33 +1593,24 @@ GraceObject *evaluateDef(DefNode *dn, Context *context) {
     struct ObjectMember *field = findField(context, dn->name);
     GraceObject *value = evaluate(dn->initialiser, context);
     ref_inc(value);
-    // if (strcmp(dn->name, "pending") == 0) {
-    //     fprintf(stderr, "Defining pending to %i %p rc %i\n", value->origin, (void *)value, value->refcount);
-    // }
     field->data = value;
     return Done;
 }
 
 GraceObject *evaluateDotRequest(DotReqNode *dr, Context *context) {
-    //fprintf(stderr, "evaluating dotreq\n");
     GraceObject *receiver = evaluate(dr->receiver, context);
     if (!receiver) {
         fprintf(stderr, "Error: receiver %c evaluated to null in %s\n", dr->receiver->nodetype, context->name);
         exit(1);
     }
     ref_inc(receiver);
-    //fprintf(stderr, "got receiver %x\n", receiver);
-    //fprintf(stderr, "arguments to find: %i\n", dr->n_arguments);
     GraceObject *args[dr->n_arguments];
     for (int i = 0; i < dr->n_arguments; i++) {
-        //fprintf(stderr, "evaluating argument %i\n", i);
         args[i] = evaluate(dr->arguments[i], context);
-        // ref_inc(args[i]);
     }
     for (int i = 0; i < dr->n_arguments; i++) {
         cc_args[i] = args[i];
     }
-    //fprintf(stderr, "about to do dot request %s\n", dr->name);
     cc_argc = dr->n_arguments;
     GraceObject *ret = do_request(context, receiver, dr->name);
     if (!ret) {
@@ -1671,14 +1618,10 @@ GraceObject *evaluateDotRequest(DotReqNode *dr, Context *context) {
         exit(1);
     }
     ref_dec(receiver);
-    // for (int i = 0; i < dr->n_arguments; i++) {
-    //     ref_dec(args[i]);
-    // }
     return ret;
 }
 
 GraceObject *evaluateLexRequest(LexReqNode *dr, Context *context) {
-    // fprintf(stderr, "evaluating lexreq %s\n", dr->name);
     if (strcmp(dr->name, "self") == 0) {
         return context->self;
     }
@@ -1692,11 +1635,8 @@ GraceObject *evaluateLexRequest(LexReqNode *dr, Context *context) {
     }
     // TODO: this is a leak
     // ref_inc(receiver);
-    //fprintf(stderr, "got receiver %x\n", receiver);
-    //fprintf(stderr, "arguments to find: %i\n", dr->n_arguments);
     GraceObject *args[dr->n_arguments];
     for (int i = 0; i < dr->n_arguments; i++) {
-        //fprintf(stderr, "evaluating argument %i\n", i);
         args[i] = evaluate(dr->arguments[i], context);
         ref_inc(args[i]);
     }
@@ -1705,9 +1645,7 @@ GraceObject *evaluateLexRequest(LexReqNode *dr, Context *context) {
         args[i]->refcount--; // soft dec so isn't freed yet
     }
     cc_argc = dr->n_arguments;
-    //fprintf(stderr, "about to do dot request %s\n", dr->name);
     GraceObject *ret = do_request(context, receiver, dr->name);
-    //if (ret != receiver) ref_dec(receiver);
     return ret;
 }
 
@@ -1752,7 +1690,6 @@ GraceObject *evaluateAssign(AssignNode *an, Context *context) {
         LexReqNode *lr = (LexReqNode*)an->lhs;
         receiver = findReceiver(context, lr->name);
         name = lr->name;
-        // fprintf(stderr, "found receiver %p for assignment to %s\n", (void *)receiver, lr->name);
         if (!receiver) {
             fprintf(stderr, "Error: could not find receiver for assignment to %s\n", lr->name);
             debugFindReceiver(context, lr->name);
@@ -1761,7 +1698,6 @@ GraceObject *evaluateAssign(AssignNode *an, Context *context) {
     }
     ref_inc(receiver);
     GraceObject *value = evaluate(an->rhs, context);
-    // fprintf(stderr, "evaluated rhs to %i %p\n", value->origin, (void *)value);
     cc_args[0] = value;
     cc_argc = 1;
     char setter_name[strlen(name) + 5];
@@ -1875,14 +1811,11 @@ GraceObject *prelude_if(GraceObject *self, int memberIndex, Context *ctx) {
                 exit(1);
             }
             cond = request(ctx, cond, "apply", 0);
-            // ref_dec(cc_args[i]);
-            // cc_args[i] = cond;
         }
         if (cond->origin != OBJECT_BOOLEAN) {
             fprintf(stderr, "Error: if condition %i is not a boolean\n", i/2);
             exit(1);
         }
-        // fprintf(stderr, "if condition is %d; thenPart is %p %i\n", (int)cond->data, (void *)thenPart, thenPart->origin);
         GraceObject *block = 0;
         if (cond->data) {
             block = thenPart;
@@ -1912,7 +1845,6 @@ GraceObject *prelude_if_else(GraceObject *self, int memberIndex, Context *ctx) {
             dump_object(cond);
             exit(1);
         }
-        // fprintf(stderr, "if condition is %d; thenPart is %p %i\n", (int)cond->data, (void *)thenPart, thenPart->origin);
         GraceObject *block = 0;
         if (cond->data) {
             ref_discard(cond);
