@@ -272,7 +272,9 @@ GraceObject *ASTMod_stringNode(GraceObject *self, int memberIndex, Context *ctx)
 
 GraceObject *ASTMod_part(GraceObject *self, int memberIndex, Context *ctx) {
     struct GraceStringData *sd = cc_args[0]->data;
-    return gracePartWrapper(part(sd->str, cc_args[1]->data));
+    char *str = malloc(sd->length + 1);
+    strcpy(str, sd->str);
+    return gracePartWrapper(part(str, cc_args[1]->data));
 }
 
 GraceObject *ASTMod_lexicalRequest1(GraceObject *self, int memberIndex, Context *ctx) {
@@ -297,12 +299,16 @@ GraceObject *ASTMod_methodDecl(GraceObject *self, int memberIndex, Context *ctx)
 
 GraceObject *ASTMod_varDecl(GraceObject *self, int memberIndex, Context *ctx) {
     struct GraceStringData *sd = cc_args[0]->data;
-    return graceASTWrapper(varDec(sd->str, cc_args[1]->data, cc_args[2]->data, cc_args[3]->data));
+    char *str = malloc(sd->length + 1);
+    strcpy(str, sd->str);
+    return graceASTWrapper(varDec(str, cc_args[1]->data, cc_args[2]->data, cc_args[3]->data));
 }
 
 GraceObject *ASTMod_defDecl(GraceObject *self, int memberIndex, Context *ctx) {
     struct GraceStringData *sd = cc_args[0]->data;
-    return graceASTWrapper(defDec(sd->str, cc_args[1]->data, cc_args[2]->data, cc_args[3]->data));
+    char *str = malloc(sd->length + 1);
+    strcpy(str, sd->str);
+    return graceASTWrapper(defDec(str, cc_args[1]->data, cc_args[2]->data, cc_args[3]->data));
 }
 
 GraceObject *ASTMod_assign(GraceObject *self, int memberIndex, Context *ctx) {
@@ -315,7 +321,9 @@ GraceObject *ASTMod_returnStmt(GraceObject *self, int memberIndex, Context *ctx)
 
 GraceObject *ASTMod_identifierDeclaration(GraceObject *self, int memberIndex, Context *ctx) {
     struct GraceStringData *sd = cc_args[0]->data;
-    return graceASTWrapper(identifierDeclaration(sd->str, cc_args[1]->data));
+    char *str = malloc(sd->length + 1);
+    strcpy(str, sd->str);
+    return graceASTWrapper(identifierDeclaration(str, cc_args[1]->data));
 }
 
 GraceObject *ASTMod_interpString(GraceObject *self, int memberIndex, Context *ctx) {
@@ -327,12 +335,16 @@ GraceObject *ASTMod_interpString(GraceObject *self, int memberIndex, Context *ct
 
 GraceObject *ASTMod_comment(GraceObject *self, int memberIndex, Context *ctx) {
     struct GraceStringData *sd = cc_args[0]->data;
-    return graceASTWrapper(comment(sd->str));
+    char *str = malloc(sd->length + 1);
+    strcpy(str, sd->str);
+    return graceASTWrapper(comment(str));
 }
 
 GraceObject *ASTMod_importStmt(GraceObject *self, int memberIndex, Context *ctx) {
     struct GraceStringData *sd = cc_args[0]->data;
-    return graceASTWrapper(importStmt(sd->str, cc_args[1]->data));
+    char *str = malloc(sd->length + 1);
+    strcpy(str, sd->str);
+    return graceASTWrapper(importStmt(str, cc_args[1]->data));
 }
 
 GraceObject *ASTMod_dialectStmt(GraceObject *self, int memberIndex, Context *ctx) {
