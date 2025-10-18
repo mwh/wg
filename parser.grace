@@ -420,7 +420,7 @@ method lexer(code) {
             def oldCurrentToken = currentToken
 
             advance
-            def pending := currentToken
+            def pending = currentToken
 
             index := oldIndex
             line := oldLine
@@ -478,6 +478,12 @@ method lexer(code) {
         method expectSymbol(nature) {
             if (currentToken.nature != nature) then {
                 parseError(currentToken.line, currentToken.column, "Expected " ++ nature ++ " but got " ++ currentToken.nature)
+            }
+        }
+
+        method expectSymbol(nature) explaining(msg) {
+            if (currentToken.nature != nature) then {
+                parseError(currentToken.line, currentToken.column, msg ++ " Expected " ++ nature ++ " but got " ++ currentToken.nature)
             }
         }
 
@@ -987,6 +993,7 @@ method parsedefDeclaration(lxr) {
             anns := parseAnnotations(lxr)
         }
     }
+    lxr.expectSymbol "EQUALS" explaining "def declarations must have an initial value assigned with '='."
     lxr.advance
     def val = parseExpression(lxr)
     
