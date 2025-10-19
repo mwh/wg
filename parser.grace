@@ -819,7 +819,15 @@ method parseExpression(lxr) {
 method parseReturnStatement(lxr) {
     lxr.advance
     def val = parseExpression(lxr)
+    endStatement(lxr)
     ast.returnStmt(val)
+}
+
+method endStatement(lxr) {
+    def nature = lxr.current.nature
+    if ((nature != "NEWLINE") && (nature != "SEMICOLON") && (nature != "EOF") && (nature != "RBRACE") && (nature != "COMMENT")) then {
+        parseError(lxr.current.line, lxr.current.column, "Expected end of statement, but got " ++ lxr.current.asString)
+    }
 }
 
 method parseStatement(lxr) {
@@ -850,6 +858,7 @@ method parseStatement(lxr) {
         def val = parseExpression(lxr)
         exp := ast.assign(exp, val)
     }
+    endStatement(lxr)
     if (lxr.current.nature == "NEWLINE") then {
         lxr.advance
     }
@@ -973,6 +982,7 @@ method parseTypeDeclaration(lxr) {
     lxr.expectSymbol "EQUALS"
     lxr.advance
     def typeExpr = parseTypeExpression(lxr)
+    endStatement(lxr)
     ast.typeDecl(ident.value, typeExpr)
 }
 
@@ -996,7 +1006,7 @@ method parsedefDeclaration(lxr) {
     lxr.expectSymbol "EQUALS" explaining "def declarations must have an initial value assigned with '='."
     lxr.advance
     def val = parseExpression(lxr)
-    
+    endStatement(lxr)
     ast.defDecl(name, dtype, anns, val)
 }
 
@@ -1020,8 +1030,10 @@ method parsevarDeclaration(lxr) {
     if (lxr.current.nature == "ASSIGN") then {
         lxr.advance
         def val = parseExpression(lxr)
+        endStatement(lxr)
         ast.varDecl(name, dtype, anns, ast.cons(val, ast.nil))
     } else {
+        endStatement(lxr)
         ast.varDecl(name, dtype, anns, ast.nil)
     }
 }
