@@ -487,6 +487,12 @@ method lexer(code) {
             }
         }
 
+        method expectSymbol(nature) or(nature2) explaining(msg) {
+            if ((currentToken.nature != nature) && (currentToken.nature != nature2)) then {
+                parseError(currentToken.line, currentToken.column, msg ++ " Expected " ++ nature ++ " or " ++ nature2 ++ " but got " ++ currentToken.nature)
+            }
+        }
+
         method expectKeyword(val) {
             if (currentToken.nature != "KEYWORD") then {
                 parseError(currentToken.line, currentToken.column, "Expected KEYWORD but got " ++ currentToken.nature)
@@ -827,6 +833,10 @@ method endStatement(lxr) {
     def nature = lxr.current.nature
     if ((nature != "NEWLINE") && (nature != "SEMICOLON") && (nature != "EOF") && (nature != "RBRACE") && (nature != "COMMENT")) then {
         parseError(lxr.current.line, lxr.current.column, "Expected end of statement, but got " ++ lxr.current.asString)
+    }
+    if (nature == "SEMICOLON") then {
+        lxr.advance
+        lxr.expectSymbol "NEWLINE" or "COMMENT" explaining "Semicolon must be at end of line."
     }
 }
 
