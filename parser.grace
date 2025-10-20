@@ -1094,6 +1094,10 @@ method parseMethodDeclaration(lxr) {
         while { lxr.current.nature == "IDENTIFIER" } do {
             var id := lxr.current.value
             lxr.advance
+            if ((id == "prefix") && (lxr.current.nature == "OPERATOR")) then {
+                id := id ++ lxr.current.value
+                lxr.advance
+            }
             if (lxr.current.nature == "ASSIGN") then {
                 id := id ++ ":="
                 lxr.advance
