@@ -311,13 +311,15 @@ method lexer(code) {
                     index := index + 1
                 }
                 if (c == ".") then {
-                    value := value ++ c
-                    c := source.at(index)
-                    index := index + 1
-                    while {isDigit(c) && (index <= source.size)} do {
+                    if (isDigit(source.at(index))) then {
                         value := value ++ c
                         c := source.at(index)
                         index := index + 1
+                        while {isDigit(c) && (index <= source.size)} do {
+                            value := value ++ c
+                            c := source.at(index)
+                            index := index + 1
+                        }
                     }
                 }
                 if (index > (startIndex + 1)) then {
