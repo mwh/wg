@@ -477,6 +477,12 @@ method lexer(code) {
             }
         }
 
+        method skipWhitespace {
+            while { currentToken.nature == "NEWLINE" } do {
+                advance
+            }
+        }
+
         method expectSymbol(nature) {
             if (currentToken.nature != nature) then {
                 parseError(currentToken.line, currentToken.column, "Expected " ++ nature ++ " but got " ++ currentToken.nature)
@@ -764,6 +770,8 @@ method parseExpressionNoOpNoDot(lxr) {
     if (token.nature == "LPAREN") then {
         lxr.advance
         def expr = parseExpression(lxr)
+        lxr.skipWhitespace
+        lxr.expectSymbol "RPAREN" explaining "Parenthesised group starting at {token} expected to end here."
         lxr.advance
         return expr
     }
