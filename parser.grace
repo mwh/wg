@@ -1092,8 +1092,12 @@ method parseMethodDeclaration(lxr) {
     var parts := ast.nil
     if (lxr.current.nature == "IDENTIFIER") then {
         while { lxr.current.nature == "IDENTIFIER" } do {
-            def id = lxr.current.value
+            var id := lxr.current.value
             lxr.advance
+            if (lxr.current.nature == "ASSIGN") then {
+                id := id ++ ":="
+                lxr.advance
+            }
             if (lxr.current.nature == "LPAREN") then {
                 lxr.advance
                 var args := ast.nil
