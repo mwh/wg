@@ -66,6 +66,8 @@ public class GraceString implements GraceObject {
                 GraceNumber endNum = GraceNumber.assertNumber(args.get(1));
                 String substring = this.value.substring(startNum.intValue() - 1, endNum.intValue());
                 return returnCont.returning(ctx, new GraceString(substring));
+            case "concise":
+                return returnCont.returning(ctx, this);
             default:
                 System.out.println("no such method " + methodName + " on String");
                 return new PendingStep(ctx, returnCont, null);

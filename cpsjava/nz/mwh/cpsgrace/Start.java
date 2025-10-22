@@ -25,6 +25,9 @@ public class Start {
                     case "-p":
                         mode = "print-ast";
                         break;
+                    case "-P":
+                        mode = "concise-ast";
+                        break;
                     default:
                         fileName = args[i];
                         break;
@@ -40,6 +43,17 @@ public class Start {
                         System.out.println(astStr);
                         return null;
                     }, "asString", List.of());
+                    while (step != null) {
+                        step = step.go();
+                    }
+                } else if (mode.equals("concise-ast")) {
+                    Context ctx = new Context();
+                    addPrelude(ctx);
+                    PendingStep step = graceAST.requestMethod(ctx, (GraceObject gs) -> {
+                        String astStr = GraceString.assertString(gs).toString();
+                        System.out.println(astStr);
+                        return null;
+                    }, "concise", List.of());
                     while (step != null) {
                         step = step.go();
                     }

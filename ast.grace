@@ -12,6 +12,17 @@ method cons(hd, tl) {
             return "cons(" ++ head.asString ++ ", " ++ tail.asString ++ ")"
         }
 
+        method concise {
+            if (tail.end) then {
+                return "o1N(" ++ head.concise ++ ")"
+            }
+            return "c0N(" ++ head.concise ++ "," ++ tail.concise ++ ")"
+        }
+
+        method size {
+            1 + tail.size
+        }
+
         method reversed(next) {
             def c = cons(head, next)
             if (tail.end) then {
@@ -36,6 +47,14 @@ method nil {
             "nil"
         }
 
+        method concise {
+            "nil"
+        }
+
+        method size {
+            0
+        }
+
         method reversed(next) {
             next
         }
@@ -55,6 +74,10 @@ method numberNode(val) {
         method asString {
             "numLit(" ++ value.asString ++ ")"
         }
+
+        method concise {
+            "n0M(" ++ value.asString ++ ")"
+        }
     }
 }
 
@@ -65,6 +88,10 @@ method stringNode(val) {
 
         method asString {
             "strLit(" ++ escapeString(value) ++ ")"
+        }
+
+        method concise {
+            "s0L(" ++ escapeString(value) ++ ")"
         }
     }
 }
@@ -77,7 +104,11 @@ method interpString(val, exp, rest) {
         def kind is public = "interpStr"
 
         method asString {
-            "interpStr(" ++ escapeString(value) ++ ", " ++ expression ++ ", " ++ next ++ ")"
+            "interpStr(" ++ escapeString(value) ++ "," ++ expression ++ ", " ++ next ++ ")"
+        }
+
+        method concise {
+            "i0S(" ++ escapeString(value) ++ "," ++ expression.concise ++ "," ++ next.concise ++ ")"
         }
     }
 }
@@ -90,6 +121,10 @@ method block(params, stmts) {
 
         method asString {
             "block(" ++ parameters ++ ", " ++ statements ++ ")"
+        }
+
+        method concise {
+            "b1K(" ++ parameters.concise ++ "," ++ statements.concise ++ ")"
         }
     }
 }
@@ -105,6 +140,10 @@ method defDecl(id, dtype, anns, val) {
         method asString {
             "defDec(\"" ++ name ++ "\", "  ++ decType ++ ", " ++ anns.map { x -> "\"" ++ x ++ "\"" } ++ ", " ++ value ++ ")"
         }
+
+        method concise {
+            "d3F(\"" ++ name ++ "\","  ++ decType ++ "," ++ (anns.map { x -> "\"" ++ x ++ "\"" }.concise) ++ "," ++ value.concise ++ ")"
+        }
     }
 }
 
@@ -118,6 +157,10 @@ method typeDecl(id, val) {
         method asString {
             "typeDec(\"" ++ name ++ "\", " ++ value ++ ")"
         }
+
+        method concise {
+            "t0D(\"" ++ name ++ "\"," ++ value.concise ++ ")"
+        }
     }
 }
 
@@ -128,6 +171,10 @@ method interfaceCons(bd) {
 
         method asString {
             "interfaceCons(" ++ body ++ ")"
+        }
+
+        method concise {
+            "i0C(" ++ body.concise ++ ")"
         }
     }
 }
@@ -140,6 +187,10 @@ method methSig(pts, rType) {
 
         method asString {
             "methSig(" ++ parts ++ ", " ++ returnType ++ ")"
+        }
+
+        method concise {
+            "m0S(" ++ parts.concise ++ "," ++ returnType.concise ++ ")"
         }
     }
 }
@@ -155,6 +206,10 @@ method varDecl(id, dtype, anns, val) {
         method asString {
             "varDec(\"" ++ name ++ "\", " ++ dtype ++ ", " ++ anns.map { x -> "\"" ++ x ++ "\"" } ++ ", " ++ value ++ ")"
         }
+
+        method concise {
+            "v4D(\"" ++ name ++ "\"," ++ dtype ++ "," ++ (anns.map { x -> "\"" ++ x ++ "\"" }.concise) ++ "," ++ value.concise ++ ")"
+        }
     }
 }
 
@@ -165,6 +220,19 @@ method lexicalRequest(requestParts) {
 
         method asString {
             "lexReq(" ++ parts ++ ")"
+        }
+
+        method concise {
+            var name := ""
+            var args := nil
+            parts.map { p -> 
+                name := name ++ p.name
+                name := name ++ "(" ++ p.parameters.size.asString ++ ")"
+                p.parameters.reversed(nil).map { a -> 
+                    args := cons(a, args)
+                }
+            }
+            "l0R(\"" ++ name ++ "\"," ++ args.concise ++ ")"
         }
     }
 }
@@ -177,6 +245,19 @@ method lexicalRequest(pos, requestParts) {
 
         method asString {
             "lexReq(" ++ parts ++ ")"
+        }
+
+        method concise {
+            var name := ""
+            var args := nil
+            parts.map { p -> 
+                name := name ++ p.name
+                name := name ++ "(" ++ p.parameters.size.asString ++ ")"
+                p.parameters.reversed(nil).map { a -> 
+                    args := cons(a, args)
+                }
+            }
+            "l0R(\"" ++ name ++ "\"," ++ args.concise ++ ")"
         }
     }
 }
@@ -191,20 +272,21 @@ method explicitRequest(pos, rec, requestParts) {
         method asString {
             "dotReq(" ++ receiver.asString ++ ", " ++ parts ++ ")"
         }
-    }
-}
 
-method requestPart(partName, args) {
-    object {
-        def name is public = partName
-        def arguments is public = args
-
-        method asString {
-            "part(\"" ++ name ++ "\", " ++ args ++ ")"
+        method concise {
+            var name := ""
+            var args := nil
+            parts.map { p -> 
+                name := name ++ p.name
+                name := name ++ "(" ++ p.parameters.size.asString ++ ")"
+                p.parameters.reversed(nil).map { a -> 
+                    args := cons(a, args)
+                }
+            }
+            "d0R(" ++ receiver.concise ++ ",\"" ++ name ++ "\"," ++ args.concise ++ ")"
         }
     }
 }
-
 
 method part(partName, args) {
     object {
@@ -214,6 +296,10 @@ method part(partName, args) {
 
         method asString {
             "part(\"" ++ name ++ "\", " ++ parameters ++ ")"
+        }
+
+        method concise {
+            "p0T(\"" ++ name ++ "\"," ++ parameters.concise ++ ")"
         }
     }
 }
@@ -229,16 +315,9 @@ method methodDecl(declarationParts, retType, anns, bd) {
         method asString {
             "methDec(" ++ parts ++ ", " ++ returnType ++ ", " ++ annotations ++ ", " ++ body ++ ")"
         }
-    }
-}
 
-method declarationPart(id, params) {
-    object {
-        def name is public = id
-        def parameters is public = params
-
-        method asString {
-            "part(\"" ++ name ++ "\", " ++ parameters ++ ")"
+        method concise {
+            "m0D(" ++ parts.concise ++ "," ++ returnType ++ "," ++ (annotations.map { x -> "\"" ++ x ++ "\"" }.concise) ++ "," ++ body.concise ++ ")"
         }
     }
 }
@@ -251,6 +330,10 @@ method objectConstructor(bd, anns) {
 
         method asString {
             "objCons(" ++ body ++ ", " ++ annotations.map { x -> "\"" ++ x ++ "\"" } ++ ")"
+        }
+
+        method concise {
+            "o0C(" ++ body.concise ++ "," ++ (annotations.map { x -> "\"" ++ x ++ "\"" }.concise) ++ ")"
         }
     }
 
@@ -265,6 +348,10 @@ method assign(lhs, rhs) {
         method asString {
             "assn(" ++ left ++ ", " ++ right ++ ")"
         }
+
+        method concise {
+            "a5N(" ++ left.concise ++ "," ++ right.concise ++ ")"
+        }
     }
 }
 
@@ -275,6 +362,10 @@ method returnStmt(val) {
 
         method asString {
             "returnStmt(" ++ value ++ ")"
+        }
+
+        method concise {
+            "r3T(" ++ value.concise ++ ")"
         }
     }
 }
@@ -288,6 +379,10 @@ method identifierDeclaration(id, dtype) {
         method asString {
             "identifierDeclaration(" ++ escapeString(name) ++ ", " ++ dtype ++ ")"
         }
+
+        method concise {
+            "i0D(" ++ escapeString(name) ++ "," ++ dtype ++ ")"
+        }
     }
 }
 
@@ -298,6 +393,10 @@ method comment(text) {
 
         method asString {
             "comment(" ++ escapeString(text) ++ ")"
+        }
+
+        method concise {
+            "c0M(" ++ escapeString(text) ++ ")"
         }
     }
 }
@@ -311,6 +410,10 @@ method importStmt(src, nm) {
         method asString {
             "importStmt(\"" ++ source ++ "\", " ++ binding ++ ")"
         }
+
+        method concise {
+            "i0M(\"" ++ source ++ "\"," ++ binding.concise ++ ")"
+        }
     }
 }
 
@@ -322,6 +425,10 @@ method dialectStmt(src) {
         method asString {
             "dialectStmt(\"" ++ source ++ "\")"
         }
+
+        method concise {
+            "d0S(\"" ++ source ++ "\")"
+        }
     }
 }
 
@@ -331,49 +438,49 @@ method escapeString(value) {
     while { i <= len } do {
         def c = value.at(i)
         if (c == "\\") then {
-            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charBackslash, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charBackslash, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "$") then {
-            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charDollar, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charDollar, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "*") then {
-            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charStar, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charStar," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "\{") then {
-            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charLBrace, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charLBrace," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "\n") then {
-            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charLF, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charLF," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "\r") then {
-            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charCR, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charCR," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "\"") then {
-            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charDQuote, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charDQuote," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "~") then {
-            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charTilde, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charTilde," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "^") then {
-            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charCaret, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charCaret," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "`") then {
-            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charBacktick, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charBacktick," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "@") then {
-            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charAt, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charAt," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "&") then {
-            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charAmp, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charAmp," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "%") then {
-            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charPercent, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charPercent," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "#") then {
-            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charHash, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charHash," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "!") then {
-            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charExclam, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charExclam," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         i := i + 1
     }
