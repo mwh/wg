@@ -116,4 +116,9 @@ public class GraceNumber implements GraceObject {
             throw new RuntimeException("Expected a Number, got: " + obj);
         }
     }
+
+    public static Number numberValue(GraceObject obj) {
+        GraceNumber gn = assertNumber(obj);
+        return gn.value;
+    }
 }

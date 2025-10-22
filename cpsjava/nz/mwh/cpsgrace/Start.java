@@ -1,8 +1,14 @@
 package nz.mwh.cpsgrace;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayDeque;
+import java.util.List;
 
+import nz.mwh.cpsgrace.ast.ASTNode;
+import nz.mwh.cpsgrace.ast.Converter;
 import nz.mwh.cpsgrace.objects.GraceBoolean;
+import nz.mwh.cpsgrace.objects.GraceString;
 import nz.mwh.cpsgrace.objects.Method;
 import nz.mwh.cpsgrace.objects.UserObject;
 
@@ -11,14 +17,85 @@ public class Start {
     public static UserObject prelude;
 
     public static void main(String[] args) {
-        new Start().run();
+        if (args.length > 0) {
+            String fileName = null;
+            String mode = "run";
+            for (int i = 0; i < args.length; i++) {
+                switch (args[i]) {
+                    case "-p":
+                        mode = "print-ast";
+                        break;
+                    default:
+                        fileName = args[i];
+                        break;
+                }
+            }
+            if (fileName != null) {
+                GraceObject graceAST = parseToGraceAST(fileName);
+                if (mode.equals("print-ast")) {
+                    Context ctx = new Context();
+                    addPrelude(ctx);
+                    PendingStep step = graceAST.requestMethod(ctx, (GraceObject gs) -> {
+                        String astStr = GraceString.assertString(gs).toString();
+                        System.out.println(astStr);
+                        return null;
+                    }, "asString", List.of());
+                    while (step != null) {
+                        step = step.go();
+                    }
+                } else {
+                    ASTNode prog = graceASTtoASTNode(graceAST);
+                    Context ctx = new Context();
+                    addPrelude(ctx);
+                    PendingStep step = prog.toCPS().run(ctx, (GraceObject _) -> {
+                        return null;
+                    });
+                    while (step != null) {
+                        step = step.go();
+                    }
+                }
+            } else {
+                System.out.println("No input file specified.");
+            }
+        } else {
+            new Start().run();
+        }
     }
-    
-    public void run() {
-        Context startContext = new Context();
-        ArrayDeque<PendingStep> queue = new ArrayDeque<>();
 
-        prelude = startContext.extendScope("prelude"); 
+    public static GraceObject parseToGraceAST(String filename) {
+        try {
+            GraceObject[] returnVal = new GraceObject[1];
+            Context ctx = new Context();
+            addPrelude(ctx);
+            String content = Files.readString(Path.of(filename));
+            PendingStep step = TheProgram.importableModules.get("parser").toCPS().run(ctx, (GraceObject o) -> {
+                return o.requestMethod(ctx, (result) -> {
+                    returnVal[0] = result;
+                    return null;
+                }, "parse(1)", List.of(new GraceString(content)));
+            });
+            while (step != null) {
+                step = step.go();
+            }
+            return returnVal[0];
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static ASTNode graceASTtoASTNode(GraceObject graceAST) {
+        Converter c = new Converter();
+        return c.convertNode(graceAST);
+    }
+
+    public static ASTNode parseFile(String filename) {
+        GraceObject graceAST = parseToGraceAST(filename);
+        return graceASTtoASTNode(graceAST);
+    }
+
+    public static GraceObject addPrelude(Context context) {
+        prelude = context.extendScope("prelude"); 
         prelude.addMethod("print(1)", Method.java((ctx, cont, _, args) -> {
             return args.get(0).requestMethod(ctx, (GraceObject obj) -> {
                 System.out.println(obj);
@@ -113,6 +190,15 @@ public class Start {
         prelude.addMethod("while(1)do(1)", Method.java((ctx, cont, _, args) -> {
             return whileDo(ctx, cont, args.get(0), args.get(1));
         }));
+        return prelude;
+    }
+    
+    public void run() {
+        Context startContext = new Context();
+        ArrayDeque<PendingStep> queue = new ArrayDeque<>();
+
+        addPrelude(startContext);
+        
         // var sl = new nz.mwh.cpsgrace.ast.StrLit("hello");
         // CPS c1 = sl.toCPS();
 
@@ -129,7 +215,7 @@ public class Start {
         }
     }
 
-    PendingStep whileDo(Context ctx, Continuation cont, GraceObject conditionBlock, GraceObject loopBlock) {
+    private static PendingStep whileDo(Context ctx, Continuation cont, GraceObject conditionBlock, GraceObject loopBlock) {
         return conditionBlock.requestMethod(ctx, (GraceObject conditionResult) -> {
             GraceBoolean condition = GraceBoolean.assertBoolean(conditionResult);
             if (condition.getValue()) {
