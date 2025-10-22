@@ -1,10 +1,12 @@
 {
     "java.project.sourcePaths": [
-        "java"
+        "java",
+        "cpsjava"
     ],
     "java.project.referencedLibraries": [],
     "files.exclude": {
         "haskell/*.{hi,o}{,-boot}": true,
         "java/**/*.{class}": true,
+        "cpsjava/**/*.{class}": true,
     }
 }
