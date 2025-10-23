@@ -22,6 +22,9 @@ public class GraceNumber implements GraceObject {
     public PendingStep requestMethod(Context ctx, Continuation returnCont, String methodName, List<GraceObject> args) {
         switch (methodName) {
             case "asString":
+                if (value instanceof Double d && d == d.intValue()) {
+                    return new PendingStep(ctx, returnCont, new GraceString(Integer.toString(d.intValue())));
+                }
                 return new PendingStep(ctx, returnCont, new GraceString(toString()));
             case "+(1)":
                 GraceNumber arg0 = assertNumber(args.get(0));
@@ -41,12 +44,12 @@ public class GraceNumber implements GraceObject {
                 return returnCont.returning(ctx, new GraceNumber(quot));
             case "==(1)":
                 GraceNumber eqNum = assertNumber(args.get(0));
-                boolean eqResult = this.value.equals(eqNum.value);
+                boolean eqResult = this.value.doubleValue() == eqNum.value.doubleValue();
                 return returnCont.returning(ctx, GraceBoolean.of(eqResult));
             case "!=(1)":
                 GraceNumber neqNum = assertNumber(args.get(0));
-                boolean neqResult = this.value.equals(neqNum.value);
-                return returnCont.returning(ctx, GraceBoolean.of(!neqResult));
+                boolean neqResult = this.value.doubleValue() != neqNum.value.doubleValue();
+                return returnCont.returning(ctx, GraceBoolean.of(neqResult));
             case "<(1)":
                 GraceNumber ltNum = assertNumber(args.get(0));
                 boolean ltResult = this.value.doubleValue() < ltNum.value.doubleValue();
@@ -63,6 +66,19 @@ public class GraceNumber implements GraceObject {
                 GraceNumber lteNum = assertNumber(args.get(0));
                 boolean lteResult = this.value.doubleValue() <= lteNum.value.doubleValue();
                 return returnCont.returning(ctx, GraceBoolean.of(lteResult));
+            case "..(1)":
+                GraceNumber endNum = assertNumber(args.get(0));
+                GraceRange range = new GraceRange(this.value.doubleValue(), endNum.value.doubleValue());
+                return returnCont.returning(ctx, range);
+            case "%(1)":
+                GraceNumber modNum = assertNumber(args.get(0));
+                Number modResult;
+                if (this.value instanceof Integer && modNum.value instanceof Integer) {
+                    modResult = this.value.intValue() % modNum.value.intValue();
+                } else {
+                    modResult = this.value.doubleValue() % modNum.value.doubleValue();
+                }
+                return returnCont.returning(ctx, new GraceNumber(modResult));
             case "prefix-":
                 Number neg = multiply(this.value, -1);
                 return returnCont.returning(ctx, new GraceNumber(neg));
@@ -74,6 +90,10 @@ public class GraceNumber implements GraceObject {
 
     public int intValue() {
         return value.intValue();
+    }
+
+    public double doubleValue() {
+        return value.doubleValue();
     }
 
     private Number add(Number x, Number y) {

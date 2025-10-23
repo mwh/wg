@@ -1,5 +1,6 @@
 package nz.mwh.cpsgrace;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
@@ -35,6 +36,10 @@ public class Start {
             }
             if (fileName != null) {
                 GraceObject graceAST = parseToGraceAST(fileName);
+                if (graceAST == null) {
+                    System.err.println("Failed to parse file " + fileName);
+                    return;
+                }
                 if (mode.equals("print-ast")) {
                     Context ctx = new Context();
                     addPrelude(ctx);
@@ -92,8 +97,8 @@ public class Start {
                 step = step.go();
             }
             return returnVal[0];
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (IOException e) {
+            System.err.println("Error reading file " + filename);
             return null;
         }
     }
@@ -198,7 +203,7 @@ public class Start {
         prelude.addMethod("for(1)do(1)", Method.java((ctx, cont, _, args) -> {
             GraceObject iterable = args.get(0);
             GraceObject loopBlock = args.get(1);
-            return iterable.requestMethod(ctx, _ -> cont.apply(GraceObject.DONE), "each", java.util.List.of(loopBlock));
+            return iterable.requestMethod(ctx, _ -> cont.apply(GraceObject.DONE), "each(1)", java.util.List.of(loopBlock));
         }));
 
         prelude.addMethod("while(1)do(1)", Method.java((ctx, cont, _, args) -> {
