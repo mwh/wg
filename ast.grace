@@ -4,6 +4,7 @@ method cons(hd, tl) {
         def tail is public = tl
         def end is public = false
         def kind is public = "cons"
+        def size = tl.size + 1
 
         method asString {
             if (tail.end) then {
@@ -16,11 +17,10 @@ method cons(hd, tl) {
             if (tail.end) then {
                 return "o1N(" ++ head.concise ++ ")"
             }
+            if (size == 2) then {
+                return "c2N(" ++ head.concise ++ "," ++ tail.head.concise ++ ")"
+            }
             return "c0N(" ++ head.concise ++ "," ++ tail.concise ++ ")"
-        }
-
-        method size {
-            1 + tail.size
         }
 
         method reversed(next) {
@@ -91,7 +91,7 @@ method stringNode(val) {
         }
 
         method concise {
-            "s0L(" ++ escapeString(value) ++ ")"
+            "s0L(" ++ escapeStringConcise(value) ++ ")"
         }
     }
 }
@@ -108,7 +108,7 @@ method interpString(val, exp, rest) {
         }
 
         method concise {
-            "i0S(" ++ escapeString(value) ++ "," ++ expression.concise ++ "," ++ next.concise ++ ")"
+            "i0S(" ++ escapeStringConcise(value) ++ "," ++ expression.concise ++ "," ++ next.concise ++ ")"
         }
     }
 }
@@ -208,7 +208,7 @@ method varDecl(id, dtype, anns, val) {
         }
 
         method concise {
-            "v4D(\"" ++ name ++ "\"," ++ dtype ++ "," ++ (anns.map { x -> "\"" ++ x ++ "\"" }.concise) ++ "," ++ value.concise ++ ")"
+            "v4R(\"" ++ name ++ "\"," ++ dtype ++ "," ++ (anns.map { x -> "\"" ++ x ++ "\"" }.concise) ++ "," ++ value.concise ++ ")"
         }
     }
 }
@@ -228,11 +228,11 @@ method lexicalRequest(requestParts) {
             parts.map { p -> 
                 name := name ++ p.name
                 name := name ++ "(" ++ p.parameters.size.asString ++ ")"
-                p.parameters.reversed(nil).map { a -> 
+                p.parameters.map { a -> 
                     args := cons(a, args)
                 }
             }
-            "l0R(\"" ++ name ++ "\"," ++ args.concise ++ ")"
+            "l0R(\"" ++ name ++ "\"," ++ args.reversed(nil).concise ++ ")"
         }
     }
 }
@@ -253,11 +253,11 @@ method lexicalRequest(pos, requestParts) {
             parts.map { p -> 
                 name := name ++ p.name
                 name := name ++ "(" ++ p.parameters.size.asString ++ ")"
-                p.parameters.reversed(nil).map { a -> 
+                p.parameters.map { a -> 
                     args := cons(a, args)
                 }
             }
-            "l0R(\"" ++ name ++ "\"," ++ args.concise ++ ")"
+            "l0R(\"" ++ name ++ "\"," ++ args.reversed(nil).concise ++ ")"
         }
     }
 }
@@ -279,11 +279,11 @@ method explicitRequest(pos, rec, requestParts) {
             parts.map { p -> 
                 name := name ++ p.name
                 name := name ++ "(" ++ p.parameters.size.asString ++ ")"
-                p.parameters.reversed(nil).map { a -> 
+                p.parameters.map { a -> 
                     args := cons(a, args)
                 }
             }
-            "d0R(" ++ receiver.concise ++ ",\"" ++ name ++ "\"," ++ args.concise ++ ")"
+            "d0R(" ++ receiver.concise ++ ",\"" ++ name ++ "\"," ++ args.reversed(nil).concise ++ ")"
         }
     }
 }
@@ -381,7 +381,7 @@ method identifierDeclaration(id, dtype) {
         }
 
         method concise {
-            "i0D(" ++ escapeString(name) ++ "," ++ dtype ++ ")"
+            "i0D(" ++ escapeStringConcise(name) ++ "," ++ dtype ++ ")"
         }
     }
 }
@@ -396,7 +396,7 @@ method comment(text) {
         }
 
         method concise {
-            "c0M(" ++ escapeString(text) ++ ")"
+            "c0M(" ++ escapeStringConcise(text) ++ ")"
         }
     }
 }
@@ -438,49 +438,104 @@ method escapeString(value) {
     while { i <= len } do {
         def c = value.at(i)
         if (c == "\\") then {
-            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charBackslash, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charBackslash, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "$") then {
-            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charDollar, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charDollar, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "*") then {
-            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charStar," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charStar, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "\{") then {
-            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charLBrace," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charLBrace, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "\n") then {
-            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charLF," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charLF, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "\r") then {
-            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charCR," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charCR, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "\"") then {
-            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charDQuote," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charDQuote, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "~") then {
-            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charTilde," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charTilde, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "^") then {
-            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charCaret," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charCaret, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "`") then {
-            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charBacktick," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charBacktick, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "@") then {
-            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charAt," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charAt, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "&") then {
-            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charAmp," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charAmp, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "%") then {
-            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charPercent," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charPercent, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "#") then {
-            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charHash," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charHash, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         if (c == "!") then {
-            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",charExclam," ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+            return "safeStr(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", charExclam, " ++ escapeString(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        i := i + 1
+    }
+    "\"" ++ value.replace "\\" with "\\\\".replace "\"" with "\\\"".replace "\n" with "\\n".replace "\r" with "\\r" ++ "\""
+}
+
+method escapeStringConcise(value) {
+    var i := 1
+    def len = value.size
+    while { i <= len } do {
+        def c = value.at(i)
+        if (c == "\\") then {
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", c9B, " ++ escapeStringConcise(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "$") then {
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\", c9D, " ++ escapeStringConcise(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "*") then {
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",c9S," ++ escapeStringConcise(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "\{") then {
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",c9L," ++ escapeStringConcise(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "\n") then {
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",c9N," ++ escapeStringConcise(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "\r") then {
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",c9R," ++ escapeStringConcise(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "\"") then {
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",c9Q," ++ escapeStringConcise(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "~") then {
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",c9T," ++ escapeStringConcise(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "^") then {
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",c9C," ++ escapeStringConcise(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "`") then {
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",c9G," ++ escapeStringConcise(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "@") then {
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",c9A," ++ escapeStringConcise(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "&") then {
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",c9M," ++ escapeStringConcise(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "%") then {
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",c9P," ++ escapeStringConcise(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "#") then {
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",c9H," ++ escapeStringConcise(value.substringFrom(i + 1)to(len)) ++ ")"
+        }
+        if (c == "!") then {
+            return "s4F(\"" ++ value.substringFrom 1 to(i - 1) ++ "\",c9E," ++ escapeStringConcise(value.substringFrom(i + 1)to(len)) ++ ")"
         }
         i := i + 1
     }

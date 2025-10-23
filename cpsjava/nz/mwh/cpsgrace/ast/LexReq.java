@@ -30,6 +30,11 @@ public class LexReq extends ASTNode {
         name = sb.toString();
     }
 
+    public LexReq(String name, List<ASTNode> arguments) {
+        this.name = name;
+        this.arguments = arguments;
+    }
+
     public List<ASTNode> getArguments() {
         return arguments;
     }
@@ -62,8 +67,8 @@ public class LexReq extends ASTNode {
                             return receiver.requestMethod(ctx, returnCont, name, requestArgs);
                         }
 
-                        System.out.println("no such method " + name);
-                        return null;
+                        System.out.println("no such method in scope: " + name);
+                        throw new RuntimeException("no such method in scope: " + name);
                     };
                     Continuation cont = finalCont;
                     for (int i = arguments.size() - 1; i >= 0; i--) {

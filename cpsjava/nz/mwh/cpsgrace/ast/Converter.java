@@ -109,7 +109,7 @@ public class Converter {
             case "block" -> {
                 GraceObject paramsObj = requestSync(node, "parameters", List.of());
                 List<ASTNode> params = convertNodeList(paramsObj);
-                GraceObject bodyObj = requestSync(node, "body", List.of());
+                GraceObject bodyObj = requestSync(node, "statements", List.of());
                 List<ASTNode> body = convertNodeList(bodyObj);
                 return new Block(params, body);
             }

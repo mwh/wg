@@ -26,7 +26,7 @@ public class ImportStmt extends ASTNode {
     }
 
     public CPS toCPS() {
-        ASTNode moduleNode = TheProgram.importableModules.get(moduleName);
+        ASTNode moduleNode = TheProgram.getModuleAST(moduleName);
         CPS moduleCPS = moduleNode.toCPS();
         return (ctx, cont) -> {
             GraceObject receiver = ctx.findReceiver(moduleName + " =(1)");

@@ -82,7 +82,7 @@ public class Start {
             Context ctx = new Context();
             addPrelude(ctx);
             String content = Files.readString(Path.of(filename));
-            PendingStep step = TheProgram.importableModules.get("parser").toCPS().run(ctx, (GraceObject o) -> {
+            PendingStep step = TheProgram.getModuleAST("parser").toCPS().run(ctx, (GraceObject o) -> {
                 return o.requestMethod(ctx, (result) -> {
                     returnVal[0] = result;
                     return null;

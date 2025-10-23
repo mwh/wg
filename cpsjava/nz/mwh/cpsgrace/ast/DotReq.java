@@ -31,6 +31,12 @@ public class DotReq extends ASTNode {
         name = sb.toString();
     }
 
+    public DotReq(ASTNode receiver, String name, List<ASTNode> arguments) {
+        this.receiver = receiver;
+        this.name = name;
+        this.arguments = arguments;
+    }
+
     public List<ASTNode> getArguments() {
         return arguments;
     }

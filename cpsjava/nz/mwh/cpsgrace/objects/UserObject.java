@@ -23,8 +23,8 @@ public class UserObject implements GraceObject {
                 if (method != null) {
                     return method.invoke(ctx.withSelfScope(this), returnCont, this, args);
                 }
-                System.out.println("no such method " + methodName);
-                return new PendingStep(ctx, returnCont, null);
+                System.out.println("no such method " + methodName + ": methods are " + getMethodNames());
+                throw new RuntimeException("no such method " + methodName);
         }
     }
 
