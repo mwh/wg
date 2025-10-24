@@ -21,11 +21,11 @@ public class ASTEncoding {
     }
 
     protected static LexReq lexReq(ConsList<Part> parts) {
-        return new LexReq(parts.asList());
+        return new LexReq(parts.asList(), null);
     }
 
     protected static DotReq dotReq(ASTNode receiver, ConsList<Part> parts) {
-        return new DotReq(receiver, parts.asList());
+        return new DotReq(receiver, parts.asList(), null);
     }
 
     protected static Part part(String name, ConsList<ASTNode> arguments) {
@@ -75,7 +75,7 @@ public class ASTEncoding {
     protected static ASTNode importStmt(String name, IdentifierDeclaration asName) {
         return new ImportStmt(name, asName);
     }
-    
+
     protected static String safeStr(String pre, String mid, String post) {
         return pre + mid + post;
     }

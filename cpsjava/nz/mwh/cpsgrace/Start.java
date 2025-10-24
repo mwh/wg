@@ -91,7 +91,7 @@ public class Start {
                 return o.requestMethod(ctx, (result) -> {
                     returnVal[0] = result;
                     return null;
-                }, "parse(1)", List.of(new GraceString(content)));
+                }, "parseModule(2)", List.of(new GraceString(filename), new GraceString(content)));
             });
             while (step != null) {
                 step = step.go();
@@ -208,6 +208,17 @@ public class Start {
 
         prelude.addMethod("while(1)do(1)", Method.java((ctx, cont, _, args) -> {
             return whileDo(ctx, cont, args.get(0), args.get(1));
+        }));
+
+        prelude.addMethod("getStackTrace", Method.java((ctx, cont, _, _) -> {
+            CallStackItem item = ctx.getCallStack();
+            StringBuilder sb = new StringBuilder();
+            item = item.caller(); // skip request to this method
+            while (item != null) {
+                sb.append("  from request to ").append(item.functionName()).append("\n");
+                item = item.caller();
+            }
+            return cont.returning(ctx, new GraceString(sb.toString()));
         }));
         return prelude;
     }

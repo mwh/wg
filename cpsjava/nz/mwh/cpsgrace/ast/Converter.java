@@ -37,7 +37,9 @@ public class Converter {
             case "lexReq" -> {
                 GraceObject partsObj = requestSync(node, "parts", List.of());
                 List<ASTNode> parts = convertNodeList(partsObj);
-                return new LexReq(parts.stream().map(x -> (Part)x).toList());
+                GraceObject position = requestSync(node, "position", List.of());
+                String positionStr = GraceString.assertString(position).toString();
+                return new LexReq(parts.stream().map(x -> (Part)x).toList(), positionStr);
             }
             case "part" -> {
                 GraceObject nameObj = requestSync(node, "name", List.of());
@@ -51,7 +53,9 @@ public class Converter {
                 ASTNode receiver = convertNode(receiverObj);
                 GraceObject partsObj = requestSync(node, "parts", List.of());
                 List<ASTNode> parts = convertNodeList(partsObj);
-                return new DotReq(receiver, parts.stream().map(x -> (Part)x).toList());
+                GraceObject position = requestSync(node, "position", List.of());
+                String positionStr = GraceString.assertString(position).toString();
+                return new DotReq(receiver, parts.stream().map(x -> (Part)x).toList(), positionStr);
             }
             case "assn" -> {
                 GraceObject leftObj = requestSync(node, "left", List.of());

@@ -13,11 +13,13 @@ public class DotReq extends ASTNode {
     private ASTNode receiver;
     private String name;
     private List<ASTNode> arguments;
+    private String position;
 
-    public DotReq(ASTNode receiver, List<Part> parts) {
+    public DotReq(ASTNode receiver, List<Part> parts, String position) {
         this.receiver = receiver;
         StringBuilder sb = new StringBuilder();
         arguments = new ArrayList<ASTNode>();
+        this.position = position;
         for (Part p : parts) {
             List<ASTNode> args = p.getArguments();
             sb.append(p.getName());
@@ -59,7 +61,7 @@ public class DotReq extends ASTNode {
                     PendingStep receiverStep = receiverCPS.run(ctx, (GraceObject recv) -> {
                         List<GraceObject> requestArgs = new ArrayList<>();
                         Continuation invokeCont = (_) -> {
-                            return recv.requestMethod(ctx, returnCont, name, requestArgs);
+                            return recv.requestMethod(ctx.withCall(name, position), returnCont, name, requestArgs);
                         };
                         Continuation cont = invokeCont;
                         for (int i = arguments.size() - 1; i >= 0; i--) {

@@ -13,8 +13,9 @@ import nz.mwh.cpsgrace.objects.GraceBoolean;
 public class LexReq extends ASTNode {
     private String name;
     private List<ASTNode> arguments;
+    private String position;
 
-    public LexReq(List<Part> parts) {
+    public LexReq(List<Part> parts, String position) {
         StringBuilder sb = new StringBuilder();
         arguments = new ArrayList<ASTNode>();
         for (Part p : parts) {
@@ -28,6 +29,7 @@ public class LexReq extends ASTNode {
             arguments.addAll(args);
         }
         name = sb.toString();
+        this.position = position;
     }
 
     public LexReq(String name, List<ASTNode> arguments) {
@@ -41,6 +43,10 @@ public class LexReq extends ASTNode {
 
     public String getName() {
         return name;
+    }
+
+    public String getPosition() {
+        return position;
     }
 
     public CPS toCPS() {
@@ -60,11 +66,14 @@ public class LexReq extends ASTNode {
                             case "false" -> {
                                 return returnCont.apply(GraceBoolean.FALSE);
                             }
+                            case "done" -> {
+                                return returnCont.apply(GraceObject.DONE);
+                            }
                         }
                         
                         GraceObject receiver = ctx.findReceiver(name);
                         if (receiver != null) {
-                            return receiver.requestMethod(ctx, returnCont, name, requestArgs);
+                            return receiver.requestMethod(ctx.withCall(name, position), returnCont, name, requestArgs);
                         }
 
                         System.out.println("no such method in scope: " + name);

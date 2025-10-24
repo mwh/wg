@@ -9,11 +9,13 @@ public class Context {
     private UserObject scope;
     private Continuation returnContinuation;
     private Continuation exceptionContinuation;
+    private CallStackItem callStack;
 
     public Context() {
         this.self = null;
         this.returnContinuation = null;
         this.exceptionContinuation = null;
+        this.scope = null;
     }
 
     public Context(Context other) {
@@ -21,6 +23,7 @@ public class Context {
         this.returnContinuation = other.returnContinuation;
         this.exceptionContinuation = other.exceptionContinuation;
         this.scope = other.scope;
+        this.callStack = other.callStack;
     }
 
     public Context withSelf(UserObject self) {
@@ -40,6 +43,22 @@ public class Context {
         Context newCtx = new Context(this);
         newCtx.scope = scope;
         return newCtx;
+    }
+
+    public Context withCall(String functionName) {
+        Context newCtx = new Context(this);
+        newCtx.callStack = new CallStackItem(functionName, this.callStack);
+        return newCtx;
+    }
+    
+    public Context withCall(String functionName, String position) {
+        Context newCtx = new Context(this);
+        newCtx.callStack = new CallStackItem(functionName + " at " + position, this.callStack);
+        return newCtx;
+    }
+
+    public CallStackItem getCallStack() {
+        return callStack;
     }
 
     public GraceObject getSelf() {
