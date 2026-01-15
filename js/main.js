@@ -143,6 +143,31 @@ document.getElementById('c_flat').addEventListener('click', async () => {
     document.getElementById('status').replaceChildren(a)
 })
 
+document.getElementById('excel').addEventListener('click', async () => {
+    if (!theAST)
+        await doParse();
+    let hzip = (await import('./hzip.js'))['default'];
+    let text = theAST
+    let worksheetF = fetch('excel-book-template.xlsx');
+    let f = await fetch("excel-sheet-template.xml")
+    let base = await f.text()
+    let sheetDoc = new DOMParser().parseFromString(base, 'text/xml');
+    sheetDoc.getElementsByTagName('f')[0].textContent = text;
+    let sheet1XML = new XMLSerializer().serializeToString(sheetDoc);
+    let worksheetR = await worksheetF;
+    let zip = new hzip.ZipFile(await worksheetR.arrayBuffer());
+    await zip.entries['xl/worksheets/sheet1.xml'].put(new Blob([sheet1XML]));
+    let blob = await zip.asBlob();
+    let url = URL.createObjectURL(blob)
+    let a = document.createElement('a')
+    a.href = url
+    a.download = "GraceSpreadsheet.xlsx"
+    a.textContent = 'Download GraceSpreadsheet.xlsx'
+    document.getElementById('status').replaceChildren(a)
+    document.getElementById('ast').value = 'Download the spreadsheet and recalculate (Ctrl-Alt-F9) upon opening.';
+})
+
+
 document.getElementById('javascript').addEventListener('click', async () => {
     if (!theAST)
         await doParse()
