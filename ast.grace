@@ -142,7 +142,7 @@ method defDecl(id, dtype, anns, val) {
         }
 
         method concise {
-            "d3F(\"" ++ name ++ "\","  ++ decType ++ "," ++ (anns.map { x -> "\"" ++ x ++ "\"" }.concise) ++ "," ++ value.concise ++ ")"
+            "d3F(\"" ++ name ++ "\","  ++ decType.concise ++ "," ++ (anns.map { x -> "\"" ++ x ++ "\"" }.concise) ++ "," ++ value.concise ++ ")"
         }
     }
 }
@@ -208,7 +208,7 @@ method varDecl(id, dtype, anns, val) {
         }
 
         method concise {
-            "v4R(\"" ++ name ++ "\"," ++ dtype ++ "," ++ (anns.map { x -> "\"" ++ x ++ "\"" }.concise) ++ "," ++ value.concise ++ ")"
+            "v4R(\"" ++ name ++ "\"," ++ dtype.concise ++ "," ++ (anns.map { x -> "\"" ++ x ++ "\"" }.concise) ++ "," ++ value.concise ++ ")"
         }
     }
 }
@@ -317,7 +317,7 @@ method methodDecl(declarationParts, retType, anns, bd) {
         }
 
         method concise {
-            "m0D(" ++ parts.concise ++ "," ++ returnType ++ "," ++ (annotations.map { x -> "\"" ++ x ++ "\"" }.concise) ++ "," ++ body.concise ++ ")"
+            "m0D(" ++ parts.concise ++ "," ++ returnType.concise ++ "," ++ (annotations.map { x -> "\"" ++ x ++ "\"" }.concise) ++ "," ++ body.concise ++ ")"
         }
     }
 }
@@ -381,7 +381,7 @@ method identifierDeclaration(id, dtype) {
         }
 
         method concise {
-            "i0D(" ++ escapeStringConcise(name) ++ "," ++ dtype ++ ")"
+            "i0D(" ++ escapeStringConcise(name) ++ "," ++ dtype.concise ++ ")"
         }
     }
 }
