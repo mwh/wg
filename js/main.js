@@ -46,7 +46,7 @@ document.getElementById('source').addEventListener('keydown', function(e) {
     }
 })
 
-async function doParse() {
+async function doParse(concise=false) {
     let start = performance.now()
     let text = document.getElementById('source').value
     status("Parsing input...")
@@ -62,7 +62,11 @@ async function doParse() {
     await evaluate(r)
     status("Stringifying AST...")
     let parseTree = cont.result
-    let r2 = parseTree.request(cont, {name: "asString(0)"}, [])
+    let r2
+    if (concise)
+        r2 = parseTree.request(cont, {name: "concise(0)"}, [])
+    else
+        r2 = parseTree.request(cont, {name: "asString(0)"}, [])
     await evaluate(r2)
     document.getElementById('ast').value = cont.result
     theAST = cont.result
@@ -166,6 +170,22 @@ document.getElementById('excel').addEventListener('click', async () => {
     document.getElementById('status').replaceChildren(a)
     document.getElementById('ast').value = 'Download the spreadsheet and recalculate (Ctrl-Alt-F9) upon opening.';
 })
+
+document.getElementById('typechecker').addEventListener('click', async () => {
+    // Get the concise AST into theAST
+    await doParse(true);
+    let f = await fetch('typechecker-template.grace');
+    let tp = await f.text();
+
+    let out = `// Typechecker of fixed program; succeeds silently, or crashes.
+${tp}
+
+// Typecheck this fixed program:
+${theAST}.check(Environment(BaseEnvironment), unknownType)
+`;
+
+    document.getElementById('ast').value = out;
+});
 
 
 document.getElementById('javascript').addEventListener('click', async () => {
