@@ -241,7 +241,7 @@ function evaluateExpression(cont, scope, expr) {
             return evaluateExpression(new FunctionContinuation(cont, (cont, val2) => {
                 return cont.of(expr.value + val + val2);
             }), scope, expr.next);
-        }), scope, expr.expression);
+        }), scope, new ast.ExplicitRequest(expr.expression, [new ast.Part("asString", [])]));
     }
     if (expr instanceof ast.Block) {
         return evaluateBlock(cont, scope, expr);
