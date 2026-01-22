@@ -100,8 +100,10 @@ class RequestContinuation extends Continuation {
 
     go(args) {
         //console.log("calling", this.req.name, "on", this.receiver, "with", args);
-        if (this.receiver instanceof GraceObject)
-            return this.receiver.request(this.endCont, this.req, args);
+        if (this.receiver instanceof GraceObject) {
+            let ret = this.receiver.request(this.endCont, this.req, args);
+            return ret;
+        }
         if (typeof this.receiver == 'number') {
             return GraceNumber.request(this.endCont, this.req, args, this.receiver);
         }
@@ -206,8 +208,13 @@ function evaluateStatement(cont, scope, stmt) {
             let reqCont = new RequestContinuation(cont, receiver, request);
             let argCont = new ArgumentsContinuation(reqCont, scope, request, 0, 0);
             return argCont;
+        } else if (stmt.lhs instanceof ast.ExplicitRequest) {
+            let newParts = [ new ast.Part(stmt.lhs.parts[0].name + ":=", [stmt.rhs]) ];
+            let newReq = new ast.ExplicitRequest(stmt.lhs.receiver, newParts);
+            return evaluateExplicitRequest(cont, scope, newReq);
         } else {
-            throw new Error("unimplemented assignment LHS", stmt.lhs);
+            console.log("unimplemented assignment LHS", stmt.lhs, typeof stmt.lhs);
+            throw new Error("unimplemented assignment LHS", stmt.lhs, typeof stmt.lhs);
         }
     } else if (stmt instanceof ast.Comment) {
         return cont.of(undefined);
@@ -260,8 +267,8 @@ function evaluateBlock(cont, scope, block) {
         ["apply(" + block.params.length + ")"]: (cont, args) => {
             let bscope = new GraceObject({}, scope);
             for (let i = 0; i < block.params.length; i++) {
-                bscope.addDef(block.params[i].parts[0].name);
-                bscope.fields[block.params[i].parts[0].name] = args[i];
+                bscope.addDef(block.params[i].name);
+                bscope.fields[block.params[i].name] = args[i];
             }
             return evaluateStatementList(cont, bscope, block.body);
         },
@@ -291,6 +298,10 @@ function evaluateExplicitRequest(cont, scope, stmt) {
 class GraceObject {
     constructor(methods, lexicalParent=null) {
         this.methods = methods;
+        if (!('==(1)' in methods)) {
+            this.methods['==(1)'] = (cont, args) => { return cont.of(this === args[0]) };
+            this.methods['!=(1)'] = (cont, args) => { return cont.of(this !== args[0]) };
+        }
         this.fields = {};
         this.lexicalParent = lexicalParent;
     }
@@ -503,6 +514,23 @@ function ifThenElseIfs(cont, args) {
     }
 }
 
+
+
+const singletonException = new GraceObject({
+    'refine(1)': (cont, args) => {
+        let exceptionName = args[0];
+        return cont.of(new GraceObject({
+            'raise(1)': (cont, args) => {
+                console.log(exceptionName + ': ' + args[0]);
+                if (typeof document !== 'undefined') {
+                    document.getElementById('output').append(exceptionName + ': ' + args[0], document.createElement('br'));
+                }
+                // return nothing, stop execution. TODO: defining & jumping to exception handlers
+            },
+        }));
+    },
+});
+
 export const prelude = new GraceObject({
     'print(1)': (cont, args) => {
         console.log(args[0]);
@@ -560,6 +588,9 @@ export const prelude = new GraceObject({
     },
     'false(0)': (cont, args) => {
         return cont.of(false);
+    },
+    'Exception(0)': (cont, args) => {
+        return cont.of(singletonException);
     },
 })
 
