@@ -230,6 +230,7 @@ method lexicalRequest(requestParts) {
                 name := name ++ "(" ++ p.parameters.size.asString ++ ")"
                 p.parameters.map { a -> 
                     args := cons(a, args)
+                    true
                 }
             }
             "l0R(\"" ++ name ++ "\"," ++ args.reversed(nil).concise ++ ")"
@@ -255,6 +256,7 @@ method lexicalRequest(pos, requestParts) {
                 name := name ++ "(" ++ p.parameters.size.asString ++ ")"
                 p.parameters.map { a -> 
                     args := cons(a, args)
+                    true
                 }
             }
             "l0R(\"" ++ name ++ "\"," ++ args.reversed(nil).concise ++ ")"
@@ -281,6 +283,7 @@ method explicitRequest(pos, rec, requestParts) {
                 name := name ++ "(" ++ p.parameters.size.asString ++ ")"
                 p.parameters.map { a -> 
                     args := cons(a, args)
+                    true
                 }
             }
             "d0R(" ++ receiver.concise ++ ",\"" ++ name ++ "\"," ++ args.reversed(nil).concise ++ ")"
