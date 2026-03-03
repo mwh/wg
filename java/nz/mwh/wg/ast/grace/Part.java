@@ -10,6 +10,10 @@ public class Part extends nz.mwh.wg.ast.Part implements GraceObject {
         super(name, args);
     }
 
+    public Part(String name, Cons<? extends ASTNode> args, Cons<? extends ASTNode> genericParams) {
+        super(name, args, genericParams);
+    }
+
     public GraceObject request(Request request) {
         throw new RuntimeException("Cannot request method on ASTNode: " + request.getName());
     }

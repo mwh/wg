@@ -70,7 +70,7 @@ public class Cons<T> {
     }
 
     public static <T> String stringFromList(List<T> items) {
-        if (items.size() == 0)
+        if (items == null || items.size() == 0)
             return "nil";
         StringBuilder sb = new StringBuilder();
         int len = items.size();

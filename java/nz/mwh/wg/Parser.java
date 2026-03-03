@@ -20,6 +20,7 @@ public class Parser {
     public static ASTNode parse(String moduleName, String input) {
         if (theParser == null) {
             evaluator.bindModule("ast", GraceASTHelps.astModule(false));
+            evaluator.bindModule("lexer", evaluator.evaluateModule((ObjectConstructor) LexerData.program));
             theParser = evaluator.evaluateModule(parserAST);
         }
         Request request = new Request(new Evaluator(), Collections.singletonList(new RequestPartR("parseModule", List.of(new GraceString(moduleName), new GraceString(input)))));

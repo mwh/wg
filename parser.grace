@@ -1,550 +1,5 @@
 import "ast" as ast
-
-var modulePrefix := ""
-
-method EOFToken(line, column) {
-    SymbolToken(line, column, "EOF")
-}
-
-method NumberToken(ln, col, val) {
-    object {
-        def nature is public = "NUMBER"
-        def value is public = val
-        def line is public = ln
-        def column is public = col
-
-        method asString {
-            nature ++ "(" ++ value ++ ")[" ++ line ++ ":" ++ column ++ "]"
-        }
-
-        method location {
-            modulePrefix ++ line ++ ":" ++ column
-        }
-    }
-}
-
-method LParenToken(line, column) {
-    SymbolToken(line, column, "LPAREN")
-}
-
-method RParenToken(line, column) {
-    SymbolToken(line, column, "RPAREN")
-}
-
-method LBraceToken(line, column) {
-    SymbolToken(line, column, "LBRACE")
-}
-
-method RBraceToken(ln, col, idx) {
-    object {
-        def nature is public = "RBRACE"
-        def line is public = ln
-        def column is public = col
-        def index is public = idx
-
-        method asString {
-            "RBRACE[" ++ line ++ ":" ++ column ++ "@" ++ index ++ "]"
-        }
-
-        method location {
-            modulePrefix ++ line ++ ":" ++ column
-        }
-
-    }
-}
-
-method CommaToken(line, column) {
-    SymbolToken(line, column, "COMMA")
-}
-
-method DotToken(line, column) {
-    SymbolToken(line, column, "DOT")
-}
-
-method IdentifierToken(ln, col, val) {
-    object {
-        def nature is public = "IDENTIFIER"
-        def value is public = val
-        def line is public = ln
-        def column is public = col
-
-        method asString {
-            nature ++ "(" ++ value ++ ")[" ++ line ++ ":" ++ column ++ "]"
-        }
-
-        method location {
-            modulePrefix ++ line ++ ":" ++ column
-        }
-    }
-}
-
-method KeywordToken(ln, col, val) {
-    object {
-        def nature is public = "KEYWORD"
-        def value is public = val
-        def line is public = ln
-        def column is public = col
-
-        method asString {
-            nature ++ "(" ++ value ++ ")" ++ "[" ++ line ++ ":" ++ column ++ "]"
-        }
-
-        method location {
-            modulePrefix ++ line ++ ":" ++ column
-        }
-    }
-}
-
-method OperatorToken(ln, col, val) {
-    object {
-        def nature is public = "OPERATOR"
-        def value is public = val
-        def line is public = ln
-        def column is public = col
-
-        method asString {
-            nature ++ "(" ++ value ++ ")" ++ "[" ++ line ++ ":" ++ column ++ "]"
-        }
-
-        method location {
-            modulePrefix ++ line ++ ":" ++ column
-        }
-    }
-}
-
-method StringToken(ln, col, val) {
-    object {
-        def nature is public = "STRING"
-        def value is public = val
-        def line is public = ln
-        def column is public = col
-
-        method asString {
-            nature ++ "(" ++ value ++ ")" ++ "[" ++ line ++ ":" ++ column ++ "]"
-        }
-
-        method location {
-            modulePrefix ++ line ++ ":" ++ column
-        }
-    }
-}
-
-method InterpStringToken(ln, col, val) {
-    object {
-        def nature is public = "INTERPSTRING"
-        def value is public = val
-        def line is public = ln
-        def column is public = col
-
-        method asString {
-            nature ++ "(" ++ value ++ ")" ++ "[" ++ line ++ ":" ++ column ++ "]"
-        }
-
-        method location {
-            modulePrefix ++ line ++ ":" ++ column
-        }
-    }
-}
-
-method EqualsToken(line, column) {
-    SymbolToken(line, column, "EQUALS")
-}
-
-method AssignToken(line, column) {
-    SymbolToken(line, column, "ASSIGN")
-}
-
-method ArrowToken(line, column) {
-    SymbolToken(line, column, "ARROW")
-}
-
-method SymbolToken(ln, col, nat) {
-    object {
-        def nature is public = nat
-        def line is public = ln
-        def column is public = col
-
-        method asString {
-            nature ++ "[" ++ line ++ ":" ++ column ++ "]"
-        }
-
-        method location {
-            modulePrefix ++ line ++ ":" ++ column
-        }
-    }
-}
-
-method NewlineToken(line, column) {
-    SymbolToken(line, column, "NEWLINE")
-}
-
-method CommentToken(ln, col, text) {
-    object {
-        def nature is public = "COMMENT"
-        def line is public = ln
-        def column is public = col
-        def value is public = text
-
-        method asString {
-            nature ++ "(" ++ value ++ ")[" ++ line ++ ":" ++ column ++ "]"
-        }
-
-        method location {
-            modulePrefix ++ line ++ ":" ++ column
-        }
-    }
-}
-
-method isOperatorCharacter(c) {
-    (c == "+") || (c == "-") || (c == "*") || (c == "/") || (c == "=") || (c == ":") || (c == "|") || (c == "&") || (c == "!") || (c == ">") || (c == "<") || (c == ".") || (c == "%")
-}
-
-method isIdentifierStart(c) {
-    def cp = c.firstCodepoint
-    ((cp >= 97) && (cp <= 122)) || ((cp >= 65) && (cp <= 90)) || (cp == 95)
-}
-
-method isDigit(c) {
-    def cp = c.firstCodepoint
-    (cp >= 48) && (cp <= 57)
-}
-
-method ErrorToken(ln, col, val) {
-    object {
-        def nature is public = "ERROR"
-        def message is public = val
-        def line is public = ln
-        def column is public = col
-
-        method asString {
-            nature ++ "(" ++ message ++ ")[" ++ line ++ ":" ++ column ++ "]"
-        }
-    }
-}
-
-var indentColumn := 0
-
-method lexer(code) {
-    object {
-        def source = code
-        var index := 1
-        var line := 1
-        var column := 0
-        var lineStart := 0
-        var currentToken := nextToken
-
-        method save {
-            object {
-                def i = index
-                def l = line
-                def c = column
-                def s = lineStart
-                def t = currentToken
-            }
-        }
-
-        method restore(memo) {
-            index := memo.i
-            line := memo.l
-            column := memo.c
-            lineStart := memo.s
-            currentToken := memo.t
-        }
-
-        method nextToken {
-            if (index > source.size) then {
-                return EOFToken(line, column)
-            }
-
-            var c := source.at(index)
-            column := index - lineStart
-            index := index + 1
-            
-
-            if (c == " ") then {
-                return nextToken
-            }
-
-            if (c == "(") then {
-                return LParenToken(line, column)
-            }
-
-            if (c == ")") then {
-                return RParenToken(line, column)
-            }
-
-            if ((c > "z") && (c < "|")) then {
-                return LBraceToken(line, column)
-            }
-
-            if (c == "}") then {
-                return RBraceToken(line, column, index)
-            }
-
-            if (c == ",") then {
-                return CommaToken(line, column)
-            }
-
-            if (c.firstCodepoint == 13) then {
-                c := source.at(index)
-                index := index + 1
-            }
-            if ((c.firstCodepoint == 10) || (c.firstCodepoint == 8232)) then {
-                line := line + 1
-                lineStart := index - 1
-                return NewlineToken(line, column)
-            }
-
-            if (c.firstCodepoint == 34) then {
-                return lexString
-            }
-
-            if (isDigit(c)) then {
-                def startIndex = index - 1
-                if (index >= source.size) then {
-                    return NumberToken(line, column, c)
-                }
-                var value := ""
-                while {isDigit(c) && (index <= source.size)} do {
-                    value := value ++ c
-                    c := source.at(index)
-                    index := index + 1
-                }
-                if (c == ".") then {
-                    if (isDigit(source.at(index))) then {
-                        value := value ++ c
-                        c := source.at(index)
-                        index := index + 1
-                        while {isDigit(c) && (index <= source.size)} do {
-                            value := value ++ c
-                            c := source.at(index)
-                            index := index + 1
-                        }
-                    }
-                }
-                if (index > (startIndex + 1)) then {
-                    index := index - 1
-                }
-                return NumberToken(line, column, value)
-            }
-
-            if (isIdentifierStart(c)) then {
-                def startIndex = index - 1
-                var value := c
-                if (index > source.size) then {
-                    return IdentifierToken(line, column, value)
-                }
-                c := source.at(index)
-                while {(isIdentifierStart(c) || isDigit(c) || (c == "'")) && (index <= source.size)} do {
-                    value := value ++ c
-                    index := index + 1
-                    if (index <= source.size) then {
-                        c := source.at(index)
-                    }
-                }
-                if ((value == "var") || (value == "def") || (value == "method") || (value == "object") || (value == "is") || (value == "return") || (value == "class") || (value == "type") || (value == "import") || (value == "self") || (value == "dialect") || (value == "interface")) then {
-                    return KeywordToken(line, column, value)
-                }
-                return IdentifierToken(line, column, value)
-            }
-
-            if (isOperatorCharacter(c)) then {
-                def startIndex = index
-                var op := c
-                c := source.at(index)
-                index := index + 1
-                while {isOperatorCharacter(c) && (index <= source.size)} do {
-                    op := op ++ c
-                    c := source.at(index)
-                    index := index + 1
-                }
-                index := index - 1
-                if (op == ":=") then {
-                    return AssignToken(line, column)
-                }
-                if (op == "=") then {
-                    return EqualsToken(line, column)
-                }
-                if (op == "->") then {
-                    return ArrowToken(line, column)
-                }
-                if (op == ".") then {
-                    return DotToken(line, column)
-                }
-                if (op == ":") then {
-                    return SymbolToken(line, column, "COLON")
-                }
-                if (op == "//") then {
-                    var cp := c.firstCodepoint
-                    var text := ""
-                    index := index + 1
-                    while { (cp != 10) && (cp != 13) && (index <= source.size) } do {
-                        text := text ++ c
-                        c := source.at(index)
-                        cp := c.firstCodepoint
-                        index := index + 1
-                    }
-                    if ((cp == 10) || (cp == 13)) then {
-                        index := index - 1
-                    }
-                    return CommentToken(line, column, text)
-                }
-                return OperatorToken(line, column, op)
-            }
-
-            if (c == ";") then {
-                return SymbolToken(line, column, "SEMICOLON")
-            }
-
-            parseError(line, column, "Unknown character: " ++ c.asString ++ " (" ++ c.firstCodepoint.asString ++ ")")
-        
-        }
-
-        method current {
-            currentToken
-        }
-
-        method advance {
-            currentToken := nextToken
-            if (currentToken.nature == "NEWLINE") then {
-                def pendingToken = peek
-                if (pendingToken.column > indentColumn) then {
-                    advance
-                }
-            }
-        }
-
-        method peek {
-            def oldIndex = index
-            def oldLine = line
-            def oldLineStart = lineStart
-            def oldColumn = column
-            def oldCurrentToken = currentToken
-
-            advance
-            def pending = currentToken
-
-            index := oldIndex
-            line := oldLine
-            lineStart := oldLineStart
-            column := oldColumn
-            currentToken := oldCurrentToken
-            
-            return pending
-        }
-
-        method lexString {
-            var value := ""
-            var escaped := false
-            while {(source.at(index).firstCodepoint != 34) || escaped} do {
-                var escapeNext := false
-                def cp = source.at(index).firstCodepoint
-                if ((cp == 92) && (escaped == false)) then {
-                    escapeNext := true
-                } elseif { escaped && (cp == 110) } then {
-                    value := value ++ "\n"
-                } elseif { escaped && (cp == 114) } then {
-                    value := value ++ "\r"
-                } else {
-                    if ((cp == 123) && (!escaped)) then {
-                        // String interpolation
-                        index := index + 1
-                        return InterpStringToken(line, column, value)
-                    } else {
-                        value := value ++ source.at(index)
-                    }
-                }
-                escaped := escapeNext
-                index := index + 1
-            }
-            index := index + 1
-            return StringToken(line, column, value)
-        }
-
-        method startStringAt(pos) {
-            index := pos
-            currentToken := lexString
-        }
-
-        method windback(pos) {
-            index := pos
-        }
-
-        method expectToken(nature) {
-            if (currentToken.nature != nature) then {
-                print("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
-                parseError(currentToken.line, currentToken.column, "Expected " ++ nature ++ " but got " ++ currentToken.nature)
-            }
-        }
-
-        method skipWhitespace {
-            while { currentToken.nature == "NEWLINE" } do {
-                advance
-            }
-        }
-
-        method expectSymbol(nature) {
-            if (currentToken.nature != nature) then {
-                parseError(currentToken.line, currentToken.column, "Expected " ++ nature ++ " but got " ++ currentToken.nature)
-            }
-        }
-
-        method expectSymbol(nature) explaining(msg) {
-            if (currentToken.nature != nature) then {
-                parseError(currentToken.line, currentToken.column, msg ++ " Expected " ++ nature ++ " but got " ++ currentToken.nature)
-            }
-        }
-
-        method expectSymbol(nature) or(nature2) explaining(msg) {
-            if ((currentToken.nature != nature) && (currentToken.nature != nature2)) then {
-                parseError(currentToken.line, currentToken.column, msg ++ " Expected " ++ nature ++ " or " ++ nature2 ++ " but got " ++ currentToken.nature)
-            }
-        }
-
-        method expectKeyword(val) {
-            if (currentToken.nature != "KEYWORD") then {
-                parseError(currentToken.line, currentToken.column, "Expected KEYWORD but got " ++ currentToken.nature)
-            }
-            if (currentToken.value != val) then {
-                parseError(currentToken.line, currentToken.column, "Expected " ++ val ++ " but got " ++ currentToken.value)
-            }
-        }
-    }
-}
-
-method digitToNumber(token, c) {
-    if (c == "1") then {
-        return 1
-    }
-    if (c == "2") then {
-        return 2
-    }
-    if (c == "3") then {
-        return 3
-    }
-    if (c == "4") then {
-        return 4
-    }
-    if (c == "5") then {
-        return 5
-    }
-    if (c == "6") then {
-        return 6
-    }
-    if (c == "7") then {
-        return 7
-    }
-    if (c == "8") then {
-        return 8
-    }
-    if (c == "9") then {
-        return 9
-    }
-    if (c == "0") then {
-        return 0
-    }
-    parseError(token.line, token.column, "Unexpected digit: " ++ c.asString)
-}
+import "lexer" as lexer
 
 method parseNumber(lxr) {
     def token = lxr.current
@@ -558,13 +13,13 @@ method parseNumber(lxr) {
             var frac := 0
             var scale := 1
             while {index <= s.size} do {
-                frac := (frac * 10) + digitToNumber(token, s.at(index))
+                frac := (frac * 10) + lexer.digitToNumber(token, s.at(index))
                 scale := scale * 10
                 index := index + 1
             }
             val := val + (frac / scale)
         } else {
-            val := (val * 10) + digitToNumber(token, s.at(index))
+            val := (val * 10) + lexer.digitToNumber(token, s.at(index))
         }
         index := index + 1
     }
@@ -601,7 +56,22 @@ method parseparts(lxr, allowBlock) {
     var parts := ast.nil
     while {lxr.current.nature == "IDENTIFIER"} do {
         var id := lxr.current.value
+        var genericParams := ast.nil
         lxr.advance
+        if (lxr.current.nature == "LGENERIC") then {
+            lxr.advance
+            while { (lxr.current.nature != "RGENERIC") && (lxr.current.nature != "EOF") } do {
+                genericParams := ast.cons(parseTypeExpression(lxr), genericParams)
+                if (lxr.current.nature == "COMMA") then {
+                    lxr.advance
+                }
+            }
+            if (lxr.current.nature != "RGENERIC") then {
+                parseError(lxr.current.line, lxr.current.column, "Expected ']]' to close generic argument list")
+            }
+            lxr.advance
+            genericParams := genericParams.reversed(ast.nil)
+        }
         if (lxr.current.nature == "LPAREN") then {
             lxr.advance
             var args := ast.nil
@@ -612,22 +82,22 @@ method parseparts(lxr, allowBlock) {
                 }
             }
             lxr.advance
-            def part = ast.part(id, args.reversed(ast.nil))
+            def part = ast.part(id, args.reversed(ast.nil), genericParams)
             parts := ast.cons(part, parts)
         } elseif { allowBlock && (lxr.current.nature == "LBRACE") } then {
             def blk = parseblock(lxr)
-            def part = ast.part(id, ast.cons(blk, ast.nil))
+            def part = ast.part(id, ast.cons(blk, ast.nil), genericParams)
             parts := ast.cons(part, parts)
         } elseif { lxr.current.nature == "NUMBER" } then {
             def num = parseNumber(lxr)
-            def part = ast.part(id, ast.cons(num, ast.nil))
+            def part = ast.part(id, ast.cons(num, ast.nil), genericParams)
             parts := ast.cons(part, parts)
         } elseif { (lxr.current.nature == "STRING") || (lxr.current.nature == "INTERPSTRING") } then {
             def str = parseString(lxr)
-            def part = ast.part(id, ast.cons(str, ast.nil))
+            def part = ast.part(id, ast.cons(str, ast.nil), genericParams)
             parts := ast.cons(part, parts)
         } else {
-            def part = ast.part(id, ast.nil)
+            def part = ast.part(id, ast.nil, genericParams)
             parts := ast.cons(part, parts)
             return parts.reversed(ast.nil)
         }
@@ -655,8 +125,8 @@ method parseInterface(lxr) {
     lxr.expectSymbol "LBRACE"
     lxr.advance
 
-    def indentBefore = indentColumn
-    indentColumn := lxr.current.column
+    def indentBefore = lexer.indentColumn
+    lexer.indentColumn := lxr.current.column
     var body := ast.nil
     while { (lxr.current.nature == "IDENTIFIER") || (lxr.current.nature == "OPERATOR") } do {
         var parts := ast.nil
@@ -665,6 +135,24 @@ method parseInterface(lxr) {
             first := false
             def id = lxr.current.value
             lxr.advance
+            var genericParams := ast.nil
+            if (lxr.current.nature == "LGENERIC") then {
+                lxr.advance
+                while { (lxr.current.nature != "RGENERIC") && (lxr.current.nature != "EOF") } do {
+                    lxr.expectToken "IDENTIFIER"
+                    def idToken = lxr.current
+                    lxr.advance
+                    genericParams := ast.cons(ast.identifierDeclaration(idToken.value, ast.nil), genericParams)
+                    if (lxr.current.nature == "COMMA") then {
+                        lxr.advance
+                    }
+                }
+                if (lxr.current.nature != "RGENERIC") then {
+                    parseError(lxr.current.line, lxr.current.column, "Expected close of generic parameter list, but got " ++ lxr.current.asString )
+                }
+                lxr.advance
+                genericParams := genericParams.reversed(ast.nil)
+            }
             if (lxr.current.nature == "LPAREN") then {
                 lxr.advance
                 var args := ast.nil
@@ -684,10 +172,10 @@ method parseInterface(lxr) {
                     }
                 }
                 lxr.advance
-                def part = ast.part(id, args.reversed(ast.nil))
+                def part = ast.part(id, args.reversed(ast.nil), genericParams)
                 parts := ast.cons(part, parts)
             } else {
-                def part = ast.part(id, ast.nil)
+                def part = ast.part(id, ast.nil, genericParams)
                 parts := ast.cons(part, parts)
             }
         }
@@ -705,7 +193,7 @@ method parseInterface(lxr) {
 
     lxr.expectSymbol "RBRACE"
     lxr.advance
-    indentColumn := indentBefore
+    lexer.indentColumn := indentBefore
     ast.interfaceCons(body.reversed(ast.nil))
 }
 
@@ -909,7 +397,7 @@ method parseParamOrStatement(lxr) {
 method parseblock(lxr) {
     var params := ast.nil
     var body := ast.nil
-    def indentBefore = indentColumn
+    def indentBefore = lexer.indentColumn
     if (lxr.current.nature == "LBRACE") then {
         lxr.advance
         while { lxr.current.nature == "NEWLINE" } do {
@@ -917,7 +405,7 @@ method parseblock(lxr) {
         }
         if (lxr.current.nature != "RBRACE") then {
             def firstTok = lxr.current
-            indentColumn := firstTok.column
+            lexer.indentColumn := firstTok.column
             def first = parseParamOrStatement(lxr)
             def after = lxr.current
             if ((after.nature == "ARROW") || (after.nature == "COMMA")) then {
@@ -948,7 +436,7 @@ method parseblock(lxr) {
                     lxr.advance
                 }
             } else {
-                indentColumn := indentBefore
+                lexer.indentColumn := indentBefore
                 body := ast.cons(first, body)
             }
         }
@@ -960,9 +448,9 @@ method parseblock(lxr) {
             lxr.advance
         }
         while {lxr.current.nature != "RBRACE"} do {
-            indentColumn := lxr.current.column
-            if (indentColumn <= indentBefore) then {
-                parseError(lxr.current.line, indentColumn, "Indentation must increase inside block body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
+            lexer.indentColumn := lxr.current.column
+            if (lexer.indentColumn <= indentBefore) then {
+                parseError(lxr.current.line, lexer.indentColumn, "Indentation must increase inside block body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ lexer.indentColumn)
             }
             body := ast.cons(parseStatement(lxr), body)
             if (lxr.current.nature == "SEMICOLON") then {
@@ -973,7 +461,7 @@ method parseblock(lxr) {
                 lxr.advance
             }
         }
-        indentColumn := indentBefore
+        lexer.indentColumn := indentBefore
         lxr.advance
     }
     ast.block(params.reversed(ast.nil), body.reversed(ast.nil))
@@ -999,11 +487,29 @@ method parseTypeDeclaration(lxr) {
     lxr.expectToken "IDENTIFIER"
     def ident = lxr.current
     lxr.advance
+    var genericParams := ast.nil
+    if (lxr.current.nature == "LGENERIC") then {
+        lxr.advance
+        while { (lxr.current.nature != "RGENERIC") && (lxr.current.nature != "EOF") } do {
+            lxr.expectToken "IDENTIFIER"
+            def idToken = lxr.current
+            lxr.advance
+            genericParams := ast.cons(ast.identifierDeclaration(idToken.value, ast.nil), genericParams)
+            if (lxr.current.nature == "COMMA") then {
+                lxr.advance
+            }
+        }
+        if (lxr.current.nature != "RGENERIC") then {
+            parseError(lxr.current.line, lxr.current.column, "Expected close of generic parameter list, but got " ++ lxr.current.asString )
+        }
+        lxr.advance
+        genericParams := genericParams.reversed(ast.nil)
+    }
     lxr.expectSymbol "EQUALS"
     lxr.advance
     def typeExpr = parseTypeExpression(lxr)
     endStatement(lxr)
-    ast.typeDecl(ident.value, typeExpr)
+    ast.typeDecl(ident.value, genericParams, typeExpr)
 }
 
 method parsedefDeclaration(lxr) {
@@ -1061,7 +567,7 @@ method parsevarDeclaration(lxr) {
 method parseMethodBody(lxr) {
     var body := ast.nil
     lxr.advance
-    def indentBefore = indentColumn
+    def indentBefore = lexer.indentColumn
     while {lxr.current.nature != "RBRACE"} do {
         if (lxr.current.nature == "SEMICOLON") then {
             lxr.advance
@@ -1070,9 +576,9 @@ method parseMethodBody(lxr) {
         if (lxr.current.nature == "NEWLINE") then {
             lxr.advance
         } else {
-            indentColumn := lxr.current.column
-            if (indentColumn <= indentBefore) then {
-                parseError(lxr.current.line, indentColumn, "Indentation must increase inside method body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
+            lexer.indentColumn := lxr.current.column
+            if (lexer.indentColumn <= indentBefore) then {
+                parseError(lxr.current.line, lexer.indentColumn, "Indentation must increase inside method body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ lexer.indentColumn)
             }
             if (lxr.current.nature == "KEYWORD") then {
                 if (lxr.current.value == "var") then {
@@ -1090,7 +596,7 @@ method parseMethodBody(lxr) {
         }
     }
     lxr.advance
-    indentColumn := indentBefore
+    lexer.indentColumn := indentBefore
     body.reversed(ast.nil)
 
 }
@@ -1100,6 +606,7 @@ method parseMethodDeclaration(lxr) {
     var parts := ast.nil
     if (lxr.current.nature == "IDENTIFIER") then {
         while { lxr.current.nature == "IDENTIFIER" } do {
+            var genericParams := ast.nil
             var id := lxr.current.value
             lxr.advance
             if ((id == "prefix") && (lxr.current.nature == "OPERATOR")) then {
@@ -1109,6 +616,23 @@ method parseMethodDeclaration(lxr) {
             if (lxr.current.nature == "ASSIGN") then {
                 id := id ++ ":="
                 lxr.advance
+            }
+            if (lxr.current.nature == "LGENERIC") then {
+                lxr.advance
+                while { (lxr.current.nature != "RGENERIC") && (lxr.current.nature != "EOF") } do {
+                    lxr.expectToken "IDENTIFIER"
+                    def idToken = lxr.current
+                    lxr.advance
+                    genericParams := ast.cons(ast.identifierDeclaration(idToken.value, ast.nil), genericParams)
+                    if (lxr.current.nature == "COMMA") then {
+                        lxr.advance
+                    }
+                }
+                if (lxr.current.nature != "RGENERIC") then {
+                    parseError(lxr.current.line, lxr.current.column, "Expected close of generic parameter list, but got " ++ lxr.current.asString )
+                }
+                lxr.advance
+                genericParams := genericParams.reversed(ast.nil)
             }
             if (lxr.current.nature == "LPAREN") then {
                 lxr.advance
@@ -1129,10 +653,10 @@ method parseMethodDeclaration(lxr) {
                     }
                 }
                 lxr.advance
-                def part = ast.part(id, args.reversed(ast.nil))
+                def part = ast.part(id, args.reversed(ast.nil), genericParams)
                 parts := ast.cons(part, parts)
             } else {
-                def part = ast.part(id, ast.nil)
+                def part = ast.part(id, ast.nil, genericParams)
                 parts := ast.cons(part, parts)
             }
         }
@@ -1153,7 +677,7 @@ method parseMethodDeclaration(lxr) {
         }
         args := ast.cons(ast.identifierDeclaration(idToken.value, dtype), args)
         lxr.advance
-        def part = ast.part(id, args.reversed(ast.nil))
+        def part = ast.part(id, args.reversed(ast.nil), nil)
         parts := ast.cons(part, parts)
     } else {
         parseError(lxr.current.line, lxr.current.column, "Expected method name or operator")
@@ -1181,6 +705,24 @@ method parseClassDeclaration(lxr) {
     while { lxr.current.nature == "IDENTIFIER" } do {
         def id = lxr.current.value
         lxr.advance
+        var genericParams := ast.nil
+        if (lxr.current.nature == "LGENERIC") then {
+            lxr.advance
+            while { (lxr.current.nature != "RGENERIC") && (lxr.current.nature != "EOF") } do {
+                lxr.expectToken "IDENTIFIER"
+                def idToken = lxr.current
+                lxr.advance
+                genericParams := ast.cons(ast.identifierDeclaration(idToken.value, ast.nil), genericParams)
+                if (lxr.current.nature == "COMMA") then {
+                    lxr.advance
+                }
+            }
+            if (lxr.current.nature != "RGENERIC") then {
+                parseError(lxr.current.line, lxr.current.column, "Expected close of generic parameter list, but got " ++ lxr.current.asString )
+            }
+            lxr.advance
+            genericParams := genericParams.reversed(ast.nil)
+        }
         if (lxr.current.nature == "LPAREN") then {
             lxr.advance
             var args := ast.nil
@@ -1199,10 +741,10 @@ method parseClassDeclaration(lxr) {
                 }
             }
             lxr.advance
-            def part = ast.part(id, args.reversed(ast.nil))
+            def part = ast.part(id, args.reversed(ast.nil), genericParams)
             parts := ast.cons(part, parts)
         } else {
-            def part = ast.part(id, ast.nil)
+            def part = ast.part(id, ast.nil, genericParams)
             parts := ast.cons(part, parts)
         }
     }
@@ -1210,7 +752,7 @@ method parseClassDeclaration(lxr) {
     def body = parseObjectBody(lxr)
     lxr.advance
     def obj = ast.objectConstructor(body, ast.nil)
-    ast.methodDecl(parts.reversed(ast.nil), ast.nil, ast.nil, ast.cons(obj, ast.nil))
+    ast.methodDecl(parts.reversed(ast.nil), ast.nil, ast.cons(obj, ast.nil))
 }
 
 method parseImport(lxr) {
@@ -1252,14 +794,14 @@ method parseObjectBody(lxr) {
     
     var token := lxr.current
 
-    def indentBefore = indentColumn
+    def indentBefore = lexer.indentColumn
 
     var first := true
 
     while { (token.nature != "EOF") && (token.nature != "RBRACE") } do {
-        indentColumn := token.column
-        if ((indentColumn <= indentBefore) && (token.nature != "NEWLINE")) then {
-            parseError(lxr.current.line, indentColumn, "Indentation must increase inside object body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ indentColumn)
+        lexer.indentColumn := token.column
+        if ((lexer.indentColumn <= indentBefore) && (token.nature != "NEWLINE")) then {
+            parseError(lxr.current.line, lexer.indentColumn, "Indentation must increase inside object body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ lexer.indentColumn)
         }
 
         if (token.nature == "SEMICOLON") then {
@@ -1291,7 +833,7 @@ method parseObjectBody(lxr) {
                         def dia = parseDialect(lxr)
                         body := ast.cons(dia, body)
                     } else {
-                        parseError(lxr.current.line, indentColumn, "dialect declaration can only appear as first statement")
+                        parseError(lxr.current.line, lexer.indentColumn, "dialect declaration can only appear as first statement")
                     }
                 } else {
                     def stmt = parseStatement(lxr)
@@ -1315,7 +857,7 @@ method parseObjectBody(lxr) {
         token := lxr.current
     }
     
-    indentColumn := indentBefore
+    lexer.indentColumn := indentBefore
     body.reversed(ast.nil)
 
 }
@@ -1334,21 +876,21 @@ method parseObject(lxr) {
 }
 
 method parseError(line, column, message) {
-    print("Parse error: " ++ message ++ " at " ++ modulePrefix ++ line ++ ":" ++ column)
-    Exception.refine "ParseError".raise(modulePrefix ++ line ++ ":" ++ column ++ ": " ++ message)
+    print("Parse error: " ++ message ++ " at " ++ lexer.modulePrefix ++ line ++ ":" ++ column)
+    Exception.refine "ParseError".raise(lexer.modulePrefix ++ line ++ ":" ++ column ++ ": " ++ message)
 }
 
 method parse(code) {
-    indentColumn := 0
-    def lxr = lexer(code)
+    lexer.indentColumn := 0
+    def lxr = lexer.lexer(code)
     def body = parseObjectBody(lxr)
     ast.objectConstructor(body, ast.nil)
 }
 
 method parseModule(module, code) {
-    modulePrefix := module ++ ":"
-    indentColumn := 0
-    def lxr = lexer(code)
+    lexer.modulePrefix := module ++ ":"
+    lexer.indentColumn := 0
+    def lxr = lexer.lexer(code)
     def body = parseObjectBody(lxr)
     ast.objectConstructor(body, ast.nil)
 }

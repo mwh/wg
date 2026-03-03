@@ -34,6 +34,10 @@ public class ASTConstructors {
         return new Part(name, args);
     }
 
+    protected static Part part(String name, Cons<ASTNode> args, Cons<ASTNode> genericParams) {
+        return new Part(name, args, genericParams);
+    }
+
     protected static NumberNode numberNode(double value) {
         return new NumberNode(value);
     }
@@ -72,6 +76,10 @@ public class ASTConstructors {
 
     protected static TypeDecl typeDecl(String name, ASTNode type) {
         return new TypeDecl(name, type);
+    }
+
+    protected static TypeDecl typeDecl(String name, Cons<ASTNode> genericParams, ASTNode type) {
+        return new TypeDecl(name, genericParams, type);
     }
 
     protected static Part declarationPart(String name, Cons<IdentifierDeclaration> parameters) {

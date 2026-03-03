@@ -50,6 +50,12 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
             Cons<ASTNode> args = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(1);
             return part(name, args);
         });
+        lexicalParent.addMethod("part(3)", request -> {
+            String name = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
+            Cons<ASTNode> args = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(1);
+            Cons<ASTNode> genericParams = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(2);
+            return part(name, args, genericParams);
+        });
         lexicalParent.addMethod("lexicalRequest(1)", request -> {
             Cons<Part> parts = (Cons<Part>) request.getParts().get(0).getArgs().get(0);
             return lexicalRequest(parts);
@@ -98,6 +104,12 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
             String name = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
             ASTNode type = (ASTNode) request.getParts().get(0).getArgs().get(1);
             return typeDecl(name, type);
+        });
+        lexicalParent.addMethod("typeDecl(3)", request -> {
+            String name = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
+            Cons<ASTNode> genericParams = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(1);
+            ASTNode type = (ASTNode) request.getParts().get(0).getArgs().get(2);
+            return typeDecl(name, genericParams, type);
         });
         lexicalParent.addMethod("declarationPart(2)", request -> {
             String name = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();

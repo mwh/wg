@@ -148,18 +148,19 @@ method defDecl(id, dtype, anns, val) {
 }
 
 
-method typeDecl(id, val) {
+method typeDecl(id, genericParams, val) {
     object {
         def name is public = id
+        def genericParameters is public = genericParams
         def value is public = val
         def kind is public = "typeDec"
 
         method asString {
-            "typeDec(\"" ++ name ++ "\", " ++ value ++ ")"
+            "typeDec(\"" ++ name ++ "\", " ++ genericParams ++ ", " ++ value ++ ")"
         }
 
         method concise {
-            "t0D(\"" ++ name ++ "\"," ++ value.concise ++ ")"
+            "t0D(\"" ++ name ++ "\"," ++ genericParams.concise ++ "," ++ value.concise ++ ")"
         }
     }
 }
@@ -225,6 +226,7 @@ method lexicalRequest(requestParts) {
         method concise {
             var name := ""
             var args := nil
+            var genericParams := nil
             parts.map { p -> 
                 name := name ++ p.name
                 name := name ++ "(" ++ p.parameters.size.asString ++ ")"
@@ -232,8 +234,12 @@ method lexicalRequest(requestParts) {
                     args := cons(a, args)
                     true
                 }
+                p.genericParameters.map { gp ->
+                    genericParams := cons(gp, genericParams)
+                    true
+                }
             }
-            "l0R(\"" ++ name ++ "\"," ++ args.reversed(nil).concise ++ ")"
+            "l0R(\"" ++ name ++ "\"," ++ args.reversed(nil).concise ++ "," ++ genericParams.reversed(nil).concise ++ ")"
         }
     }
 }
@@ -251,6 +257,7 @@ method lexicalRequest(pos, requestParts) {
         method concise {
             var name := ""
             var args := nil
+            var genericParams := nil
             parts.map { p -> 
                 name := name ++ p.name
                 name := name ++ "(" ++ p.parameters.size.asString ++ ")"
@@ -258,8 +265,12 @@ method lexicalRequest(pos, requestParts) {
                     args := cons(a, args)
                     true
                 }
+                p.genericParameters.map { gp ->
+                    genericParams := cons(gp, genericParams)
+                    true
+                }
             }
-            "l0R(\"" ++ name ++ "\"," ++ args.reversed(nil).concise ++ ")"
+            "l0R(\"" ++ name ++ "\"," ++ args.reversed(nil).concise ++ "," ++ genericParams.reversed(nil).concise ++ ")"
         }
     }
 }
@@ -278,6 +289,7 @@ method explicitRequest(pos, rec, requestParts) {
         method concise {
             var name := ""
             var args := nil
+            var genericParams := nil
             parts.map { p -> 
                 name := name ++ p.name
                 name := name ++ "(" ++ p.parameters.size.asString ++ ")"
@@ -285,8 +297,12 @@ method explicitRequest(pos, rec, requestParts) {
                     args := cons(a, args)
                     true
                 }
+                p.genericParameters.map { gp ->
+                    genericParams := cons(gp, genericParams)
+                    true
+                }
             }
-            "d0R(" ++ receiver.concise ++ ",\"" ++ name ++ "\"," ++ args.reversed(nil).concise ++ ")"
+            "d0R(" ++ receiver.concise ++ ",\"" ++ name ++ "\"," ++ args.reversed(nil).concise ++ "," ++ genericParams.reversed(nil).concise ++ ")"
         }
     }
 }
@@ -303,6 +319,23 @@ method part(partName, args) {
 
         method concise {
             "p0T(\"" ++ name ++ "\"," ++ parameters.concise ++ ")"
+        }
+    }
+}
+
+method part(partName, args, genericParams) {
+    object {
+        def name is public = partName
+        def parameters is public = args
+        def genericParameters is public = genericParams
+        def kind is public = "part"
+
+        method asString {
+            "part(\"" ++ name ++ "\", " ++ parameters ++ ", " ++ genericParameters ++ ")"
+        }
+
+        method concise {
+            "p0T(\"" ++ name ++ "\"," ++ parameters.concise ++ "," ++ genericParameters.concise ++ ")"
         }
     }
 }

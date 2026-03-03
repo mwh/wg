@@ -7,10 +7,17 @@ import nz.mwh.wg.Visitor;
 public class Part extends ASTNode {
     String name;
     List<? extends ASTNode> parameters;
+    List<? extends ASTNode> genericParameters;
 
     public Part(String name, Cons<? extends ASTNode> parameters) {
         this.name = name;
         this.parameters = parameters.toList();
+    }
+
+    public Part(String name, Cons<? extends ASTNode> parameters, Cons<? extends ASTNode> genericParameters) {
+        this.name = name;
+        this.parameters = parameters.toList();
+        this.genericParameters = genericParameters.toList();
     }
     
     public <T> T accept(T context, Visitor<T> visitor) {
@@ -18,7 +25,10 @@ public class Part extends ASTNode {
     }
 
     public String toString() {
-        return "part(\"" + name + "\", " + Cons.stringFromList(parameters) + ")";
+        // if (genericParameters == null || genericParameters.isEmpty()) {
+        //     return "part(\"" + name + "\", " + Cons.stringFromList(parameters) + ")";
+        // }
+        return "part(\"" + name + "\", " + Cons.stringFromList(parameters) + ", " + Cons.stringFromList(genericParameters) + ")";
     }
 
     public String getName() {
