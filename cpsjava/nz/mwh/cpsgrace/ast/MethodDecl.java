@@ -15,14 +15,17 @@ public class MethodDecl extends ASTNode {
     private ASTNode returnType;
     private List<ASTNode> annotations;
     private List<ASTNode> body;
+    private List<ASTNode> genericParameters;
 
     private List<String> parameterNames = new ArrayList<>();
+    private List<String> genericParameterNames = new ArrayList<>();
     private List<String> varNames = new ArrayList<>();
     private List<String> defNames = new ArrayList<>();
 
     public MethodDecl(List<Part> parts, ASTNode returnType, List<ASTNode> annotations, List<ASTNode> body) {
         StringBuilder sb = new StringBuilder();
         parameters = new ArrayList<>();
+        genericParameters = new ArrayList<>();
         for (Part p : parts) {
             List<ASTNode> args = p.getArguments();
             sb.append(p.getName());
@@ -32,6 +35,7 @@ public class MethodDecl extends ASTNode {
                 sb.append(')');
             }
             parameters.addAll(args);
+            genericParameters.addAll(p.getGenericArguments());
             for (ASTNode arg : args) {
                 if (arg instanceof IdentifierDeclaration idDecl) {
                     parameterNames.add(idDecl.getName());
@@ -47,6 +51,11 @@ public class MethodDecl extends ASTNode {
                     defNames.add(defDec.getName());
                 }
                 default -> {}
+            }
+        }
+        for (ASTNode genParam : genericParameters) {
+            if (genParam instanceof IdentifierDeclaration idDecl) {
+                genericParameterNames.add(idDecl.getName());
             }
         }
         this.name = sb.toString();
@@ -77,6 +86,10 @@ public class MethodDecl extends ASTNode {
 
     public List<String> getParameterNames() {
         return parameterNames;
+    }
+
+    public List<String> getGenericParameterNames() {
+        return genericParameterNames;
     }
 
     public List<String> getVarNames() {

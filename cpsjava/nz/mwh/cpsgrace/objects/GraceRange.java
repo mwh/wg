@@ -47,7 +47,7 @@ public class GraceRange implements GraceObject {
     }
 
     @Override
-    public PendingStep requestMethod(Context ctx, Continuation returnCont, String methodName, List<GraceObject> args) {
+    public PendingStep requestMethod(Context ctx, Continuation returnCont, String methodName, List<GraceObject> args, List<GraceObject> genericArgs) {
         switch (methodName) {
             case "asString":
                 String rangeStr = "Range(" + start + " .. " + end + " by " + step + ")";

@@ -7,14 +7,16 @@ import java.util.Map;
 import nz.mwh.cpsgrace.ast.ASTNode;
 import nz.mwh.cpsgrace.baked.ASTData;
 import nz.mwh.cpsgrace.baked.ParserData;
+import nz.mwh.cpsgrace.baked.LexerData;
 
-public class TheProgram extends nz.mwh.cpsgrace.ast.ASTEncoding {
+public class TheProgram extends nz.mwh.cpsgrace.ast.ConciseEncoding {
     @SuppressWarnings("unchecked")
-    public static ASTNode program = objCons(cons(comment(" Algol Bulletin, issue 17, Jul. 1964. Letter by Donald Knuth, p7."), cons(methDec(one(part("A", cons(identifierDeclaration("k", nil), cons(identifierDeclaration("x1", nil), cons(identifierDeclaration("x2", nil), cons(identifierDeclaration("x3", nil), cons(identifierDeclaration("x4", nil), one(identifierDeclaration("x5", nil))))))))), nil, nil, cons(varDec("k'", nil, nil, one(lexReq(one(part("k", nil))))), cons(varDec("aRet", nil, nil, nil), cons(defDec("B", nil, nil, block(nil, cons(varDec("bRet", nil, nil, nil), cons(assn(lexReq(one(part("k'", nil))), dotReq(lexReq(one(part("k'", nil))), one(part("-", one(numLit(1)))))), cons(assn(lexReq(one(part("aRet", nil))), lexReq(one(part("A", cons(lexReq(one(part("k'", nil))), cons(lexReq(one(part("B", nil))), cons(lexReq(one(part("x1", nil))), cons(lexReq(one(part("x2", nil))), cons(lexReq(one(part("x3", nil))), one(lexReq(one(part("x4", nil))))))))))))), cons(assn(lexReq(one(part("bRet", nil))), lexReq(one(part("aRet", nil)))), one(lexReq(one(part("bRet", nil)))))))))), cons(lexReq(cons(part("if", one(dotReq(lexReq(one(part("k'", nil))), one(part("<=", one(numLit(0))))))), cons(part("then", one(block(nil, one(assn(lexReq(one(part("aRet", nil))), dotReq(dotReq(lexReq(one(part("x4", nil))), one(part("apply", nil))), one(part("+", one(dotReq(lexReq(one(part("x5", nil))), one(part("apply", nil)))))))))))), one(part("else", one(block(nil, one(dotReq(lexReq(one(part("B", nil))), one(part("apply", nil))))))))))), one(lexReq(one(part("aRet", nil))))))))), one(lexReq(one(part("print", one(lexReq(one(part("A", cons(numLit(15), cons(block(nil, one(numLit(1))), cons(block(nil, one(dotReq(numLit(1), one(part("prefix-", nil))))), cons(block(nil, one(dotReq(numLit(1), one(part("prefix-", nil))))), cons(block(nil, one(numLit(1))), one(block(nil, one(numLit(0))))))))))))))))))), nil);
+    public static ASTNode program = o0C(c0N(m0D(o1N(p0T("foo",nil,c2N(i0D("X",nil),i0D("Y",nil)))),o1N(l0R("X(0)",nil,nil)),nil,o1N(n0M(1))),c0N(l0R("print(1)",o1N(l0R("foo(0)",nil,c2N(l0R("Number(0)",nil,nil),l0R("String(0)",nil,nil)))),nil),c0N(c0M(s4F(" type List[[T]] = interface ",c9L,"")),c2N(c0M("     map[[S]](b : Block[[T,S]]) -> List[[S]]"),c0M(" }"))))),nil);
 
     public static Map<String, Class<?>> importableModules = new HashMap<>(Map.of(
         "ast", ASTData.class
         , "parser", ParserData.class
+        , "lexer", LexerData.class
     ));
 
     public static Map<String, GraceObject> importedModules = new HashMap<>();

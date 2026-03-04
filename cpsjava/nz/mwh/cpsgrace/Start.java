@@ -47,7 +47,7 @@ public class Start {
                         String astStr = GraceString.assertString(gs).toString();
                         System.out.println(astStr);
                         return null;
-                    }, "asString", List.of());
+                    }, "asString", List.of(), java.util.List.of());
                     while (step != null) {
                         step = step.go();
                     }
@@ -58,7 +58,7 @@ public class Start {
                         String astStr = GraceString.assertString(gs).toString();
                         System.out.println(astStr);
                         return null;
-                    }, "concise", List.of());
+                    }, "concise", List.of(), java.util.List.of());
                     while (step != null) {
                         step = step.go();
                     }
@@ -137,7 +137,7 @@ public class Start {
             GraceBoolean condition = GraceBoolean.assertBoolean(args.get(0));
             GraceObject thenBlock = args.get(1);
             if (condition.getValue()) {
-                return thenBlock.requestMethod(ctx, _ -> cont.apply(GraceObject.DONE), "apply", java.util.List.of());
+                return thenBlock.requestMethod(ctx, _ -> cont.apply(GraceObject.DONE), "apply", java.util.List.of(), java.util.List.of());
             } else {
                 return cont.apply(GraceObject.DONE);
             }
@@ -147,23 +147,23 @@ public class Start {
             GraceObject thenBlock = args.get(1);
             GraceObject elseBlock = args.get(2);
             if (condition.getValue()) {
-                return thenBlock.requestMethod(ctx, cont, "apply", java.util.List.of());
+                return thenBlock.requestMethod(ctx, cont, "apply", java.util.List.of(), java.util.List.of());
             } else {
-                return elseBlock.requestMethod(ctx, cont, "apply", java.util.List.of());
+                return elseBlock.requestMethod(ctx, cont, "apply", java.util.List.of(), java.util.List.of());
             }
         }));
         Method ifThenCombinedMethod = Method.java((ctx, cont, _, args) -> {
             GraceBoolean condition = GraceBoolean.assertBoolean(args.get(0));
             GraceObject thenBlock = args.get(1);
             if (condition.getValue()) {
-                return thenBlock.requestMethod(ctx, cont, "apply", java.util.List.of());
+                return thenBlock.requestMethod(ctx, cont, "apply", java.util.List.of(), java.util.List.of());
             }
             Continuation next;
             int lastElseifIndex;
             if (args.size() % 2 == 1) {
                 // We have an else block
                 GraceObject elseBlock = args.get(args.size() - 1);
-                next = (_) -> elseBlock.requestMethod(ctx, cont, "apply", java.util.List.of());
+                next = (_) -> elseBlock.requestMethod(ctx, cont, "apply", java.util.List.of(), java.util.List.of());
                 lastElseifIndex = args.size() - 3;
             } else {
                 next = (_) -> cont.apply(GraceObject.DONE);
@@ -178,7 +178,7 @@ public class Start {
                     return elifConditionBlock.requestMethod(ctx, (GraceObject elifConditionResult) -> {
                         GraceBoolean elifCondition = GraceBoolean.assertBoolean(elifConditionResult);
                         if (elifCondition.getValue()) {
-                            return elifBlock.requestMethod(ctx, cont, "apply", java.util.List.of());
+                            return elifBlock.requestMethod(ctx, cont, "apply", java.util.List.of(), java.util.List.of());
                         } else {
                             return currentNext.apply(GraceObject.DONE);
                         }
@@ -203,7 +203,7 @@ public class Start {
         prelude.addMethod("for(1)do(1)", Method.java((ctx, cont, _, args) -> {
             GraceObject iterable = args.get(0);
             GraceObject loopBlock = args.get(1);
-            return iterable.requestMethod(ctx, _ -> cont.apply(GraceObject.DONE), "each(1)", java.util.List.of(loopBlock));
+            return iterable.requestMethod(ctx, _ -> cont.apply(GraceObject.DONE), "each(1)", java.util.List.of(loopBlock), java.util.List.of());
         }));
 
         prelude.addMethod("while(1)do(1)", Method.java((ctx, cont, _, args) -> {

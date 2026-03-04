@@ -1,5 +1,7 @@
 package nz.mwh.cpsgrace.ast;
 
+import java.util.Collections;
+
 public class ASTEncoding {
     @SuppressWarnings("rawtypes")
     protected static ConsList nil = ConsList.nil();
@@ -29,7 +31,11 @@ public class ASTEncoding {
     }
 
     protected static Part part(String name, ConsList<ASTNode> arguments) {
-        return new Part(name, arguments.asList());
+        return new Part(name, arguments.asList(), Collections.emptyList());
+    }
+
+    protected static Part part(String name, ConsList<ASTNode> arguments, ConsList<ASTNode> genericArguments) {
+        return new Part(name, arguments.asList(), genericArguments.asList());
     }
 
     protected static ObjCons objCons(ConsList<ASTNode> body, ConsList<ASTNode> annotations) {

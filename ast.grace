@@ -23,6 +23,16 @@ method cons(hd, tl) {
             return "c0N(" ++ head.concise ++ "," ++ tail.concise ++ ")"
         }
 
+        method conciseRaw {
+            if (tail.end) then {
+                return "o1N(" ++ head.asString ++ ")"
+            }
+            if (size == 2) then {
+                return "c2N(" ++ head.asString ++ "," ++ tail.head.asString ++ ")"
+            }
+            return "c0N(" ++ head.asString ++ "," ++ tail.conciseRaw ++ ")"
+        }
+
         method reversed(next) {
             def c = cons(head, next)
             if (tail.end) then {
@@ -48,6 +58,10 @@ method nil {
         }
 
         method concise {
+            "nil"
+        }
+
+        method conciseRaw {
             "nil"
         }
 
@@ -142,7 +156,7 @@ method defDecl(id, dtype, anns, val) {
         }
 
         method concise {
-            "d3F(\"" ++ name ++ "\","  ++ decType.concise ++ "," ++ (anns.map { x -> "\"" ++ x ++ "\"" }.concise) ++ "," ++ value.concise ++ ")"
+            "d3F(\"" ++ name ++ "\","  ++ decType.concise ++ "," ++ (anns.map { x -> "\"" ++ x ++ "\"" }.conciseRaw) ++ "," ++ value.concise ++ ")"
         }
     }
 }
@@ -311,6 +325,7 @@ method part(partName, args) {
     object {
         def name is public = partName
         def parameters is public = args
+        def genericParameters is public = nil
         def kind is public = "part"
 
         method asString {

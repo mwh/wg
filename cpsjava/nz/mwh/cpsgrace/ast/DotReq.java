@@ -13,12 +13,14 @@ public class DotReq extends ASTNode {
     private ASTNode receiver;
     private String name;
     private List<ASTNode> arguments;
+    private List<ASTNode> genericArguments;
     private String position;
 
     public DotReq(ASTNode receiver, List<Part> parts, String position) {
         this.receiver = receiver;
         StringBuilder sb = new StringBuilder();
         arguments = new ArrayList<ASTNode>();
+        genericArguments = new ArrayList<ASTNode>();
         this.position = position;
         for (Part p : parts) {
             List<ASTNode> args = p.getArguments();
@@ -29,18 +31,24 @@ public class DotReq extends ASTNode {
                 sb.append(')');
             }
             arguments.addAll(args);
+            genericArguments.addAll(p.getGenericArguments());
         }
         name = sb.toString();
     }
 
-    public DotReq(ASTNode receiver, String name, List<ASTNode> arguments) {
+    public DotReq(ASTNode receiver, String name, List<ASTNode> arguments, List<ASTNode> genericArguments) {
         this.receiver = receiver;
         this.name = name;
         this.arguments = arguments;
+        this.genericArguments = genericArguments;
     }
 
     public List<ASTNode> getArguments() {
         return arguments;
+    }
+
+    public List<ASTNode> getGenericArguments() {
+        return genericArguments;
     }
 
     public String getName() {

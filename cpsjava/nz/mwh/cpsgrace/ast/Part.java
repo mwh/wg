@@ -6,10 +6,12 @@ import java.util.List;
 public class Part extends ASTNode {
     private String name;
     private List<ASTNode> arguments;
+    private List<ASTNode> genericArguments;
 
-    public Part(String name, List<ASTNode> arguments) {
+    public Part(String name, List<ASTNode> arguments, List<ASTNode> genericArguments) {
         this.name = name;
         this.arguments = new ArrayList<>(arguments);
+        this.genericArguments = new ArrayList<>(genericArguments);
     }
 
     public String getName() {
@@ -18,5 +20,9 @@ public class Part extends ASTNode {
 
     public List<ASTNode> getArguments() {
         return arguments;
+    }
+
+    public List<ASTNode> getGenericArguments() {
+        return genericArguments;
     }
 }

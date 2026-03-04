@@ -31,7 +31,7 @@ public class GraceBoolean implements GraceObject {
     }
 
     @Override
-    public PendingStep requestMethod(Context ctx, Continuation returnCont, String methodName, List<GraceObject> args) {
+    public PendingStep requestMethod(Context ctx, Continuation returnCont, String methodName, List<GraceObject> args, List<GraceObject> genericArgs) {
         switch (methodName) {
             case "asString":
                 return new PendingStep(ctx, returnCont, new GraceString(toString()));

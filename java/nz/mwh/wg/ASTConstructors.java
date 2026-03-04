@@ -131,7 +131,7 @@ public class ASTConstructors {
     }
 
     static TypeDecl typeDecl(String name, Cons<ASTNode> genericParams, ASTNode type) {
-        return new TypeDecl(name, type);
+        return new TypeDecl(name, genericParams, type);
     }
 
     static Part declarationPart(String name, Cons<IdentifierDeclaration> parameters) {

@@ -46,7 +46,9 @@ public class Converter {
                 String name = GraceString.assertString(nameObj).toString();
                 GraceObject paramsObj = requestSync(node, "parameters", List.of());
                 List<ASTNode> params = convertNodeList(paramsObj);
-                return new Part(name, params);
+                GraceObject genericParamsObj = requestSync(node, "genericParameters", List.of());
+                List<ASTNode> genericParams = convertNodeList(genericParamsObj);
+                return new Part(name, params, genericParams);
             }
             case "dotReq" -> {
                 GraceObject receiverObj = requestSync(node, "receiver", List.of());

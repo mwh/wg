@@ -38,6 +38,7 @@ public class ObjCons extends ASTNode {
                     case MethodDecl methodDecl -> {
                         obj.addMethod(methodDecl.getName(), new Method(
                             methodDecl.getParameterNames(),
+                            methodDecl.getGenericParameterNames(),
                             methodDecl.bodyCPS(),
                             methodDecl.getVarNames(),
                             methodDecl.getDefNames(),

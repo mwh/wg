@@ -14,10 +14,12 @@ public class LexReq extends ASTNode {
     private String name;
     private List<ASTNode> arguments;
     private String position;
+    private List<ASTNode> genericArguments;
 
     public LexReq(List<Part> parts, String position) {
         StringBuilder sb = new StringBuilder();
         arguments = new ArrayList<ASTNode>();
+        genericArguments = new ArrayList<ASTNode>();
         for (Part p : parts) {
             List<ASTNode> args = p.getArguments();
             sb.append(p.getName());
@@ -27,14 +29,16 @@ public class LexReq extends ASTNode {
                 sb.append(')');
             }
             arguments.addAll(args);
+            genericArguments.addAll(p.getGenericArguments());
         }
         name = sb.toString();
         this.position = position;
     }
 
-    public LexReq(String name, List<ASTNode> arguments) {
+    public LexReq(String name, List<ASTNode> arguments, List<ASTNode> genericArguments) {
         this.name = name;
         this.arguments = arguments;
+        this.genericArguments = genericArguments;
     }
 
     public List<ASTNode> getArguments() {

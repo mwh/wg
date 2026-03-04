@@ -16,12 +16,12 @@ public class UserObject implements GraceObject {
     private String debugLabel;
 
     @Override
-    public PendingStep requestMethod(Context ctx, Continuation returnCont, String methodName, List<GraceObject> args) {
+    public PendingStep requestMethod(Context ctx, Continuation returnCont, String methodName, List<GraceObject> args, List<GraceObject> genericArgs) {
         switch (methodName) {
             default:
                 Method method = methods.get(methodName);
                 if (method != null) {
-                    return method.invoke(ctx.withSelfScope(this), returnCont, this, args);
+                    return method.invoke(ctx.withSelfScope(this), returnCont, this, args, genericArgs);
                 }
                 System.out.println("no such method " + methodName + ": methods are " + getMethodNames());
                 throw new RuntimeException("no such method " + methodName);

@@ -1,5 +1,7 @@
 package nz.mwh.cpsgrace.ast;
 
+import java.util.Collections;
+
 public class ConciseEncoding {
     @SuppressWarnings("rawtypes")
     protected static ConsList nil = ConsList.nil();
@@ -28,18 +30,25 @@ public class ConciseEncoding {
         if (name.endsWith("(0)")) {
             name = name.substring(0, name.length() - 3);
         }
-        return new LexReq(name, arguments.asList());
+        return new LexReq(name, arguments.asList(), Collections.emptyList());
     }
 
-    protected static DotReq d0R(ASTNode receiver, String name, ConsList<ASTNode> arguments) {
+    protected static LexReq l0R(String name, ConsList<ASTNode> arguments, ConsList<ASTNode> genericArguments) {
         if (name.endsWith("(0)")) {
             name = name.substring(0, name.length() - 3);
         }
-        return new DotReq(receiver, name, arguments.asList());
+        return new LexReq(name, arguments.asList(), genericArguments.asList());
     }
 
-    protected static Part p0T(String name, ConsList<ASTNode> arguments) {
-        return new Part(name, arguments.asList());
+    protected static DotReq d0R(ASTNode receiver, String name, ConsList<ASTNode> arguments, ConsList<ASTNode> genericArguments) {
+        if (name.endsWith("(0)")) {
+            name = name.substring(0, name.length() - 3);
+        }
+        return new DotReq(receiver, name, arguments.asList(), genericArguments.asList());
+    }
+
+    protected static Part p0T(String name, ConsList<ASTNode> arguments, ConsList<ASTNode> genericArguments) {
+        return new Part(name, arguments.asList(), genericArguments.asList());
     }
 
     protected static ObjCons o0C(ConsList<ASTNode> body, ConsList<ASTNode> annotations) {

@@ -10,6 +10,7 @@ import nz.mwh.cpsgrace.PendingStep;
 
 public class Method {
     private List<String> parameterNames;
+    private List<String> genericParameterNames;
     private List<String> vars;
     private List<String> defs;
     private CPS body;
@@ -28,9 +29,10 @@ public class Method {
         this.defs = List.of();
     }
 
-    public Method(List<String> parameterNames, CPS body, List<String> vars, List<String> defs, boolean captureReturn) {
+    public Method(List<String> parameterNames, List<String> genericParameters, CPS body, List<String> vars, List<String> defs, boolean captureReturn) {
         // Store the parameter names and body for later use
         this.parameterNames = parameterNames;
+        this.genericParameterNames = genericParameters;
         this.body = body;
         this.vars = vars;
         this.defs = defs;
@@ -50,7 +52,7 @@ public class Method {
         }
     }
 
-    public PendingStep invoke(Context ctx, Continuation returnCont, GraceObject self, List<GraceObject> args) {
+    public PendingStep invoke(Context ctx, Continuation returnCont, GraceObject self, List<GraceObject> args, List<GraceObject> genericArgs) {
         Context bodyContext = ctx.withSelf((UserObject) self);
         if (!captureReturn) {
             bodyContext = bodyContext.withReturnContinuation(returnCont);
@@ -60,6 +62,16 @@ public class Method {
             String paramName = parameterNames.get(i);
             GraceObject argValue = args.get(i);
             bodyContext.bindLocalName(paramName, argValue);
+        }
+        for (int i = 0; i < genericParameterNames.size(); i++) {
+            String genName = genericParameterNames.get(i);
+            if (i >= genericArgs.size()) {
+                GraceObject argValue = new UserObject();
+                bodyContext.bindLocalName(genName, argValue);
+            } else {
+                GraceObject argValue = genericArgs.get(i);
+                bodyContext.bindLocalName(genName, argValue);
+            }
         }
         for (String varName : vars) {
             localScope.addVar(varName);
@@ -83,7 +95,7 @@ public class Method {
         }
 
         @Override
-        public PendingStep invoke(Context ctx, Continuation returnCont, GraceObject self, List<GraceObject> args) {
+        public PendingStep invoke(Context ctx, Continuation returnCont, GraceObject self, List<GraceObject> args, List<GraceObject> genericArgs) {
             return function.apply(ctx, returnCont, self, args);
         }
     }

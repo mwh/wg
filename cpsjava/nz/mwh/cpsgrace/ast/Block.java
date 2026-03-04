@@ -2,6 +2,7 @@ package nz.mwh.cpsgrace.ast;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Collections;
 
 import nz.mwh.cpsgrace.CPS;
 import nz.mwh.cpsgrace.Context;
@@ -69,7 +70,7 @@ public class Block extends ASTNode {
                 step = body.get(0).toCPS().run(evalCtx, cont);
                 return step;
             };
-            Method apply = new Method(this.parameterNames, blockBody, vars, defs, false);
+            Method apply = new Method(this.parameterNames, Collections.emptyList(), blockBody, vars, defs, false);
             String name = parameterNames.isEmpty() ? "apply" : "apply(" + parameterNames.size() + ")";
             obj.addMethod(name, apply);
             return new PendingStep(ctx, blockCont, obj);
