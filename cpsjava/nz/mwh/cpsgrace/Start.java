@@ -9,6 +9,8 @@ import java.util.List;
 import nz.mwh.cpsgrace.ast.ASTNode;
 import nz.mwh.cpsgrace.ast.Converter;
 import nz.mwh.cpsgrace.objects.GraceBoolean;
+import nz.mwh.cpsgrace.objects.GraceMatchResult;
+import nz.mwh.cpsgrace.objects.GracePatternOr;
 import nz.mwh.cpsgrace.objects.GraceString;
 import nz.mwh.cpsgrace.objects.Method;
 import nz.mwh.cpsgrace.objects.UserObject;
@@ -220,9 +222,49 @@ public class Start {
             }
             return cont.returning(ctx, new GraceString(sb.toString()));
         }));
+
+        prelude.addMethod("successfulMatch(1)", Method.java((ctx, cont, _, args) -> {
+            GraceMatchResult mr = new GraceMatchResult(true, args.get(0));
+            return cont.returning(ctx, mr);
+        }));
+
+        prelude.addMethod("failedMatch(1)", Method.java((ctx, cont, _, args) -> {
+            GraceMatchResult mr = new GraceMatchResult(false, args.get(0));
+            return cont.returning(ctx, mr);
+        }));
+
+        // match(1)case(1) through match(1)...case(1)*30
+        // Each case argument is a block (or pattern). We try each case's match(target) in order.
+        // The first successful match result is returned.
+        String matchCaseName = "match(1)";
+        for (int i = 0; i < 30; i++) {
+            matchCaseName += "case(1)";
+            final String finalName = matchCaseName;
+            prelude.addMethod(finalName, Method.java((ctx, cont, _, args) -> {
+                GraceObject target = args.get(0);
+                // args.get(1) is the first case, args.get(2) the second, etc.
+                return tryMatchCases(ctx, cont, target, args, 1);
+            }));
+        }
+
         return prelude;
     }
     
+    private static PendingStep tryMatchCases(Context ctx, Continuation cont, GraceObject target, java.util.List<GraceObject> args, int caseIndex) {
+        if (caseIndex >= args.size()) {
+            // No case matched - return a failed match result
+            return cont.returning(ctx, new GraceMatchResult(false, target));
+        }
+        GraceObject pattern = args.get(caseIndex);
+        return pattern.requestMethod(ctx, (GraceObject matchResultObj) -> {
+            GraceMatchResult mr = GraceMatchResult.assertMatchResult(matchResultObj);
+            if (mr.isSuccess()) {
+                return cont.returning(ctx, mr);
+            }
+            return tryMatchCases(ctx, cont, target, args, caseIndex + 1);
+        }, "match(1)", java.util.List.of(target));
+    }
+
     public void run() {
         Context startContext = new Context();
         ArrayDeque<PendingStep> queue = new ArrayDeque<>();

@@ -18,4 +18,9 @@ public interface GraceObject {
     }
 
     public PendingStep requestMethod(Context ctx, Continuation returnCont, String methodName, java.util.List<GraceObject> args, java.util.List<GraceObject> genericArgs);
+
+    /** Returns true if this object responds to the given method name */
+    public default boolean hasMethod(String name) {
+        return false;
+    }
 }

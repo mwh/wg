@@ -1,6 +1,7 @@
 package nz.mwh.cpsgrace.objects;
 
 import java.util.List;
+import java.util.Set;
 
 import nz.mwh.cpsgrace.Context;
 import nz.mwh.cpsgrace.Continuation;
@@ -68,10 +69,30 @@ public class GraceString implements GraceObject {
                 return returnCont.returning(ctx, new GraceString(substring));
             case "concise":
                 return returnCont.returning(ctx, this);
+            case "match(1)": {
+                GraceObject target = args.get(0);
+                if (target instanceof GraceString ts && this.value.equals(ts.value)) {
+                    return returnCont.returning(ctx, new GraceMatchResult(true, target));
+                }
+                return returnCont.returning(ctx, new GraceMatchResult(false, target));
+            }
+            case "|(1)":
+                return returnCont.returning(ctx, new GracePatternOr(this, args.get(0)));
             default:
                 System.out.println("no such method " + methodName + " on String");
                 return new PendingStep(ctx, returnCont, null);
         }
+    }
+
+    private static final Set<String> METHODS = Set.of(
+        "asString", "concise", "++(1)", "size", "at(1)",
+        "firstCodepoint", "firstCP", "==(1)", "!=(1)", "<(1)", ">(1)",
+        "replace(1)with(1)", "substringFrom(1)to(1)", "match(1)", "|(1)"
+    );
+
+    @Override
+    public boolean hasMethod(String name) {
+        return METHODS.contains(name);
     }
 
     public static GraceString assertString(GraceObject obj) {

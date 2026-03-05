@@ -1,6 +1,7 @@
 package nz.mwh.cpsgrace.objects;
 
 import java.util.List;
+import java.util.Set;
 
 import nz.mwh.cpsgrace.Context;
 import nz.mwh.cpsgrace.Continuation;
@@ -82,6 +83,15 @@ public class GraceNumber implements GraceObject {
             case "prefix-":
                 Number neg = multiply(this.value, -1);
                 return returnCont.returning(ctx, new GraceNumber(neg));
+            case "match(1)": {
+                GraceObject target = args.get(0);
+                if (target instanceof GraceNumber tn && this.value.doubleValue() == tn.value.doubleValue()) {
+                    return returnCont.returning(ctx, new GraceMatchResult(true, target));
+                }
+                return returnCont.returning(ctx, new GraceMatchResult(false, target));
+            }
+            case "|(1)":
+                return returnCont.returning(ctx, new GracePatternOr(this, args.get(0)));
             default:
                 System.out.println("no such method " + methodName + " on Number");
                 return new PendingStep(ctx, returnCont, null);
@@ -127,6 +137,17 @@ public class GraceNumber implements GraceObject {
         } else {
             return result;
         }
+    }
+
+    private static final Set<String> METHODS = Set.of(
+        "asString", "+(1)", "-(1)", "*(1)", "/(1)",
+        "==(1)", "!=(1)", "<(1)", ">(1)", ">=(1)", "<=(1)",
+        "..(1)", "%(1)", "prefix-", "match(1)", "|(1)"
+    );
+
+    @Override
+    public boolean hasMethod(String name) {
+        return METHODS.contains(name);
     }
 
     public static GraceNumber assertNumber(GraceObject obj) {

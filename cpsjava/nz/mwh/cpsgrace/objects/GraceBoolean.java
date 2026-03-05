@@ -1,6 +1,7 @@
 package nz.mwh.cpsgrace.objects;
 
 import java.util.List;
+import java.util.Set;
 
 import nz.mwh.cpsgrace.Context;
 import nz.mwh.cpsgrace.Continuation;
@@ -54,10 +55,29 @@ public class GraceBoolean implements GraceObject {
                 GraceBoolean orBool = assertBoolean(args.get(0));
                 boolean orResult = this.value || orBool.value;
                 return returnCont.returning(ctx, GraceBoolean.of(orResult));
+            case "match(1)": {
+                GraceObject target = args.get(0);
+                if (target instanceof GraceBoolean tb && this.value == tb.value) {
+                    return returnCont.returning(ctx, new GraceMatchResult(true, target));
+                }
+                return returnCont.returning(ctx, new GraceMatchResult(false, target));
+            }
+            case "|(1)":
+                return returnCont.returning(ctx, new GracePatternOr(this, args.get(0)));
             default:
                 System.out.println("no such method " + methodName + " on Boolean");
                 return new PendingStep(ctx, returnCont, null);
         }
+    }
+
+    private static final Set<String> METHODS = Set.of(
+        "asString", "not", "prefix!", "==(1)", "!=(1)",
+        "&&(1)", "||(1)", "match(1)", "|(1)"
+    );
+
+    @Override
+    public boolean hasMethod(String name) {
+        return METHODS.contains(name);
     }
 
     public static GraceBoolean assertBoolean(GraceObject obj) {

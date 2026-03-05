@@ -21,7 +21,19 @@ public class GraceType implements GraceObject {
 
     @Override
     public PendingStep requestMethod(Context ctx, Continuation returnCont, String methodName, List<GraceObject> args, List<GraceObject> genericArgs) {
-        throw new RuntimeException("Cannot request method on type object: " + methodName);
+        switch (methodName) {
+            case "match(1)": {
+                GraceObject target = args.get(0);
+                boolean allMatch = signatures.stream().allMatch(sig -> target.hasMethod(sig.getName()));
+                return returnCont.returning(ctx, new GraceMatchResult(allMatch, target));
+            }
+            case "|(1)":
+                return returnCont.returning(ctx, new GracePatternOr(this, args.get(0)));
+            case "asString":
+                return returnCont.returning(ctx, new GraceString(toString()));
+            default:
+                throw new RuntimeException("Cannot request method on type object: " + methodName);
+        }
     }
 
     @Override
