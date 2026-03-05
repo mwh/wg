@@ -94,6 +94,18 @@ public class ConciseEncoding {
     protected static ASTNode i0M(String name, IdentifierDeclaration asName) {
         return new ImportStmt(name, asName);
     }
+
+    protected static TypeDec t0D(String name, ConsList<ASTNode> genericParams, ASTNode typeExpr) {
+        return new TypeDec(name, genericParams.asList(), typeExpr);
+    }
+
+    protected static InterfaceCons i0C(ConsList<ASTNode> body) {
+        return new InterfaceCons(body.asList().stream().map(x -> (MethSig) x).toList());
+    }
+
+    protected static MethSig m0S(ConsList<Part> parts, ConsList<ASTNode> returnType) {
+        return new MethSig(parts.asList(), returnType.single());
+    }
     
     protected static String s4F(String pre, String mid, String post) {
         return pre + mid + post;

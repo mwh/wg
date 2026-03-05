@@ -50,6 +50,9 @@ public class MethodDecl extends ASTNode {
                 case DefDec defDec -> {
                     defNames.add(defDec.getName());
                 }
+                case TypeDec typeDec -> {
+                    defNames.add(typeDec.getName());
+                }
                 default -> {}
             }
         }

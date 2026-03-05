@@ -82,6 +82,18 @@ public class ASTEncoding {
         return new ImportStmt(name, asName);
     }
 
+    protected static TypeDec typeDecl(String name, ConsList<ASTNode> genericParams, ASTNode typeExpr) {
+        return new TypeDec(name, genericParams.asList(), typeExpr);
+    }
+
+    protected static InterfaceCons interfaceCons(ConsList<ASTNode> body) {
+        return new InterfaceCons(body.asList().stream().map(x -> (MethSig) x).toList());
+    }
+
+    protected static MethSig methSig(ConsList<Part> parts, ConsList<ASTNode> returnType) {
+        return new MethSig(parts.asList(), returnType.single());
+    }
+
     protected static String safeStr(String pre, String mid, String post) {
         return pre + mid + post;
     }

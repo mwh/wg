@@ -139,6 +139,27 @@ public class Converter {
                 List<ASTNode> body = convertNodeList(bodyObj);
                 return new MethodDecl(parts.stream().map(x -> (Part)x).toList(), returnType, annots, body);
             }
+            case "typeDec" -> {
+                GraceObject nameObj = requestSync(node, "name", List.of());
+                String name = GraceString.assertString(nameObj).toString();
+                GraceObject genericParamsObj = requestSync(node, "genericParameters", List.of());
+                List<ASTNode> genericParams = convertNodeList(genericParamsObj);
+                GraceObject typeExprObj = requestSync(node, "value", List.of());
+                ASTNode typeExpr = convertNode(typeExprObj);
+                return new TypeDec(name, genericParams, typeExpr);
+            }
+            case "interfaceCons" -> {
+                GraceObject bodyObj = requestSync(node, "body", List.of());
+                List<ASTNode> body = convertNodeList(bodyObj);
+                return new InterfaceCons(body.stream().map(x -> (MethSig) x).toList());
+            }
+            case "methSig" -> {
+                GraceObject partsObj = requestSync(node, "parts", List.of());
+                List<ASTNode> parts = convertNodeList(partsObj);
+                GraceObject returnTypeObj = requestSync(node, "returnType", List.of());
+                ASTNode returnType = convertNode(returnTypeObj);
+                return new MethSig(parts.stream().map(x -> (Part) x).toList(), returnType);
+            }
             case "nil" -> {
                 // For optional values - lists are converted below
                 return null;
