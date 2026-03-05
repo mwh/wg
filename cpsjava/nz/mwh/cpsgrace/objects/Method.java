@@ -27,6 +27,7 @@ public class Method {
         this.body = body;
         this.vars = List.of();
         this.defs = List.of();
+        this.genericParameterNames = List.of();
     }
 
     public Method(List<String> parameterNames, List<String> genericParameters, CPS body, List<String> vars, List<String> defs, boolean captureReturn) {
