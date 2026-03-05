@@ -64,6 +64,20 @@ public class UserObject implements GraceObject {
         addMethod(name, getter);
     }
 
+    /**
+     * Like addDef, but pre-populates the slot with a GraceTypeRef placeholder.
+     * The setter calls setType() on that ref rather than replacing it, so any
+     * other type expressions that captured the ref will see the resolved type.
+     */
+    public void addTypeDef(String name) {
+        GraceTypeRef ref = new GraceTypeRef(name);
+        addMethod(name, Method.java((ctx, cont, _, _) -> cont.returning(ctx, ref)));
+        addMethod(name + " =(1)", Method.java((ctx, cont, _, args) -> {
+            ref.setType(args.get(0));
+            return cont.returning(ctx, GraceObject.DONE);
+        }));
+    }
+
     public boolean hasMethod(String name) {
         return methods != null && methods.containsKey(name);
     }

@@ -36,7 +36,9 @@ public class ObjCons extends ASTNode {
                         obj.addDef(defDec.getName());
                     }
                     case TypeDec typeDec -> {
-                        obj.addDef(typeDec.getName());
+                        // Pre-populate with a GraceTypeRef placeholder so forward
+                        // and circular references resolve correctly.
+                        obj.addTypeDef(typeDec.getName());
                     }
                     case MethodDecl methodDecl -> {
                         obj.addMethod(methodDecl.getName(), new Method(
@@ -54,17 +56,32 @@ public class ObjCons extends ASTNode {
                     default -> {}
                 }
             }
+
+            // Lift type declarations to run before all other body statements,
+            // matching the java/ implementation's two-pass evaluation order.
+            List<ASTNode> execOrder = new ArrayList<>();
+            for (ASTNode member : body) {
+                if (member instanceof TypeDec) execOrder.add(member);
+            }
+            for (ASTNode member : body) {
+                if (!(member instanceof TypeDec)) execOrder.add(member);
+            }
+
+            if (execOrder.isEmpty()) {
+                return returnCont.apply(obj);
+            }
+
             PendingStep step = null;
             Continuation cont = _ -> returnCont.apply(obj);
             Context bodyContext = ctx.withSelfScope(obj);
-            for (int i = body.size() - 1; i > 0; i--) {
+            for (int i = execOrder.size() - 1; i > 0; i--) {
                 int j = i;
                 Continuation next = cont;
                 cont = (_) -> {
-                    return body.get(j).toCPS().run(bodyContext, next);
+                    return execOrder.get(j).toCPS().run(bodyContext, next);
                 };
             }
-            step = body.get(0).toCPS().run(bodyContext, cont);
+            step = execOrder.get(0).toCPS().run(bodyContext, cont);
             return step;
         };
     }
