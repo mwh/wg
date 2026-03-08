@@ -8,5 +8,7 @@
         "haskell/*.{hi,o}{,-boot}": true,
         "java/**/*.{class}": true,
         "cpsjava/**/*.{class}": true,
+        "c/**/*.o": true,
+        "c/**/{grace,program}{,.exe}": true,
     }
 }
