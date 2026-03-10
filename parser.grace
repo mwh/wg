@@ -752,7 +752,7 @@ method parseClassDeclaration(lxr) {
     def body = parseObjectBody(lxr)
     lxr.advance
     def obj = ast.objectConstructor(body, ast.nil)
-    ast.methodDecl(parts.reversed(ast.nil), ast.nil, ast.cons(obj, ast.nil))
+    ast.methodDecl(parts.reversed(ast.nil), ast.nil, ast.nil, ast.cons(obj, ast.nil))
 }
 
 method parseImport(lxr) {

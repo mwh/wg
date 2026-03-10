@@ -118,7 +118,7 @@ method interpString(val, exp, rest) {
         def kind is public = "interpStr"
 
         method asString {
-            "interpStr(" ++ escapeString(value) ++ "," ++ expression ++ ", " ++ next ++ ")"
+            "interpStr(" ++ escapeString(value) ++ ", " ++ expression ++ ", " ++ next ++ ")"
         }
 
         method concise {
@@ -223,7 +223,7 @@ method varDecl(id, dtype, anns, val) {
         }
 
         method concise {
-            "v4R(\"" ++ name ++ "\"," ++ dtype.concise ++ "," ++ (anns.map { x -> "\"" ++ x ++ "\"" }.concise) ++ "," ++ value.concise ++ ")"
+            "v4R(\"" ++ name ++ "\"," ++ dtype.concise ++ "," ++ (anns.map { x -> "\"" ++ x ++ "\"" }.conciseRaw) ++ "," ++ value.concise ++ ")"
         }
     }
 }
@@ -368,7 +368,7 @@ method methodDecl(declarationParts, retType, anns, bd) {
         }
 
         method concise {
-            "m0D(" ++ parts.concise ++ "," ++ returnType.concise ++ "," ++ (annotations.map { x -> "\"" ++ x ++ "\"" }.concise) ++ "," ++ body.concise ++ ")"
+            "m0D(" ++ parts.concise ++ "," ++ returnType.concise ++ "," ++ (annotations.map { x -> "\"" ++ x ++ "\"" }.conciseRaw) ++ "," ++ body.concise ++ ")"
         }
     }
 }
