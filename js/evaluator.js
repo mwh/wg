@@ -358,6 +358,9 @@ const GraceNumber = new GraceObject({
     "-(1)": (cont, args, rec) => {
         return cont.of(rec - args[0]);
     },
+    "prefix-(0)": (cont, args, rec) => {
+        return cont.of(-rec);
+    },
     "*(1)": (cont, args, rec) => {
         return cont.of(rec * args[0]);
     },

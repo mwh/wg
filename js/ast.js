@@ -25,13 +25,18 @@ export class MethodDecl {
 }
 
 export class Part {
-    constructor(name, params) {
+    constructor(name, params, genericParams) {
         this.name = name;
         this.params = params;
+        this.genericParams = genericParams;
     }
 
     get args() {
         return this.params;
+    }
+
+    get genericArgs() {
+        return this.genericParams;
     }
 }
 
