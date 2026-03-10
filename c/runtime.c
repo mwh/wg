@@ -1161,7 +1161,7 @@ void free_cons_both(ConsCell *cell) {
     }
 }
 
-MethodPart *part(char *name, ConsCell *args) {
+MethodPart *part(char *name, ConsCell *args, ConsCell *generics) {
     int size = 0;
     ConsCell *tmp = args;
     while (tmp) {
@@ -2039,7 +2039,7 @@ int main(int argc, char **argv) {
     ctx.scope = prelude;
     ctx.self = prelude;
 
-    program = objCons(cons(defDec("name", nil, nil, strLit("world")), one(lexReq(one(part("print", one(interpStr("Hello, ", lexReq(one(part("name", nil))), strLit(safeStr("", charExclam, ""))))))))), nil);
+    program = objCons(cons(defDec("name", nil, nil, strLit("world")), one(lexReq(one(part("print", one(interpStr("Hello, ", lexReq(one(part("name", nil, nil))), strLit(safeStr("", charExclam, "")))), nil))))), nil);
 
     GraceObject *module = evaluate(program, &ctx);
     grace_teardown(0);
