@@ -506,6 +506,7 @@ static PendingStep *block_request(GraceObject *self, Env *env, const char *name,
         inner->scope    = scope;
         inner->return_k = cont_retain(blk->return_k ? blk->return_k : k);
         inner->except_k = cont_retain(env->except_k);
+        inner->reset_k  = cont_retain(env->reset_k);
         BlockBodyStep *step = malloc(sizeof(BlockBodyStep));
         step->base.go = block_body_go;
         step->base.gc_trace = block_body_step_trace;
@@ -642,9 +643,19 @@ static void def_trace_data(void *data) {
 
 void user_bind_def(GraceObject *obj, const char *name, GraceObject *value) {
     gc_write_barrier(value);  /* value may be WHITE; obj may be BLACK (new frame) */
-    user_add_method(obj, str_fmt("%s(0)", name), def_fn, value);
-    /* Set trace_data on the just-added method entry */
+    /* If a def binding for this name already exists, update it in place.
+     * This supports multi-shot continuations that re-bind the same def. */
+    char *full = str_fmt("%s(0)", name);
     GraceUserObject *uo = (GraceUserObject *)obj;
+    for (MethodEntry *m = uo->methods; m; m = m->next) {
+        if (m->fn == def_fn && strcmp(m->name, full) == 0) {
+            m->data = value;
+            free(full);
+            return;
+        }
+    }
+    user_add_method(obj, full, def_fn, value);
+    /* Set trace_data on the just-added method entry */
     MethodEntry *last = uo->methods;
     while (last->next) last = last->next;
     last->trace_data = def_trace_data;

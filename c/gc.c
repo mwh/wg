@@ -151,6 +151,7 @@ void gc_trace_env(Env *env) {
 
     gc_trace_cont(env->return_k);
     gc_trace_cont(env->except_k);
+    gc_trace_cont(env->reset_k);
 }
 
 /* Process the grey list until empty: for each grey object, trace its

@@ -160,6 +160,7 @@ static PendingStep *prelude_try_catch_fn(GraceObject *self, Env *env,
     *try_env = *env;
     try_env->refcount = 1;
     cont_retain(try_env->return_k);  /* copy inherited return_k ref */
+    cont_retain(try_env->reset_k);   /* copy inherited reset_k ref */
     try_env->except_k = cont_retain((Cont *)td);
     PendingStep *r = grace_request(body_blk, try_env, "apply(0)", NULL, 0, k);
     env_release(try_env);
@@ -542,6 +543,190 @@ static PendingStep *prelude_exception_fn(GraceObject *s, Env *e, GraceObject **a
     return cont_apply(k, grace_exception_proto_new("Exception"));
 }
 
+/*
+ * Delimited continuations: reset(1) and shift(1)
+ */
+
+/*
+ * PromptBox is a mutable cell holding the "outer_k" of the current reset
+ * delimiter.
+ * The prompt continuation reads the box to find where to send the body's result.
+ * When a captured continuation is invoked, update the box to point to the
+ * invoker's continuation, so they are composable. The resumed computation
+ * delivers its result to the caller of k.apply(v) rather than the original
+ * reset.
+ *
+ * The PromptBox is refcounted and GC-traced so it stays alive as long as
+ * any captured continuation referencing it is alive.
+ */
+
+typedef struct PromptBox {
+    int    refcount;
+    Cont  *outer_k;   /* where the prompt currently delivers results */
+} PromptBox;
+
+static PromptBox *promptbox_new(Cont *outer_k) {
+    PromptBox *pb = malloc(sizeof(PromptBox));
+    pb->refcount = 1;
+    pb->outer_k = cont_retain(outer_k);
+    return pb;
+}
+static PromptBox *promptbox_retain(PromptBox *pb) {
+    if (pb) pb->refcount++;
+    return pb;
+}
+static void promptbox_release(PromptBox *pb) {
+    if (pb && --pb->refcount <= 0) {
+        cont_release(pb->outer_k);
+        free(pb);
+    }
+}
+
+/* ResetPrompt: the prompt continuation installed by reset */
+
+typedef struct {
+    Cont      base;
+    PromptBox *box;
+} ResetPrompt;
+
+static void reset_prompt_trace(Cont *c) {
+    ResetPrompt *rp = (ResetPrompt *)c;
+    gc_trace_cont(rp->box->outer_k);
+}
+static void reset_prompt_cleanup(Cont *c) {
+    ResetPrompt *rp = (ResetPrompt *)c;
+    promptbox_release(rp->box);
+}
+static PendingStep *reset_prompt_apply(Cont *c, GraceObject *value) {
+    ResetPrompt *rp = (ResetPrompt *)c;
+    Cont *outer_k = cont_retain(rp->box->outer_k);
+    cont_consumed(c);
+    PendingStep *r = cont_apply(outer_k, value);
+    cont_release(outer_k);
+    return r;
+}
+
+/* reset(1) */
+
+static PendingStep *prelude_reset_fn(GraceObject *self, Env *env,
+                                      GraceObject **args, int nargs,
+                                      Cont *k, void *data) {
+    (void)self; (void)nargs; (void)data;
+    GraceObject *body_blk = args[0];
+    /* Create prompt box and prompt continuation */
+    PromptBox *box = promptbox_new(k);
+    ResetPrompt *prompt = CONT_ALLOC(ResetPrompt);
+    prompt->base.apply    = reset_prompt_apply;
+    prompt->base.gc_trace = reset_prompt_trace;
+    prompt->base.cleanup  = reset_prompt_cleanup;
+    prompt->box           = promptbox_retain(box);
+    /* Build env with reset_k = prompt */
+    Env *reset_env = malloc(sizeof(Env));
+    *reset_env = *env;
+    reset_env->refcount = 1;
+    cont_retain(reset_env->return_k);
+    cont_retain(reset_env->except_k);
+    reset_env->reset_k = cont_retain((Cont *)prompt);
+    /* Evaluate body with the prompt as the continuation */
+    PendingStep *r = grace_request(body_blk, reset_env, "apply(0)",
+                                    NULL, 0, (Cont *)prompt);
+    env_release(reset_env);
+    promptbox_release(box);
+    return r;
+}
+
+/* Reified continuation (the "k" passed to the shift body)  */
+
+typedef struct {
+    Cont      *captured_k;   /* continuation from shift point to prompt */
+    PromptBox *box;           /* shared mutable cell for redirect on resume */
+} ReifiedContData;
+
+static void reified_cont_trace_data(void *data) {
+    ReifiedContData *rd = (ReifiedContData *)data;
+    gc_trace_cont(rd->captured_k);
+    gc_trace_cont(rd->box->outer_k);
+}
+static void reified_cont_free_data(void *data) {
+    ReifiedContData *rd = (ReifiedContData *)data;
+    cont_release(rd->captured_k);
+    promptbox_release(rd->box);
+    free(rd);
+}
+
+/*
+ * When k.apply(v) is called:
+ *  1. Redirect the prompt box so the captured computation delivers
+ *     its result to a fresh prompt wired to the caller's continuation.
+ *  2. Apply the captured continuation with v.
+ *
+ * This makes the continuation composable: each invocation of k delivers
+ * its result to the invoker, not the original reset's caller.
+ */
+static PendingStep *reified_cont_apply_fn(GraceObject *self, Env *env,
+                                           GraceObject **args, int nargs,
+                                           Cont *k, void *data) {
+    (void)self; (void)env; (void)nargs;
+    ReifiedContData *rd = (ReifiedContData *)data;
+    GraceObject *value = args[0];
+    /* Redirect the prompt box to deliver to this k */
+    Cont *old_outer = rd->box->outer_k;
+    rd->box->outer_k = cont_retain(k);
+    cont_release(old_outer);
+    /* Apply the captured continuation with the supplied value */
+    return cont_apply(rd->captured_k, value);
+}
+
+/* shift(1) */
+
+static PendingStep *prelude_shift_fn(GraceObject *self, Env *env,
+                                      GraceObject **args, int nargs,
+                                      Cont *k, void *data) {
+    (void)self; (void)nargs; (void)data;
+    GraceObject *shift_body = args[0];  /* { k -> ... } */
+    /* Find the nearest reset prompt */
+    if (!env->reset_k || env->reset_k == cont_done)
+        grace_raise(env, "ContinuationError", "shift called outside of reset");
+    ResetPrompt *prompt = (ResetPrompt *)env->reset_k;
+    /* Reify the current continuation k as a Grace object with apply(1).
+     * k is the continuation from the shift point to the prompt. */
+    GraceObject *reified = grace_user_new(NULL);
+    ReifiedContData *rd = malloc(sizeof(ReifiedContData));
+    rd->captured_k = cont_retain(k);
+    rd->box        = promptbox_retain(prompt->box);
+    user_add_method(reified, "apply(1)", reified_cont_apply_fn, rd);
+    /* Set trace_data and free_data on the method entry */
+    {
+        GraceUserObject *uo = (GraceUserObject *)reified;
+        MethodEntry *m = uo->methods;
+        while (m) {
+            if (m->data == rd) {
+                m->trace_data = reified_cont_trace_data;
+                m->free_data  = reified_cont_free_data;
+                break;
+            }
+            m = m->next;
+        }
+    }
+    /* The shift body is evaluated with the prompt's outer_k as the
+     * continuation, so the shift aborts to the reset boundary.
+     * The result of the shift body becomes the result of the reset. */
+    Cont *outer_k = cont_retain(prompt->box->outer_k);
+    /* Build env without reset_k for the shift body */
+    Env *shift_env = malloc(sizeof(Env));
+    *shift_env = *env;
+    shift_env->refcount = 1;
+    cont_retain(shift_env->return_k);
+    cont_retain(shift_env->except_k);
+    shift_env->reset_k = NULL;  /* shift body is outside the reset */
+    GraceObject *kargs[1] = { reified };
+    PendingStep *r = grace_request(shift_body, shift_env, "apply(1)",
+                                    kargs, 1, outer_k);
+    env_release(shift_env);
+    cont_release(outer_k);
+    return r;
+}
+
 GraceObject *make_prelude(void) {
     GraceObject *p = grace_user_new(NULL);
 
@@ -577,6 +762,10 @@ GraceObject *make_prelude(void) {
     user_bind_def(p, "true",  grace_true);
     user_bind_def(p, "false", grace_false);
     user_bind_def(p, "done",  grace_done);
+
+    /* delimited continuations */
+    user_add_method(p, "reset(1)",  prelude_reset_fn,  NULL);
+    user_add_method(p, "shift(1)",  prelude_shift_fn,  NULL);
 
     return p;
 }

@@ -157,6 +157,7 @@ static PendingStep *method_fn(GraceObject *self, Env *env,
     inner->scope    = frame;
     inner->return_k = cont_retain(k);       /* return stmt goes to caller's k */
     inner->except_k = cont_retain(env->except_k);
+    inner->reset_k  = cont_retain(env->reset_k);
 
     PendingStep *r = eval_stmts(mc->body, inner, k);
     env_release(inner);
@@ -732,6 +733,7 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
         inner->scope    = (GraceObject *)obj;
         inner->return_k = cont_retain(cont_done);      /* return inside object body is unusual */
         inner->except_k = cont_retain(env->except_k);
+        inner->reset_k  = cont_retain(env->reset_k);
         /* Pre-pass: hoist all method declarations so they are visible
          * to var/def initializers in the same body (Grace semantics). */
         for (ASTNode *n = node->a1; n; ) {

@@ -145,6 +145,7 @@ struct Env {
     GraceObject *scope;      /* current lexical scope (a GraceUserObject chain) */
     Cont        *return_k;   /* continuation for `return expr` */
     Cont        *except_k;   /* continuation for exceptions */
+    Cont        *reset_k;    /* innermost reset (delimited continuation) prompt */
 };
 
 static inline Env *env_retain(Env *e) { if (e) e->refcount++; return e; }
@@ -152,6 +153,7 @@ static inline void env_release(Env *e) {
     if (e && --e->refcount <= 0) {
         cont_release(e->return_k);
         cont_release(e->except_k);
+        cont_release(e->reset_k);
         free(e);
     }
 }

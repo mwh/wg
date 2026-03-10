@@ -253,6 +253,7 @@ Env *env_extend(const Env *env, GraceObject *new_scope) {
     e->scope = new_scope;
     cont_retain(e->return_k);
     cont_retain(e->except_k);
+    cont_retain(e->reset_k);
     return e;
 }
 
@@ -270,6 +271,7 @@ Env *env_new(GraceObject *prelude) {
     e->scope    = prelude;
     e->return_k = cont_retain(cont_done);
     e->except_k = cont_retain(cont_done);
+    e->reset_k  = NULL;
     return e;
 }
 
