@@ -78,6 +78,10 @@ document.getElementById('parse').addEventListener('click', async () => {
     await doParse()
 })
 
+document.getElementById('parse_concise').addEventListener('click', async () => {
+    await doParse(true)
+})
+
 document.getElementById('run').addEventListener('click', async () => {
     stepsTaken = 0
     document.getElementById('output').replaceChildren()
