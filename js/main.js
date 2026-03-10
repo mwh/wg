@@ -13,6 +13,8 @@ let cont = {
     toString() {return "END"}
 }
 
+let lastConcise = false
+
 let output = document.getElementById('output')
 
 function say(s) {
@@ -47,6 +49,7 @@ document.getElementById('source').addEventListener('keydown', function(e) {
 })
 
 async function doParse(concise=false) {
+    lastConcise = concise;
     let start = performance.now()
     let text = document.getElementById('source').value
     status("Parsing input...")
@@ -85,7 +88,7 @@ document.getElementById('parse_concise').addEventListener('click', async () => {
 document.getElementById('run').addEventListener('click', async () => {
     stepsTaken = 0
     document.getElementById('output').replaceChildren()
-    if (!theAST) {
+    if (!theAST || lastConcise) {
         await doParse()
     }
     let start = performance.now();
@@ -101,7 +104,7 @@ document.getElementById('run').addEventListener('click', async () => {
 })
 
 document.getElementById('java').addEventListener('click', async () => {
-    if (!theAST)
+    if (!theAST || lastConcise)
         await doParse()
     let text = theAST
     let f = await fetch("flat-template.java")
@@ -120,7 +123,7 @@ document.getElementById('java').addEventListener('click', async () => {
 })
 
 document.getElementById('haskell').addEventListener('click', async () => {
-    if (!theAST)
+    if (!theAST || lastConcise)
         await doParse()
     let text = theAST
     let f = await fetch("flat-template.hs")
@@ -136,7 +139,7 @@ document.getElementById('haskell').addEventListener('click', async () => {
 })
 
 document.getElementById('c_flat').addEventListener('click', async () => {
-    if (!theAST)
+    if (!theAST || lastConcise)
         await doParse()
     let text = theAST
     let f = await fetch("flat-template.c")
@@ -152,7 +155,7 @@ document.getElementById('c_flat').addEventListener('click', async () => {
 })
 
 document.getElementById('excel').addEventListener('click', async () => {
-    if (!theAST)
+    if (!theAST || lastConcise)
         await doParse();
     let hzip = (await import('./hzip.js'))['default'];
     let text = theAST
@@ -193,7 +196,7 @@ ${theAST}.check(Environment(BaseEnvironment), unknownType)
 
 
 document.getElementById('javascript').addEventListener('click', async () => {
-    if (!theAST)
+    if (!theAST || lastConcise)
         await doParse()
     let text = theAST
     text = `
