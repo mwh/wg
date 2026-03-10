@@ -32,25 +32,36 @@ static char *read_file(const char *path) {
 
 /*  Evaluate a baked ASTNode* tree, returning the resulting object  */
 static GraceObject *eval_baked(ASTNode *ast, Env *env) {
-    CaptureCont cc;
-    cc.base.apply = capture_apply;
-    cc.base.gc_trace = NULL;  /* stack-local, no GC trace needed */
-    cc.base.cleanup = NULL;
-    cc.base.refcount = CONT_REFCOUNT_STATIC;
-    cc.base.consumed = 0;
-    cc.result     = grace_done;
-    trampoline(eval_node(ast, env, (Cont *)&cc));
-    return cc.result;
+    CaptureCont *cc = CONT_ALLOC(CaptureCont);
+    cc->base.apply = capture_apply;
+    cc->base.gc_trace = NULL;
+    cc->base.cleanup = NULL;
+    cc->result = grace_done;
+    trampoline(eval_node(ast, env, (Cont *)cc));
+    GraceObject *result = cc->result;
+    cont_release((Cont *)cc);
+    return result;
 }
 
 /*  main  */
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "Usage: grace <file.grace>\n");
+        fprintf(stderr, "Usage: grace [-p|-P] <file.grace>\n");
         return 1;
     }
-    const char *user_file = argv[1];
+    int file_index = 1;
+    int print_ast = 0;
+    if (strcmp(argv[file_index], "-p") == 0) {
+        print_ast = 1;
+        file_index++;
+    } else if (strcmp(argv[file_index], "-P") == 0) {
+        print_ast = 2;
+        file_index++;
+    }
+    
+    const char *user_file = argv[file_index];
     char *source = read_file(user_file);
+
 
     /*  1. Build prelude  */
     GraceObject *prelude = make_prelude();
@@ -83,13 +94,23 @@ int main(int argc, char *argv[]) {
     GraceObject *grace_ast_obj = grace_request_sync(parser_obj, env,
                                                      "parseModule(2)",
                                                      parse_args, 2);
+    if (print_ast == 1) {
+        GraceObject *ast_str = grace_request_sync(grace_ast_obj, env, "asString(0)", NULL, 0);
+        printf("%s\n", grace_string_val(ast_str));
+        return 0;
+    } else if (print_ast == 2) {
+        GraceObject *ast_str = grace_request_sync(grace_ast_obj, env, "concise(0)", NULL, 0);
+        printf("%s\n", grace_string_val(ast_str));
+        return 0;
+    }
     // puts("Parsing done. Converting...");
     /*  7. Convert Grace AST object -> ASTNode* tree  */
     ASTNode *program = grace_ast_to_astnode(grace_ast_obj, env);
     if (!program) {
-        fprintf(stderr, "gracei: parser returned nothing for '%s'\n", user_file);
+        fprintf(stderr, "grace: parser returned nothing for '%s'\n", user_file);
         return 1;
     }
+    gc_collect();
 
     // puts("Conversion done. Evaluating...");
     /*  8. Evaluate the user program  */
@@ -97,14 +118,13 @@ int main(int argc, char *argv[]) {
      * Final result is ignored, but side effects still happen.
      */
     //log_requests = 1;
-    CaptureCont result_cc;
-    result_cc.base.apply = capture_apply;
-    result_cc.base.gc_trace = NULL;
-    result_cc.base.cleanup = NULL;
-    result_cc.base.refcount = CONT_REFCOUNT_STATIC;
-    result_cc.base.consumed = 0;
-    result_cc.result     = grace_done;
-    trampoline(eval_node(program, env, (Cont *)&result_cc));
+    CaptureCont *result_cc = CONT_ALLOC(CaptureCont);
+    result_cc->base.apply = capture_apply;
+    result_cc->base.gc_trace = NULL;
+    result_cc->base.cleanup = NULL;
+    result_cc->result = grace_done;
+    trampoline(eval_node(program, env, (Cont *)result_cc));
+    cont_release((Cont *)result_cc);
 
     free(source);
     return 0;
