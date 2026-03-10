@@ -19,7 +19,7 @@ toFunc (ExplicitRequest receiverNode parts) =
     let name = partsToName parts
         receiverFunc = toFunc receiverNode
         argSeq = do
-            Part _ a <- parts
+            Part _ a _ <- parts
             argNode <- a
             return $ toFunc argNode
     in
@@ -93,7 +93,7 @@ toFunc (StringNode s) =
 toFunc (Assign lhs rhs) =
     case lhs of
         LexicalRequest parts ->
-            let Part name _ = parts !! 0
+            let Part name _ _ = parts !! 0
                 rhsFunc = toFunc rhs
             in \ctx ->
                     let slf = localScope ctx
@@ -105,7 +105,7 @@ toFunc (Assign lhs rhs) =
                                 setter ctx [val]
                             )
         ExplicitRequest receiverNode parts ->
-            let Part name _ = parts !! 0
+            let Part name _ _ = parts !! 0
                 receiverFunc = toFunc receiverNode
                 rhsFunc = toFunc rhs
             in
@@ -123,7 +123,7 @@ toFunc (Assign lhs rhs) =
 toFunc (LexicalRequest parts) =
     let name = partsToName parts
         argSeq = do
-            Part _ a <- parts
+            Part _ a _ <- parts
             argNode <- a
             return $ toFunc argNode
     in
@@ -161,7 +161,7 @@ toFunc (Block params body) =
                         else (\ctx' -> (continuation ctx') GraceDone)
             in
                 do
-                    continuation ctx $ GraceBlock [name | (LexicalRequest [Part name _]) <- params] folded (varNames body) ctx
+                    continuation ctx $ GraceBlock [name | (LexicalRequest [Part name _ _]) <- params] folded (varNames body) ctx
 
 toFunc (ImportStmt name binding) =
     \ctx ->
@@ -295,7 +295,7 @@ makeMethods (stmt:rest) self =
                                 \ctx args ->
                                     do
                                         selfObj <- readIORef self
-                                        let params = parts >>= (\(Part _ a) -> a)
+                                        let params = parts >>= (\(Part _ a _) -> a)
                                         let params' = map (\(IdentifierDeclaration name _) -> name) params
                                         scopeMap <- makeScopeMap params' args (varNames body)
                                         let

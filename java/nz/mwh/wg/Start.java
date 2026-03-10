@@ -20,6 +20,8 @@ public class Start {
         boolean printAST = false;
         String updateFile = null;
         boolean inlineImports = false;
+        List<String> toInline = new ArrayList<>();
+        boolean waitingForImport = false;
         for (String arg : args) {
             if (arg.equals("-p")) {
                 printAST = true;
@@ -29,6 +31,11 @@ public class Start {
                 updateFile = arg;
             } else if (arg.equals("-i")) {
                 inlineImports = true;
+            } else if (arg.equals("-I")) {
+                waitingForImport = true;
+            } else if (waitingForImport) {
+                toInline.add(arg);
+                waitingForImport = false;
             } else if (arg.equals("--help")) {
                 System.out.println("""
                 Usage: java nz.mwh.wg.Start [--help] [-p] [-i] [-u other.lang] FILE.grace
@@ -57,6 +64,8 @@ public class Start {
             ASTNode ast = Parser.parse(Path.of(filename).getFileName().toString(), source);
             if (inlineImports) {
                 inlineImports((ObjectConstructor) ast);
+            } else if (toInline.size() > 0) {
+                inlineImports((ObjectConstructor) ast, toInline);
             }
             if (printAST) {
                 System.out.println(ast);
@@ -109,6 +118,24 @@ public class Start {
                 inlineImports(imported);
                 DefDecl def = new DefDecl(importStmt.getName(), null, Cons.nil(), imported);
                 body.set(i, def);
+            }
+        }
+    }
+
+    private static void inlineImports(ObjectConstructor ast, List<String> toInline) throws IOException {
+        List<ASTNode> body = ast.getBody();
+        for (int i = 0; i < body.size(); i++) {
+            ASTNode node = body.get(i);
+            if (node instanceof ImportStmt) {
+                ImportStmt importStmt = (ImportStmt) node;
+                if (toInline.contains(importStmt.getName())) {
+                    String filename = importStmt.getSource() + ".grace";
+                    String source = Files.readString(Path.of(filename));
+                    ObjectConstructor imported = (ObjectConstructor) Parser.parse(source);
+                    inlineImports(imported, toInline);
+                    DefDecl def = new DefDecl(importStmt.getName(), null, Cons.nil(), imported);
+                    body.set(i, def);
+                }
             }
         }
     }

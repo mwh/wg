@@ -20,7 +20,7 @@ data ASTNode = ObjectConstructor [ASTNode] [String]
              | InterfaceConstructor [MethodSignature]
         deriving Show
 
-data Part = Part String [ASTNode]
+data Part = Part String [ASTNode] [ASTNode]
         deriving Show
 
 data MethodSignature = MethodSignature [Part] (Maybe ASTNode)
@@ -51,7 +51,7 @@ importStmt (name, binding) = ImportStmt name binding
 dialectStmt name = DialectStmt name
 
 
-part (name, params) = Part name params
+part (name, params, genericParams) = Part name params genericParams
 
 safeStr (l, m, r) = l ++ m ++ r
 
@@ -72,7 +72,7 @@ charHash = "#";
 charExclam = "!";
 
 
-ppPart (Part name params) = "part(\"" ++ name ++ "\", " ++ ppASTList params ++ ")"
+ppPart (Part name params genericParams) = "part(\"" ++ name ++ "\", " ++ ppASTList params ++ ", " ++ ppASTList genericParams ++ ")"
 
 ppStrList [] = "nil"
 ppStrList (h:t) = "cons(\"" ++ h ++ "\", " ++ (ppStrList t) ++ ")"

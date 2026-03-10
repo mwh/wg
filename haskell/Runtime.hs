@@ -96,7 +96,8 @@ astModule = BaseObject GraceDone $ fromList [
     , ("objectConstructor(2)", \ctx [(GraceAstList body), anns] -> continuation ctx $ GraceAstObject (ObjectConstructor [n | GraceAstObject n <- body] []))
     , ("numberNode(1)", \ctx [GraceNumber n] -> continuation ctx $ GraceAstObject (NumberNode n))
     , ("stringNode(1)", \ctx [GraceString s] -> continuation ctx $ GraceAstObject (StringNode s))
-    , ("part(2)", \ctx [GraceString name, (GraceAstList params)] -> continuation ctx $ GracePartObject (Part name [n | GraceAstObject n <- params]))
+    , ("part(2)", \ctx [GraceString name, (GraceAstList params)] -> continuation ctx $ GracePartObject (Part name [n | GraceAstObject n <- params] []))
+    , ("part(3)", \ctx [GraceString name, (GraceAstList params), (GraceAstList genericParams)] -> continuation ctx $ GracePartObject (Part name [n | GraceAstObject n <- params] [n | GraceAstObject n <- genericParams]))
     , ("lexicalRequest(1)", \ctx [(GraceAstList parts)] -> continuation ctx $ GraceAstObject (LexicalRequest [n | GracePartObject n <- parts]))
     , ("lexicalRequest(2)", \ctx [_, (GraceAstList parts)] -> continuation ctx $ GraceAstObject (LexicalRequest [n | GracePartObject n <- parts]))
     , ("explicitRequest(3)", \ctx [_, (GraceAstObject receiver), (GraceAstList parts)] -> continuation ctx $ GraceAstObject (ExplicitRequest receiver [n | GracePartObject n <- parts]))
@@ -139,8 +140,8 @@ astObjectToAstNode (GraceAstObject node@(InterfaceConstructor _)) = node
 
 partsToName :: [Part] -> String
 partsToName [] = ""
-partsToName [Part n p] = n ++ "(" ++ (show $ length p) ++ ")"
-partsToName ((Part n p):t) = n ++ "(" ++ (show $ length p) ++ ")" ++ partsToName t
+partsToName [Part n p g] = n ++ "(" ++ (show $ length p) ++ ")"
+partsToName ((Part n p g):t) = n ++ "(" ++ (show $ length p) ++ ")" ++ partsToName t
 
 getMethod :: String -> GraceObject -> (Context -> [GraceObject] -> IO ())
 getMethod n (GraceNumber f) =
@@ -148,6 +149,7 @@ getMethod n (GraceNumber f) =
         "+(1)" -> \ctx [GraceNumber other] -> continuation ctx $ GraceNumber (f + other)
         "*(1)" -> \ctx [GraceNumber other] -> continuation ctx $ GraceNumber (f * other)
         "-(1)" -> \ctx [GraceNumber other] -> continuation ctx $ GraceNumber (f - other)
+        "prefix-(0)" -> \ctx [] -> continuation ctx $ GraceNumber (-f)
         "/(1)" -> \ctx [GraceNumber other] -> continuation ctx $ GraceNumber (f / other)
         "==(1)" -> \ctx [GraceNumber other] -> continuation ctx $ GraceBool (f == other)
         "!=(1)" -> \ctx [GraceNumber other] -> continuation ctx $ GraceBool (f /= other)
