@@ -9,12 +9,17 @@ public class Context {
     private UserObject scope;
     private Continuation returnContinuation;
     private Continuation exceptionContinuation;
+    // Mutable cell shared by all contexts in the same reset scope.
+    // resetPromptTarget[0] is the continuation the prompt forwards to.
+    // shift reads it to find the abort target; k.apply mutates it to redirect.
+    private Continuation[] resetPromptTarget;
     private CallStackItem callStack;
 
     public Context() {
         this.self = null;
         this.returnContinuation = null;
         this.exceptionContinuation = null;
+        this.resetPromptTarget = null;
         this.scope = null;
     }
 
@@ -22,6 +27,7 @@ public class Context {
         this.self = other.self;
         this.returnContinuation = other.returnContinuation;
         this.exceptionContinuation = other.exceptionContinuation;
+        this.resetPromptTarget = other.resetPromptTarget;
         this.scope = other.scope;
         this.callStack = other.callStack;
     }
@@ -119,5 +125,19 @@ public class Context {
         Context newCtx = new Context(this);
         newCtx.exceptionContinuation = exceptionContinuation;
         return newCtx;
+    }
+
+    public Context withResetPromptTarget(Continuation[] resetPromptTarget) {
+        Context newCtx = new Context(this);
+        newCtx.resetPromptTarget = resetPromptTarget;
+        return newCtx;
+    }
+
+    public Continuation[] getResetPromptTarget() {
+        return resetPromptTarget;
+    }
+
+    public Continuation getExceptionContinuation() {
+        return exceptionContinuation;
     }
 }

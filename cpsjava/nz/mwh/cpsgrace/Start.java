@@ -247,6 +247,107 @@ public class Start {
             }));
         }
 
+        // reset(1) - delimited continuation delimiter
+        prelude.addMethod("reset(1)", Method.java((ctx, cont, _, args) -> {
+            GraceObject bodyBlock = args.get(0);
+            // Mutable cell: promptTarget[0] starts as the outer continuation.
+            // The prompt continuation reads from this cell, so k.apply can redirect it.
+            Continuation[] promptTarget = { cont };
+            Continuation promptCont = (GraceObject bodyResult) -> {
+                return promptTarget[0].apply(bodyResult);
+            };
+            // Install the prompt target in the context so shift/k.apply can access it
+            Context resetCtx = ctx.withResetPromptTarget(promptTarget);
+            return bodyBlock.requestMethod(resetCtx, promptCont, "apply", java.util.List.of(), java.util.List.of());
+        }));
+
+        // shift(1) - capture the delimited continuation up to the nearest reset
+        prelude.addMethod("shift(1)", Method.java((ctx, cont, _, args) -> {
+            GraceObject shiftBody = args.get(0);
+            Continuation[] promptTarget = ctx.getResetPromptTarget();
+            if (promptTarget == null) {
+                throw new RuntimeException("shift called outside of any reset");
+            }
+            // Read the current abort target (outer continuation of enclosing reset)
+            Continuation shiftAbortTarget = promptTarget[0];
+            // The captured continuation: from the shift point through to the prompt
+            Continuation capturedK = cont;
+            // Wrap captured continuation as a Grace object with apply(1)
+            UserObject reifiedCont = new UserObject();
+            reifiedCont.setDebugLabel("a reified continuation");
+            reifiedCont.addMethod("apply(1)", Method.java((applyCtx, applyCont, _, applyArgs) -> {
+                GraceObject resumeValue = applyArgs.get(0);
+                // Redirect the prompt to the apply caller's continuation.
+                // When the resumed computation reaches the prompt, it will
+                // forward to applyCont, making the result the return value of k.apply(v).
+                promptTarget[0] = applyCont;
+                return new PendingStep(applyCtx, capturedK, resumeValue);
+            }));
+            // Evaluate the shift body; its result goes directly to the abort target
+            // (the outer continuation of the enclosing reset), bypassing the prompt.
+            return shiftBody.requestMethod(ctx, shiftAbortTarget, "apply(1)", java.util.List.of(reifiedCont), java.util.List.of());
+        }));
+
+        // Exception object with refine(1) and raise(1)
+        UserObject exceptionObj = new UserObject();
+        exceptionObj.setDebugLabel("Exception");
+        exceptionObj.addMethod("refine(1)", Method.java((ctx, cont, self, args) -> {
+            GraceObject nameObj = args.get(0);
+            return nameObj.requestMethod(ctx, (GraceObject nameStr) -> {
+                String name = nameStr.toString();
+                UserObject refinedExn = new UserObject();
+                refinedExn.setDebugLabel(name);
+                refinedExn.addMethod("raise(1)", Method.java((raiseCtx, raiseCont, _, raiseArgs) -> {
+                    GraceObject messageObj = raiseArgs.get(0);
+                    return messageObj.requestMethod(raiseCtx, (GraceObject msgStr) -> {
+                        UserObject exnValue = new UserObject();
+                        exnValue.setDebugLabel("exception: " + name);
+                        exnValue.addMethod("message", Method.java((c, k, _, _) -> k.returning(c, msgStr)));
+                        exnValue.addMethod("name", Method.java((c, k, _, _) -> k.returning(c, new GraceString(name))));
+                        exnValue.addMethod("asString", Method.java((c, k, _, _) -> k.returning(c, new GraceString(name + ": " + msgStr))));
+                        Continuation exnK = raiseCtx.getExceptionContinuation();
+                        if (exnK != null) {
+                            return exnK.apply(exnValue);
+                        }
+                        throw new RuntimeException("Unhandled exception: " + name + ": " + msgStr);
+                    }, "asString", java.util.List.of());
+                }));
+                refinedExn.addMethod("match(1)", Method.java((matchCtx, matchCont, _, matchArgs) -> {
+                    // For now, exception types always match
+                    GraceObject target = matchArgs.get(0);
+                    return matchCont.returning(matchCtx, new GraceMatchResult(true, target));
+                }));
+                return cont.returning(ctx, refinedExn);
+            }, "asString", java.util.List.of());
+        }));
+        exceptionObj.addMethod("raise(1)", Method.java((ctx, cont, _, args) -> {
+            GraceObject messageObj = args.get(0);
+            return messageObj.requestMethod(ctx, (GraceObject msgStr) -> {
+                UserObject exnValue = new UserObject();
+                exnValue.setDebugLabel("exception");
+                exnValue.addMethod("message", Method.java((c, k, _, _) -> k.returning(c, msgStr)));
+                exnValue.addMethod("name", Method.java((c, k, _, _) -> k.returning(c, new GraceString("Exception"))));
+                exnValue.addMethod("asString", Method.java((c, k, _, _) -> k.returning(c, new GraceString("Exception: " + msgStr))));
+                Continuation exnK = ctx.getExceptionContinuation();
+                if (exnK != null) {
+                    return exnK.apply(exnValue);
+                }
+                throw new RuntimeException("Unhandled exception: " + msgStr);
+            }, "asString", java.util.List.of());
+        }));
+        prelude.addMethod("Exception", Method.java((ctx, cont, _, _) -> cont.returning(ctx, exceptionObj)));
+
+        // try(1)catch(1)
+        prelude.addMethod("try(1)catch(1)", Method.java((ctx, cont, _, args) -> {
+            GraceObject tryBlock = args.get(0);
+            GraceObject catchBlock = args.get(1);
+            Continuation exnCont = (GraceObject exnValue) -> {
+                return catchBlock.requestMethod(ctx, cont, "apply(1)", java.util.List.of(exnValue), java.util.List.of());
+            };
+            Context tryCtx = ctx.withExceptionContinuation(exnCont);
+            return tryBlock.requestMethod(tryCtx, cont, "apply", java.util.List.of(), java.util.List.of());
+        }));
+
         return prelude;
     }
     
