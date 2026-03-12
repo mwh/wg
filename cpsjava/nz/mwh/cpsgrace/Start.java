@@ -205,7 +205,7 @@ public class Start {
         prelude.addMethod("for(1)do(1)", Method.java((ctx, cont, _, args) -> {
             GraceObject iterable = args.get(0);
             GraceObject loopBlock = args.get(1);
-            return iterable.requestMethod(ctx, _ -> cont.apply(GraceObject.DONE), "each(1)", java.util.List.of(loopBlock), java.util.List.of());
+            return iterable.requestMethod(ctx, _ -> cont.apply(GraceObject.DONE), "do(1)", java.util.List.of(loopBlock), java.util.List.of());
         }));
 
         prelude.addMethod("while(1)do(1)", Method.java((ctx, cont, _, args) -> {

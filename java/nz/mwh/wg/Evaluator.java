@@ -456,7 +456,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
         lexicalParent.addMethod("for(1)do(1)", request -> {
             GraceObject iterable = request.getParts().get(0).getArgs().get(0);
             GraceObject block = request.getParts().get(1).getArgs().get(0);
-            Request eachReq = Request.unary(request.getVisitor(), "each", block);
+            Request eachReq = Request.unary(request.getVisitor(), "do", block);
             iterable.request(eachReq);
             return done;
         });

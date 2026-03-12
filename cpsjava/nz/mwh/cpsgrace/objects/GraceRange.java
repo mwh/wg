@@ -53,6 +53,7 @@ public class GraceRange implements GraceObject {
             case "asString":
                 String rangeStr = "Range(" + start + " .. " + end + " by " + step + ")";
                 return new PendingStep(ctx, returnCont, new GraceString(rangeStr));
+            case "do(1)":
             case "each(1)":
                 GraceObject funcObj = args.get(0);
                 return each(ctx, returnCont, funcObj, start);
@@ -78,7 +79,7 @@ public class GraceRange implements GraceObject {
     }
 
     private static final Set<String> METHODS = Set.of(
-        "asString", "each(1)", "..(1)", "match(1)", "|(1)"
+        "asString", "do(1)", "each(1)", "..(1)", "match(1)", "|(1)"
     );
 
     @Override

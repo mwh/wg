@@ -21,6 +21,7 @@ public class GraceRange implements GraceObject {
     public GraceObject request(Request request) {
         switch(request.getName()) {
             case "asString(0)": return new GraceString(toString());
+            case "do(1)":
             case "each(1)": {
                 GraceObject block = request.getParts().getFirst().getArgs().getFirst();
                 for (double val = start; val <= end; val += step) {

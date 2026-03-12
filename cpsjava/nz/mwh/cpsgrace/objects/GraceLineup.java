@@ -18,11 +18,8 @@ public class GraceLineup implements GraceObject {
     @Override
     public PendingStep requestMethod(Context ctx, Continuation returnCont, String methodName, List<GraceObject> args, List<GraceObject> genericArgs) {
         switch (methodName) {
+            case "do(1)":
             case "each(1)": {
-                GraceObject block = args.get(0);
-                return eachHelper(ctx, returnCont, block, 0);
-            }
-            case "do(1)": {
                 GraceObject block = args.get(0);
                 return doHelper(ctx, returnCont, block, 0);
             }
@@ -55,20 +52,12 @@ public class GraceLineup implements GraceObject {
         }
     }
 
-    private PendingStep eachHelper(Context ctx, Continuation returnCont, GraceObject block, int index) {
-        if (index >= elements.size()) {
-            return returnCont.returning(ctx, GraceObject.DONE);
-        }
-        return block.requestMethod(ctx, (_) -> eachHelper(ctx, returnCont, block, index + 1),
-            "apply(1)", List.of(elements.get(index)));
-    }
-
     private PendingStep doHelper(Context ctx, Continuation returnCont, GraceObject block, int index) {
         if (index >= elements.size()) {
             return returnCont.returning(ctx, GraceObject.DONE);
         }
         return block.requestMethod(ctx, (_) -> doHelper(ctx, returnCont, block, index + 1),
-            "apply", List.of());
+            "apply(1)", List.of(elements.get(index)));
     }
 
     private PendingStep mapHelper(Context ctx, Continuation returnCont, GraceObject block, int index, List<GraceObject> results) {
