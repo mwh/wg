@@ -97,9 +97,15 @@ method parseparts(lxr, allowBlock) {
             def part = ast.part(id, ast.cons(str, ast.nil), genericParams)
             parts := ast.cons(part, parts)
         } else {
-            def part = ast.part(id, ast.nil, genericParams)
-            parts := ast.cons(part, parts)
-            return parts.reversed(ast.nil)
+            if (lxr.current.nature == "LSQUARE") then {
+                def lineup = parseLineup(lxr)
+                def part = ast.part(id, ast.cons(lineup, ast.nil), genericParams)
+                parts := ast.cons(part, parts)
+            } else {
+                def part = ast.part(id, ast.nil, genericParams)
+                parts := ast.cons(part, parts)
+                return parts.reversed(ast.nil)
+            }
         }
     }
     parts.reversed(ast.nil)
@@ -232,6 +238,26 @@ method parseTypeExpression(lxr) {
     expr
 }
 
+method parseLineup(lxr) {
+    lxr.expectSymbol "LSQUARE"
+    lxr.advance
+    var elements := ast.nil
+    while { (lxr.current.nature != "RSQUARE") && (lxr.current.nature != "EOF") } do {
+        def elem = parseExpression(lxr)
+        elements := ast.cons(elem, elements)
+        if (lxr.current.nature == "COMMA") then {
+            lxr.advance
+        } elseif { lxr.current.nature != "RSQUARE" } then {
+            parseError(lxr.current.line, lxr.current.column, "Expected ',' or ']' in lineup, but got " ++ lxr.current.asString)
+        }
+    }
+    if (lxr.current.nature != "RSQUARE") then {
+        parseError(lxr.current.line, lxr.current.column, "Expected ']' to close lineup")
+    }
+    lxr.advance
+    ast.lineup(elements.reversed(ast.nil))
+}
+
 method parseTypeExpressionOrPattern(lxr) {
     def token = lxr.current
     if (token.nature == "IDENTIFIER") then {
@@ -265,6 +291,9 @@ method parseExpressionNoOpNoDot(lxr) {
     }
     if (token.nature == "LBRACE") then {
         return parseblock(lxr)
+    }
+    if (token.nature == "LSQUARE") then {
+        return parseLineup(lxr)
     }
     if (token.nature == "IDENTIFIER") then {
         return parselexicalRequest(lxr)

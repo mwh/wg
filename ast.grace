@@ -127,6 +127,21 @@ method interpString(val, exp, rest) {
     }
 }
 
+method lineup(elems) {
+    object {
+        def elements is public = elems
+        def kind is public = "lineup"
+
+        method asString {
+            "lineup(" ++ elements ++ ")"
+        }
+
+        method concise {
+            "l0N(" ++ elements.concise ++ ")"
+        }
+    }
+}
+
 method block(params, stmts) {
     object {
         def parameters is public = params

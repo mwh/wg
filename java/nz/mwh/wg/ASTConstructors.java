@@ -13,6 +13,7 @@ import nz.mwh.wg.ast.ImportStmt;
 import nz.mwh.wg.ast.InterfaceConstructor;
 import nz.mwh.wg.ast.InterpString;
 import nz.mwh.wg.ast.LexicalRequest;
+import nz.mwh.wg.ast.Lineup;
 import nz.mwh.wg.ast.MethodDecl;
 import nz.mwh.wg.ast.MethodSignature;
 import nz.mwh.wg.ast.NumberNode;
@@ -178,8 +179,12 @@ public class ASTConstructors {
         return new ImportStmt(source, binding);
     }
 
-    protected static DialectStmt DialectStmt(String source) {
+    protected static DialectStmt dialectStmt(String source) {
         return new DialectStmt(source);
+    }
+
+    protected static Lineup lineup(Cons<ASTNode> elements) {
+        return new Lineup(elements);
     }
 
     protected static final String charDollar = "$";

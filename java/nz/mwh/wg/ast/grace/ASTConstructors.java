@@ -118,6 +118,10 @@ public class ASTConstructors {
         return new DialectStmt(source);
     }
 
+    protected static Lineup lineup(Cons<ASTNode> elements) {
+        return new Lineup(elements);
+    }
+
     protected static final String charDollar = "$";
     protected static final String charBacklash = "\\";
     protected static final String charLF = "\n";

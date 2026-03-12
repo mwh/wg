@@ -26,6 +26,7 @@ public interface Visitor<T> {
     T visit(T context, DialectStmt node);
     T visit(T context, TypeDecl node);
     T visit(T context, InterfaceConstructor node);
+    T visit(T context, Lineup node);
 
     Iterable<String> getStack();
 }

@@ -60,6 +60,14 @@ method RBraceToken(ln, col, idx) {
     }
 }
 
+method LSquareToken(line, column) {
+    SymbolToken(line, column, "LSQUARE")
+}
+
+method RSquareToken(line, column) {
+    SymbolToken(line, column, "RSQUARE")
+}
+
 method CommaToken(line, column) {
     SymbolToken(line, column, "COMMA")
 }
@@ -286,7 +294,7 @@ method lexer(code) {
                         return LGenericToken(line, column)
                     }
                 }
-                parseError(line, column, "Expected '[' after '['")
+                return LSquareToken(line, column)
             }
 
             if (c == "]") then {
@@ -297,7 +305,7 @@ method lexer(code) {
                         return RGenericToken(line, column)
                     }
                 }
-                parseError(line, column, "Expected ']' after ']'")
+                return RSquareToken(line, column)
             }
 
             if ((c > "z") && (c < "|")) then {
@@ -571,4 +579,10 @@ method digitToNumber(token, c) {
         return 0
     }
     parseError(token.line, token.column, "Unexpected digit: " ++ c.asString)
+}
+
+
+method parseError(line, column, message) {
+    print("Lexical error: " ++ message ++ " at " ++ modulePrefix ++ line ++ ":" ++ column)
+    Exception.refine "LexicalError".raise(modulePrefix ++ line ++ ":" ++ column ++ ": " ++ message)
 }

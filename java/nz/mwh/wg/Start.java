@@ -22,6 +22,7 @@ public class Start {
         boolean inlineImports = false;
         List<String> toInline = new ArrayList<>();
         boolean waitingForImport = false;
+        boolean runString = false;
         for (String arg : args) {
             if (arg.equals("-p")) {
                 printAST = true;
@@ -33,6 +34,8 @@ public class Start {
                 inlineImports = true;
             } else if (arg.equals("-I")) {
                 waitingForImport = true;
+            } else if (arg.equals("-e")) {
+                runString = true;
             } else if (waitingForImport) {
                 toInline.add(arg);
                 waitingForImport = false;
@@ -56,12 +59,17 @@ public class Start {
             }
         }
         if (filename == null) {
-            System.out.println("Usage: java nz.mwh.wg.Start [--help] [-p] [-i] [-u other.lang] FILE.grace");
+            System.out.println("Usage: java nz.mwh.wg.Start [--help] [-p] [-i] [-e] [-u other.lang] CODE-FILE");
             System.exit(0);
         }
         try {
-            String source = Files.readString(Path.of(filename));
-            ASTNode ast = Parser.parse(Path.of(filename).getFileName().toString(), source);
+            ASTNode ast;
+            if (runString) {
+                ast = Parser.parse("<string>", filename);
+            } else {
+                String source = Files.readString(Path.of(filename));
+                ast = Parser.parse(Path.of(filename).getFileName().toString(), source);
+            }
             if (inlineImports) {
                 inlineImports((ObjectConstructor) ast);
             } else if (toInline.size() > 0) {

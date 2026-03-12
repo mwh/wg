@@ -262,6 +262,11 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
     }
 
     @Override
+    public GraceObject visit(GraceObject context, Lineup node) {
+        return new GraceLineup(node.getElements().stream().map(x -> visit(context, x)).collect(Collectors.toList()));
+    }
+
+    @Override
     public GraceObject visit(GraceObject context, ImportStmt node) {
         if (context instanceof BaseObject) {
             BaseObject object = (BaseObject) context;
