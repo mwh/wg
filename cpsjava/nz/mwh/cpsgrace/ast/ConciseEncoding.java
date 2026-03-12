@@ -106,6 +106,10 @@ public class ConciseEncoding {
     protected static MethSig m0S(ConsList<Part> parts, ConsList<ASTNode> returnType) {
         return new MethSig(parts.asList(), returnType.single());
     }
+
+    protected static Lineup l0N(ConsList<ASTNode> elements) {
+        return new Lineup(elements.asList());
+    }
     
     protected static String s4F(String pre, String mid, String post) {
         return pre + mid + post;

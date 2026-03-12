@@ -160,6 +160,11 @@ public class Converter {
                 ASTNode returnType = convertNode(returnTypeObj);
                 return new MethSig(parts.stream().map(x -> (Part) x).toList(), returnType);
             }
+            case "lineup" -> {
+                GraceObject elemsObj = requestSync(node, "elements", List.of());
+                List<ASTNode> elems = convertNodeList(elemsObj);
+                return new Lineup(elems);
+            }
             case "nil" -> {
                 // For optional values - lists are converted below
                 return null;
