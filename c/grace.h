@@ -216,6 +216,17 @@ GraceObject *grace_block_new(ASTNode *params, ASTNode *body,
                               GraceObject *scope, GraceObject *self_obj,
                               Cont *return_k, Cont *except_k);
 
+/*
+ * GraceLineup  (immutable sequence of GraceObject*)
+ *  */
+typedef struct {
+    GraceObject  base;
+    int          n;
+    GraceObject **elems;  /* malloc'd array of n elements */
+} GraceLineup;
+extern const GraceVTable grace_lineup_vtable;
+GraceObject *grace_lineup_new(GraceObject **elems, int n);
+
 /* 
  * GraceUserObject (objects created by `object { ... }`, modules, scope frames)
  *  */

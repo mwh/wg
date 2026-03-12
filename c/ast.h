@@ -55,6 +55,7 @@
 #define NK_IFACE_CONS  19
 #define NK_METH_SIG    20
 #define NK_CONS        21
+#define NK_LINEUP      22
 /* NK_NIL is represented by the NULL pointer */
 
 /*  ASTNode  */
@@ -176,5 +177,8 @@ ASTNode *m0S(ASTNode *parts, ASTNode *rettype);
 
 /* t0D  typeDecl(name, genericParams, value) */
 ASTNode *t0D(const char *name, ASTNode *gen, ASTNode *val);
+
+/* l0N  lineup(elements) - a1 = cons list of element expressions */
+ASTNode *l0N(ASTNode *elements);
 
 #endif /* AST_H */

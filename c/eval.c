@@ -93,6 +93,52 @@ static void eac_cleanup(Cont *c) {
 }
 
 /*
+ * LineupBuildCont: evaluate a cons-list of element nodes into an array,
+ * then construct a GraceLineup.
+ */
+typedef struct LineupBuildCont {
+    Cont         base;
+    ASTNode     *rem;    /* next cons cell to evaluate */
+    GraceObject **arr;   /* accumulator */
+    int          idx;    /* how many filled */
+    int          total;
+    Env         *env;
+    Cont        *k;
+} LineupBuildCont;
+
+static PendingStep *lineup_build_apply(Cont *c, GraceObject *v) {
+    LineupBuildCont *lb = (LineupBuildCont *)c;
+    lb->arr[lb->idx++] = v;
+    lb->rem = lb->rem->a2;
+    if (lb->idx == lb->total || lb->rem == NULL) {
+        GraceObject **arr = lb->arr;
+        int n = lb->idx;
+        Cont *k = cont_retain(lb->k);
+        lb->arr = NULL;
+        cont_consumed(c);
+        PendingStep *r = cont_apply(k, grace_lineup_new(arr, n));
+        cont_release(k);
+        return r;
+    }
+    return eval_node(lb->rem->a1, lb->env, c);
+}
+
+static void lineup_build_trace(Cont *c) {
+    LineupBuildCont *lb = (LineupBuildCont *)c;
+    gc_trace_env(lb->env);
+    for (int i = 0; i < lb->idx; i++)
+        gc_mark_grey(lb->arr[i]);
+    gc_trace_cont(lb->k);
+}
+
+static void lineup_build_cleanup(Cont *c) {
+    LineupBuildCont *lb = (LineupBuildCont *)c;
+    env_release(lb->env);
+    cont_release(lb->k);
+    free(lb->arr);
+}
+
+/*
  * Method declaration closure
  */
 typedef struct {
@@ -679,6 +725,26 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
             env->return_k,
             env->except_k);
         return cont_apply(k, blk);
+    }
+
+    /*  Lineup  */
+    case NK_LINEUP: {
+        ASTNode *elems = node->a1;  /* cons list of element ASTNodes */
+        int n = list_length(elems);
+        if (n == 0)
+            return cont_apply(k, grace_lineup_new(NULL, 0));
+        GraceObject **arr = malloc((size_t)n * sizeof(GraceObject *));
+        LineupBuildCont *lb = CONT_ALLOC(LineupBuildCont);
+        lb->base.apply    = lineup_build_apply;
+        lb->base.gc_trace = lineup_build_trace;
+        lb->base.cleanup  = lineup_build_cleanup;
+        lb->rem   = elems;
+        lb->arr   = arr;
+        lb->idx   = 0;
+        lb->total = n;
+        lb->env   = env_retain(env);
+        lb->k     = cont_retain(k);
+        return eval_node(elems->a1, env, (Cont *)lb);
     }
 
     /*  lexical request  */

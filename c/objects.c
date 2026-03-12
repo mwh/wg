@@ -551,6 +551,192 @@ GraceObject *grace_block_new(ASTNode *params, ASTNode *body, GraceObject *scope,
     return (GraceObject *)blk;
 }
 
+/*  GraceLineup  */
+
+/* Iteration continuation */
+typedef struct {
+    int          idx;
+    GraceObject *lineup;   /* keeps lineup alive during GC */
+    GraceObject *block;
+    Env         *env;
+    Cont        *k;
+} LineupIterState;
+typedef struct { Cont base; LineupIterState *st; } LineupIterCont;
+
+static void lineup_iter_trace(Cont *c) {
+    LineupIterCont *lc = (LineupIterCont *)c;
+    LineupIterState *st = lc->st;
+    gc_mark_grey(st->lineup);
+    gc_mark_grey(st->block);
+    gc_trace_env(st->env);
+    gc_trace_cont(st->k);
+}
+
+static PendingStep *lineup_iter_next(Cont *c, GraceObject *v) {
+    (void)v;
+    LineupIterCont *lc = (LineupIterCont *)c;
+    LineupIterState *st = lc->st;
+    st->idx++;
+    GraceLineup *lu = (GraceLineup *)st->lineup;
+    if (st->idx >= lu->n) {
+        Cont *k = cont_retain(st->k);
+        cont_consumed(c);
+        env_release(st->env);
+        cont_release(st->k);
+        free(st);
+        PendingStep *r = cont_apply(k, grace_done);
+        cont_release(k);
+        return r;
+    }
+    GraceObject *a[1] = { lu->elems[st->idx] };
+    LineupIterCont *nc = CONT_ALLOC(LineupIterCont);
+    nc->base.apply    = lineup_iter_next;
+    nc->base.gc_trace = lineup_iter_trace;
+    nc->st = st;
+    cont_consumed(c);
+    return grace_request(st->block, st->env, "apply(1)", a, 1, (Cont *)nc);
+}
+
+/* asString continuation */
+typedef struct {
+    int          idx;       /* index of element whose asString we're waiting for */
+    GraceObject *lineup;
+    char        *so_far;
+    Env         *env;
+    Cont        *k;
+} LineupAsStrState;
+typedef struct { Cont base; LineupAsStrState *st; } LineupAsStrCont;
+
+static void lineup_asstr_trace(Cont *c) {
+    LineupAsStrCont *lc = (LineupAsStrCont *)c;
+    LineupAsStrState *st = lc->st;
+    gc_mark_grey(st->lineup);
+    gc_trace_env(st->env);
+    gc_trace_cont(st->k);
+}
+
+static PendingStep *lineup_asstr_next(Cont *c, GraceObject *str_v) {
+    LineupAsStrCont *lc = (LineupAsStrCont *)c;
+    LineupAsStrState *st = lc->st;
+    GraceLineup *lu = (GraceLineup *)st->lineup;
+    const char *part = grace_string_val(str_v);
+    const char *sep  = (st->idx == 0) ? "" : ", ";
+    char *next_sf = str_fmt("%s%s%s", st->so_far, sep, part);
+    free(st->so_far);
+    st->so_far = next_sf;
+    st->idx++;
+    if (st->idx >= lu->n) {
+        char *result = str_fmt("[%s]", st->so_far);
+        Cont *k = cont_retain(st->k);
+        env_release(st->env);
+        cont_release(st->k);
+        free(st->so_far);
+        free(st);
+        cont_consumed(c);
+        PendingStep *r = cont_apply(k, grace_string_new(result));
+        cont_release(k);
+        return r;
+    }
+    LineupAsStrCont *nc = CONT_ALLOC(LineupAsStrCont);
+    nc->base.apply    = lineup_asstr_next;
+    nc->base.gc_trace = lineup_asstr_trace;
+    nc->st = st;
+    cont_consumed(c);
+    return grace_request(lu->elems[st->idx], st->env, "asString(0)", NULL, 0, (Cont *)nc);
+}
+
+/* vtable dispatch */
+static PendingStep *lineup_request(GraceObject *self, Env *env, const char *name,
+                                    GraceObject **args, int nargs, Cont *k) {
+    (void)nargs;
+    GraceLineup *lu = (GraceLineup *)self;
+
+    if (strcmp(name, "do(1)") == 0 || strcmp(name, "each(1)") == 0) {
+        if (lu->n == 0) return cont_apply(k, grace_done);
+        LineupIterState *st = malloc(sizeof(LineupIterState));
+        st->idx    = 0;
+        st->lineup = self;
+        st->block  = args[0];
+        st->env    = env_retain(env);
+        st->k      = cont_retain(k);
+        LineupIterCont *lc = CONT_ALLOC(LineupIterCont);
+        lc->base.apply    = lineup_iter_next;
+        lc->base.gc_trace = lineup_iter_trace;
+        lc->st = st;
+        GraceObject *a[1] = { lu->elems[0] };
+        return grace_request(args[0], env, "apply(1)", a, 1, (Cont *)lc);
+    }
+
+    if (strcmp(name, "size(0)") == 0)
+        return cont_apply(k, grace_number_new((double)lu->n));
+
+    if (strcmp(name, "at(1)") == 0) {
+        int idx = (int)grace_number_val(args[0]) - 1;
+        if (idx < 0 || idx >= lu->n)
+            grace_raise(env, "BoundsError", "lineup index %d out of range (size %d)",
+                        idx + 1, lu->n);
+        return cont_apply(k, lu->elems[idx]);
+    }
+
+    if (strcmp(name, "++(1)") == 0) {
+        GraceObject *other = args[0];
+        if (other->vt != &grace_lineup_vtable)
+            grace_raise(env, "TypeError", "++ requires a lineup argument");
+        GraceLineup *b = (GraceLineup *)other;
+        int n2 = lu->n + b->n;
+        GraceObject **arr = malloc((size_t)(n2 > 0 ? n2 : 1) * sizeof(GraceObject *));
+        for (int i = 0; i < lu->n; i++) arr[i]          = lu->elems[i];
+        for (int i = 0; i < b->n;  i++) arr[lu->n + i]  = b->elems[i];
+        return cont_apply(k, grace_lineup_new(arr, n2));
+    }
+
+    if (strcmp(name, "asString(0)") == 0) {
+        if (lu->n == 0) return cont_apply(k, grace_string_new("[]"));
+        LineupAsStrState *st = malloc(sizeof(LineupAsStrState));
+        st->idx    = 0;
+        st->lineup = self;
+        st->so_far = str_dup("");
+        st->env    = env_retain(env);
+        st->k      = cont_retain(k);
+        LineupAsStrCont *lc = CONT_ALLOC(LineupAsStrCont);
+        lc->base.apply    = lineup_asstr_next;
+        lc->base.gc_trace = lineup_asstr_trace;
+        lc->st = st;
+        return grace_request(lu->elems[0], env, "asString(0)", NULL, 0, (Cont *)lc);
+    }
+
+    if (strcmp(name, "==(1)") == 0)
+        return cont_apply(k, grace_bool(self == args[0]));
+    if (strcmp(name, "!=(1)") == 0)
+        return cont_apply(k, grace_bool(self != args[0]));
+
+    grace_fatal("No method '%s' on lineup", name);
+}
+
+static const char *lineup_describe(GraceObject *self) { (void)self; return "a lineup"; }
+
+static void lineup_trace(GraceObject *self) {
+    GraceLineup *lu = (GraceLineup *)self;
+    for (int i = 0; i < lu->n; i++)
+        gc_mark_grey(lu->elems[i]);
+}
+
+static void lineup_sweep_free(GraceObject *self) {
+    GraceLineup *lu = (GraceLineup *)self;
+    free(lu->elems);
+    lu->elems = NULL;
+}
+
+const GraceVTable grace_lineup_vtable = { lineup_request, lineup_describe, lineup_trace, lineup_sweep_free };
+
+GraceObject *grace_lineup_new(GraceObject **elems, int n) {
+    GraceLineup *lu = (GraceLineup *)gc_alloc(sizeof(GraceLineup));
+    lu->base.vt = &grace_lineup_vtable;
+    lu->n       = n;
+    lu->elems   = elems;   /* takes ownership of the malloc'd array */
+    return (GraceObject *)lu;
+}
+
 /*  GraceUserObject  */
 static PendingStep *user_request(GraceObject *self, Env *env, const char *name,
                                   GraceObject **args, int nargs, Cont *k) {

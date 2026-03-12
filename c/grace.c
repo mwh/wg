@@ -201,6 +201,10 @@ ASTNode *t0D(const char *name, ASTNode *gen, ASTNode *val) {
     ASTNode *n = ast_alloc(NK_TYPE_DECL);
     n->strval = name; n->a1 = gen; n->a2 = val; return n;
 }
+ASTNode *l0N(ASTNode *elements) {
+    ASTNode *n = ast_alloc(NK_LINEUP);
+    n->a1 = elements; return n;
+}
 
 /* 
  * Trampoline

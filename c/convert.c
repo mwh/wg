@@ -360,6 +360,13 @@ ASTNode *grace_ast_to_astnode(GraceObject *obj, Env *env) {
         return d0S(src ? src : "");
     }
 
+    /*  Lineup  */
+    if (strcmp(kind, "lineup") == 0) {
+        GraceObject *elems_obj = get_field(obj, env, "elements");
+        ASTNode *elems = convert_list(elems_obj, env);
+        return l0N(elems);
+    }
+
     /* Unknown kind - warn and return NULL */
     fprintf(stderr, "grace_ast_to_astnode: unknown kind '%s'\n", kind);
     return NULL;
