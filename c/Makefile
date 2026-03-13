@@ -40,5 +40,27 @@ baked/parser.o: baked/parser.c ast.h
 baked/%.o: baked/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+onefile.c: $(SRCS)
+	cat ast.h grace.h gc.h convert.c eval.c grace.c gc.c objects.c prelude.c baked/*.c main.c > bigfile.c
+	sed -i.bak -e '/#include "/d' bigfile.c
+	rm bigfile.c.bak
+
+onefile: onefile.c
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+
+onefile-template.c: $(INTERP_SRCS) program.c
+	cat ast.h grace.h gc.h convert.c eval.c grace.c gc.c objects.c prelude.c > $@
+	sed -i.bak -e '/#include "/d' $@
+	sed -e 's/program_ast = .*/program_ast = o0C(nil, nil);' program.c >> $@
+	rm $@.bak
+
+onefile-program.c: $(INTERP_SRCS) program.c
+	cat ast.h grace.h gc.h convert.c eval.c grace.c gc.c objects.c prelude.c program.c > $@
+	sed -i.bak -e '/#include "/d' $@
+	rm $@.bak
+
+onefile-program: onefile-program.c
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+
 clean:
 	rm -f $(OBJS) grace program
