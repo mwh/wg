@@ -37,6 +37,7 @@ static GraceObject *eval_baked(ASTNode *ast, Env *env) {
     cc->base.gc_trace = NULL;
     cc->base.cleanup = NULL;
     cc->result = grace_done;
+    cont_retain((Cont *)cc);
     trampoline(eval_node(ast, env, (Cont *)cc));
     GraceObject *result = cc->result;
     cont_release((Cont *)cc);
@@ -123,8 +124,14 @@ int main(int argc, char *argv[]) {
     result_cc->base.gc_trace = NULL;
     result_cc->base.cleanup = NULL;
     result_cc->result = grace_done;
+    cont_retain((Cont *)result_cc);
     trampoline(eval_node(program, env, (Cont *)result_cc));
     cont_release((Cont *)result_cc);
+
+    /* Final cleanup: force a full GC to free objects that may release conts,
+     * then sweep any abandoned continuations that refcounting missed. */
+    gc_collect();
+    gc_sweep_conts();
 
     free(source);
     return 0;

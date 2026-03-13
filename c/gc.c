@@ -22,6 +22,12 @@ static GraceObject *gc_sweep_cur = NULL;
 static GraceObject **gc_root_stack[GC_MAX_ROOTS];
 static int gc_root_sp = 0;
 
+/* Cont root stack: protects Cont* held on the C stack during nested
+ * trampolines so gc_sweep_conts does not free them prematurely. */
+#define GC_MAX_CONT_ROOTS 16
+static Cont **gc_cont_root_stack[GC_MAX_CONT_ROOTS];
+static int gc_cont_root_sp = 0;
+
 /* Trampoline nesting depth */
 static int gc_tramp_depth = 0;
 
@@ -90,6 +96,17 @@ void gc_pop_roots(int n) {
     if (gc_root_sp < 0) gc_root_sp = 0;
 }
 
+void gc_push_cont_root(Cont **root) {
+    if (gc_cont_root_sp >= GC_MAX_CONT_ROOTS) {
+        fprintf(stderr, "gc_push_cont_root: stack overflow\n");
+        exit(1);
+    }
+    gc_cont_root_stack[gc_cont_root_sp++] = root;
+}
+void gc_pop_cont_root(void) {
+    if (gc_cont_root_sp > 0) gc_cont_root_sp--;
+}
+
 /*
  * Trampoline depth
  */
@@ -114,13 +131,17 @@ void gc_mark_grey(GraceObject *obj) {
 /* Trace a continuation: call its gc_trace if set.
  * Uses an epoch check so that shared/repeated continuations are only traced
  * once per GC cycle - this prevents O(chain_length) work when the same
- * continuation is reachable from many live objects (common in deep CPS stacks). */
+ * continuation is reachable from many live objects (common in deep CPS stacks).
+ * Always sets the epoch even when gc_trace is NULL, so that the GC cont sweep
+ * correctly identifies conts without trace callbacks as reachable. */
 void gc_trace_cont(Cont *k) {
-    if (!k || !k->gc_trace) return;
+    if (!k) return;
     if (k->gc_epoch == gc_trace_epoch) return;  /* already traced this cycle */
     k->gc_epoch = gc_trace_epoch;
-    k->gc_trace(k);
+    if (k->gc_trace) k->gc_trace(k);
 }
+
+unsigned int gc_current_epoch(void) { return gc_trace_epoch; }
 
 /* Trace an environment: mark receiver/scope and trace continuations */
 void gc_trace_env(Env *env) {
@@ -189,7 +210,12 @@ static void trace_roots(void) {
         GraceObject *obj = *gc_root_stack[i];
         gc_mark_grey(obj);
     }
-    /* 2. Extra root tracers (module registry, current step, etc.) */
+    /* 2. Cont root stack: C-stack-held continuations */
+    for (int i = 0; i < gc_cont_root_sp; i++) {
+        Cont *k = *gc_cont_root_stack[i];
+        gc_trace_cont(k);
+    }
+    /* 3. Extra root tracers (module registry, current step, etc.) */
     for (int i = 0; i < gc_n_extra_tracers; i++)
         gc_extra_root_tracers[i]();
 }
@@ -263,6 +289,58 @@ static void gc_print_heap_summary(void) {
 }
 
 /*
+ * Continuation sweep - free abandoned heap-allocated continuations
+ */
+
+/* Global doubly-linked list sentinel for all CONT_ALLOC'd continuations. */
+Cont gc_cont_sentinel = {
+    .apply = NULL, .gc_trace = NULL, .cleanup = NULL,
+    .gc_epoch = 0, .refcount = CONT_REFCOUNT_STATIC, .consumed = 0,
+    .gc_cont_prev = &gc_cont_sentinel, .gc_cont_next = &gc_cont_sentinel
+};
+
+void gc_cont_unlink(Cont *k) {
+    if (k->gc_cont_prev) k->gc_cont_prev->gc_cont_next = k->gc_cont_next;
+    if (k->gc_cont_next) k->gc_cont_next->gc_cont_prev = k->gc_cont_prev;
+    k->gc_cont_prev = k->gc_cont_next = NULL;
+}
+
+/* Sweep the global cont list for abandoned continuations (those not traced
+ * in the current GC cycle).  Two-phase approach:
+ * Phase 1: detach all abandoned conts and set refcount to STATIC sentinel
+ *          to prevent cascading double-frees during cleanup.
+ * Phase 2: call all cleanup functions (may touch other swept conts).
+ * Phase 3: free all detached conts. */
+void gc_sweep_conts(void) {
+    Cont *to_free = NULL;
+    Cont *c = gc_cont_sentinel.gc_cont_next;
+    while (c != &gc_cont_sentinel) {
+        Cont *next = c->gc_cont_next;
+        if (c->gc_epoch != gc_trace_epoch && c->refcount < CONT_REFCOUNT_STATIC) {
+            /* Unlink from main list */
+            c->gc_cont_prev->gc_cont_next = c->gc_cont_next;
+            c->gc_cont_next->gc_cont_prev = c->gc_cont_prev;
+            /* Chain into to_free list via gc_cont_next */
+            c->gc_cont_next = to_free;
+            c->gc_cont_prev = NULL;
+            c->refcount = CONT_REFCOUNT_STATIC;  /* prevent cascading frees */
+            to_free = c;
+        }
+        c = next;
+    }
+    /* Phase 2: run all cleanup functions while memory is still valid. */
+    for (Cont *p = to_free; p; p = p->gc_cont_next) {
+        if (p->cleanup) { p->cleanup(p); p->cleanup = NULL; }
+    }
+    /* Phase 3: free all detached conts. */
+    while (to_free) {
+        Cont *next = to_free->gc_cont_next;
+        free(to_free);
+        to_free = next;
+    }
+}
+
+/*
  * Sweeping
  */
 
@@ -275,6 +353,10 @@ static void gc_begin_sweep(void) {
 }
 
 static void gc_finish_cycle(void) {
+    /* Sweep abandoned continuations that were not traced in this GC cycle.
+     * Safe because GC only runs at trampoline depth <= 1 (between steps),
+     * where all live conts are reachable via GC tracing. */
+    gc_sweep_conts();
     size_t surviving = gc_statistics.heap_size;
     gc_next_threshold = (surviving * 2 > GC_MIN_THRESHOLD)
                         ? surviving * 2 : GC_MIN_THRESHOLD;

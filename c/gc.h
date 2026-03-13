@@ -46,6 +46,12 @@ void gc_push_root(GraceObject **root);
 void gc_pop_root(void);
 void gc_pop_roots(int n);
 
+/* Cont root stack: protect Cont* held on the C stack during nested
+ * trampolines from being freed by gc_sweep_conts. */
+struct Cont;
+void gc_push_cont_root(struct Cont **root);
+void gc_pop_cont_root(void);
+
 /*
  * Trampoline-depth tracking
  */
@@ -60,6 +66,7 @@ void gc_trampoline_exit(void);
 /* Force a complete collection immediately (finishes any in-progress cycle).
  * Normal operation uses gc_maybe_collect() which runs incrementally. */
 void gc_collect(void);
+void gc_sweep_conts(void);
 
 /* Advance incremental marking by one slice, or start a new cycle if the
  * allocation threshold has been reached.  Call from the trampoline loop. */
@@ -79,6 +86,10 @@ void gc_write_barrier(GraceObject *new_val);
 
 /* Mark a single object grey if it is white.  Safe to call with NULL. */
 void gc_mark_grey(GraceObject *obj);
+
+/* Return the current GC trace epoch.  Used by CONT_ALLOC to stamp new
+ * continuations so they survive any in-progress collection cycle. */
+unsigned int gc_current_epoch(void);
 
 /* Trace a Cont chain: calls cont->gc_trace if set. */
 void gc_trace_cont(struct Cont *k);

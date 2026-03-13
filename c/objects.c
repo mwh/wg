@@ -53,9 +53,18 @@ typedef struct { Cont base; RangeIterState *st; } RangeIterCont;
 static void range_iter_trace(Cont *c) {
     RangeIterCont *rc = (RangeIterCont *)c;
     RangeIterState *st = rc->st;
+    if (!st) return;
     gc_mark_grey(st->block);
     gc_trace_env(st->env);
     gc_trace_cont(st->k);
+}
+static void range_iter_cleanup(Cont *c) {
+    RangeIterCont *rc = (RangeIterCont *)c;
+    RangeIterState *st = rc->st;
+    if (!st) return;
+    env_release(st->env);
+    cont_release_abandon(st->k);
+    free(st);
 }
 static PendingStep *range_iter_next(Cont *c, GraceObject *v) {
     (void)v;
@@ -64,6 +73,7 @@ static PendingStep *range_iter_next(Cont *c, GraceObject *v) {
     st->current += 1.0;
     if (st->current > st->end_val) {
         Cont *k = cont_retain(st->k);
+        rc->st = NULL;
         cont_consumed(c);
         env_release(st->env);
         cont_release(st->k);
@@ -75,7 +85,9 @@ static PendingStep *range_iter_next(Cont *c, GraceObject *v) {
     GraceObject *num = grace_number_new(st->current);
     GraceObject *a[1] = {num};
     RangeIterCont *nc = CONT_ALLOC(RangeIterCont);
-    nc->base.apply = range_iter_next; nc->base.gc_trace = range_iter_trace; nc->st = st;
+    nc->base.apply = range_iter_next; nc->base.gc_trace = range_iter_trace;
+    nc->base.cleanup = range_iter_cleanup; nc->st = st;
+    rc->st = NULL;
     cont_consumed(c);
     return grace_request(st->block, st->env, "apply(1)", a, 1, (Cont *)nc);
 }
@@ -91,7 +103,8 @@ static PendingStep *range_do_fn(GraceObject *self, Env *env, GraceObject **args,
     GraceObject *num = grace_number_new(st->current);
     GraceObject *a[1] = {num};
     RangeIterCont *rc = CONT_ALLOC(RangeIterCont);
-    rc->base.apply = range_iter_next; rc->base.gc_trace = range_iter_trace; rc->st = st;
+    rc->base.apply = range_iter_next; rc->base.gc_trace = range_iter_trace;
+    rc->base.cleanup = range_iter_cleanup; rc->st = st;
     return grace_request(args[0], env, "apply(1)", a, 1, (Cont *)rc);
 }
 
@@ -101,9 +114,18 @@ typedef struct { Cont base; RevIterState *st; } RevIterCont;
 static void rev_iter_trace(Cont *c) {
     RevIterCont *rc = (RevIterCont *)c;
     RevIterState *st = rc->st;
+    if (!st) return;
     gc_mark_grey(st->block);
     gc_trace_env(st->env);
     gc_trace_cont(st->k);
+}
+static void rev_iter_cleanup(Cont *c) {
+    RevIterCont *rc = (RevIterCont *)c;
+    RevIterState *st = rc->st;
+    if (!st) return;
+    env_release(st->env);
+    cont_release_abandon(st->k);
+    free(st);
 }
 static PendingStep *rev_iter_next(Cont *c, GraceObject *v) {
     (void)v;
@@ -112,6 +134,7 @@ static PendingStep *rev_iter_next(Cont *c, GraceObject *v) {
     st->current -= 1.0;
     if (st->current < st->start_val) {
         Cont *k = cont_retain(st->k);
+        rc->st = NULL;
         cont_consumed(c);
         env_release(st->env);
         cont_release(st->k);
@@ -123,7 +146,9 @@ static PendingStep *rev_iter_next(Cont *c, GraceObject *v) {
     GraceObject *num = grace_number_new(st->current);
     GraceObject *a[1] = {num};
     RevIterCont *nc = CONT_ALLOC(RevIterCont);
-    nc->base.apply = rev_iter_next; nc->base.gc_trace = rev_iter_trace; nc->st = st;
+    nc->base.apply = rev_iter_next; nc->base.gc_trace = rev_iter_trace;
+    nc->base.cleanup = rev_iter_cleanup; nc->st = st;
+    rc->st = NULL;
     cont_consumed(c);
     return grace_request(st->block, st->env, "apply(1)", a, 1, (Cont *)nc);
 }
@@ -139,7 +164,8 @@ static PendingStep *range_revdo_fn(GraceObject *self, Env *env, GraceObject **ar
     GraceObject *num = grace_number_new(st->current);
     GraceObject *a[1] = {num};
     RevIterCont *rc = CONT_ALLOC(RevIterCont);
-    rc->base.apply = rev_iter_next; rc->base.gc_trace = rev_iter_trace; rc->st = st;
+    rc->base.apply = rev_iter_next; rc->base.gc_trace = rev_iter_trace;
+    rc->base.cleanup = rev_iter_cleanup; rc->st = st;
     return grace_request(args[0], env, "apply(1)", a, 1, (Cont *)rc);
 }
 
@@ -147,7 +173,7 @@ static PendingStep *range_asstr_fn(GraceObject *self, Env *env, GraceObject **ar
                                     int nargs, Cont *k, void *data) {
     (void)self;(void)env;(void)args;(void)nargs;
     RangeData *d = (RangeData *)data;
-    return cont_apply(k, grace_string_new(str_fmt("%.0f..%.0f", d->start, d->end)));
+    return cont_apply(k, grace_string_take(str_fmt("%.0f..%.0f", d->start, d->end)));
 }
 
 GraceObject *grace_range_new(double start, double end) {
@@ -208,7 +234,7 @@ static PendingStep *number_request(GraceObject *self, Env *env,
             snprintf(buf, sizeof(buf), "%.0f", v);
         else
             snprintf(buf, sizeof(buf), "%g", v);
-        return cont_apply(k, grace_string_new(str_dup(buf)));
+        return cont_apply(k, grace_string_new(buf));
     }
     if (strcmp(name,"match(1)")==0) {
         if (args[0]->vt == &grace_number_vtable)
@@ -249,7 +275,7 @@ static void concat_asstr_trace(Cont *c) {
 }
 static void concat_asstr_cleanup(Cont *c) {
     ConcatAsStrCont *cc = (ConcatAsStrCont *)c;
-    cont_release(cc->k);
+    cont_release_abandon(cc->k);
 }
 static PendingStep *concat_asstr_apply(Cont *c, GraceObject *v) {
     ConcatAsStrCont *cc = (ConcatAsStrCont *)c;
@@ -257,7 +283,7 @@ static PendingStep *concat_asstr_apply(Cont *c, GraceObject *v) {
                     ? grace_string_val(v) : "";
     Cont *k = cont_retain(cc->k);
     cont_consumed(c);
-    PendingStep *r = cont_apply(k, grace_string_new(str_cat(cc->prefix, rhs)));
+    PendingStep *r = cont_apply(k, grace_string_take(str_cat(cc->prefix, rhs)));
     cont_release(k);
     return r;
 }
@@ -292,7 +318,7 @@ static PendingStep *string_request(GraceObject *self, Env *env,
             cc->k          = cont_retain(k);
             return grace_request(args[0], env, "asString(0)", NULL, 0, (Cont *)cc);
         }
-        return cont_apply(k, grace_string_new(str_cat(v, rhs)));
+        return cont_apply(k, grace_string_take(str_cat(v, rhs)));
     }
     if (strcmp(name,"size(0)")==0)
         return cont_apply(k, grace_number_new((double)len));
@@ -301,7 +327,7 @@ static PendingStep *string_request(GraceObject *self, Env *env,
         if (idx < 0 || idx >= (int)len)
             grace_raise(env, "BoundsError", "String index %d out of bounds", idx+1);
         char ch[2] = { v[idx], 0 };
-        return cont_apply(k, grace_string_new(str_dup(ch)));
+        return cont_apply(k, grace_string_new(ch));
     }
     if (strcmp(name,"firstCodepoint(0)")==0) {
         if (len == 0) grace_raise(env, "BoundsError", "Empty string");
@@ -315,13 +341,13 @@ static PendingStep *string_request(GraceObject *self, Env *env,
         if (from >= to) return cont_apply(k, grace_string_new(""));
         char *sub = malloc(to - from + 1);
         memcpy(sub, v + from, to - from); sub[to - from] = 0;
-        return cont_apply(k, grace_string_new(sub));
+        return cont_apply(k, grace_string_take(sub));
     }
     if (strcmp(name,"replace(1)with(1)")==0) {
         const char *pat = grace_string_val(args[0]);
         const char *rep = grace_string_val(args[1]);
         size_t plen = strlen(pat), rlen = strlen(rep);
-        if (plen == 0) return cont_apply(k, grace_string_new(str_dup(v)));
+        if (plen == 0) return cont_apply(k, grace_string_new(v));
         size_t count = 0; const char *p = v;
         while ((p = strstr(p, pat)) != NULL) { count++; p += plen; }
         size_t newlen = len + count * rlen - count * plen;
@@ -332,7 +358,7 @@ static PendingStep *string_request(GraceObject *self, Env *env,
             memcpy(out, rep, rlen); out += rlen; p = found + plen;
         }
         strcpy(out, p);
-        return cont_apply(k, grace_string_new(res));
+        return cont_apply(k, grace_string_take(res));
     }
     if (strcmp(name,"==(1)")==0) return cont_apply(k, grace_bool(strcmp(v, grace_string_val(args[0])) == 0));
     if (strcmp(name,"!=(1)")==0) return cont_apply(k, grace_bool(strcmp(v, grace_string_val(args[0])) != 0));
@@ -364,13 +390,13 @@ static PendingStep *string_request(GraceObject *self, Env *env,
         while (e > s && (e[-1] == ' ' || e[-1] == '\t' || e[-1] == '\n' || e[-1] == '\r')) e--;
         size_t tl = e - s; char *t = malloc(tl + 1);
         memcpy(t, s, tl); t[tl] = 0;
-        return cont_apply(k, grace_string_new(t));
+        return cont_apply(k, grace_string_take(t));
     }
     if (strcmp(name,"reversed(0)")==0) {
         char *r = malloc(len + 1);
         for (size_t i = 0; i < len; i++) r[i] = v[len-1-i];
         r[len] = 0;
-        return cont_apply(k, grace_string_new(r));
+        return cont_apply(k, grace_string_take(r));
     }
     if (strcmp(name,"match(1)")==0) {
         if (args[0]->vt == &grace_string_vtable)
@@ -394,6 +420,14 @@ GraceObject *grace_string_new(const char *s) {
     GraceString *gs = (GraceString *)gc_alloc(sizeof(GraceString));
     gs->base.vt = &grace_string_vtable;
     gs->value = str_dup(s ? s : "");
+    return (GraceObject *)gs;
+}
+/* Like grace_string_new, but takes ownership of the malloc'd string `s`
+ * instead of duplicating it.  Caller must not free `s` afterwards. */
+GraceObject *grace_string_take(char *s) {
+    GraceString *gs = (GraceString *)gc_alloc(sizeof(GraceString));
+    gs->base.vt = &grace_string_vtable;
+    gs->value = s ? s : str_dup("");
     return (GraceObject *)gs;
 }
 const char *grace_string_val(GraceObject *o) {
@@ -566,10 +600,19 @@ typedef struct { Cont base; LineupIterState *st; } LineupIterCont;
 static void lineup_iter_trace(Cont *c) {
     LineupIterCont *lc = (LineupIterCont *)c;
     LineupIterState *st = lc->st;
+    if (!st) return;
     gc_mark_grey(st->lineup);
     gc_mark_grey(st->block);
     gc_trace_env(st->env);
     gc_trace_cont(st->k);
+}
+static void lineup_iter_cleanup(Cont *c) {
+    LineupIterCont *lc = (LineupIterCont *)c;
+    LineupIterState *st = lc->st;
+    if (!st) return;
+    env_release(st->env);
+    cont_release_abandon(st->k);
+    free(st);
 }
 
 static PendingStep *lineup_iter_next(Cont *c, GraceObject *v) {
@@ -580,6 +623,7 @@ static PendingStep *lineup_iter_next(Cont *c, GraceObject *v) {
     GraceLineup *lu = (GraceLineup *)st->lineup;
     if (st->idx >= lu->n) {
         Cont *k = cont_retain(st->k);
+        lc->st = NULL;
         cont_consumed(c);
         env_release(st->env);
         cont_release(st->k);
@@ -592,7 +636,9 @@ static PendingStep *lineup_iter_next(Cont *c, GraceObject *v) {
     LineupIterCont *nc = CONT_ALLOC(LineupIterCont);
     nc->base.apply    = lineup_iter_next;
     nc->base.gc_trace = lineup_iter_trace;
+    nc->base.cleanup  = lineup_iter_cleanup;
     nc->st = st;
+    lc->st = NULL;
     cont_consumed(c);
     return grace_request(st->block, st->env, "apply(1)", a, 1, (Cont *)nc);
 }
@@ -610,9 +656,19 @@ typedef struct { Cont base; LineupAsStrState *st; } LineupAsStrCont;
 static void lineup_asstr_trace(Cont *c) {
     LineupAsStrCont *lc = (LineupAsStrCont *)c;
     LineupAsStrState *st = lc->st;
+    if (!st) return;
     gc_mark_grey(st->lineup);
     gc_trace_env(st->env);
     gc_trace_cont(st->k);
+}
+static void lineup_asstr_cleanup(Cont *c) {
+    LineupAsStrCont *lc = (LineupAsStrCont *)c;
+    LineupAsStrState *st = lc->st;
+    if (!st) return;
+    env_release(st->env);
+    cont_release_abandon(st->k);
+    free(st->so_far);
+    free(st);
 }
 
 static PendingStep *lineup_asstr_next(Cont *c, GraceObject *str_v) {
@@ -628,19 +684,22 @@ static PendingStep *lineup_asstr_next(Cont *c, GraceObject *str_v) {
     if (st->idx >= lu->n) {
         char *result = str_fmt("[%s]", st->so_far);
         Cont *k = cont_retain(st->k);
+        lc->st = NULL;
         env_release(st->env);
         cont_release(st->k);
         free(st->so_far);
         free(st);
         cont_consumed(c);
-        PendingStep *r = cont_apply(k, grace_string_new(result));
+        PendingStep *r = cont_apply(k, grace_string_take(result));
         cont_release(k);
         return r;
     }
     LineupAsStrCont *nc = CONT_ALLOC(LineupAsStrCont);
     nc->base.apply    = lineup_asstr_next;
     nc->base.gc_trace = lineup_asstr_trace;
+    nc->base.cleanup  = lineup_asstr_cleanup;
     nc->st = st;
+    lc->st = NULL;
     cont_consumed(c);
     return grace_request(lu->elems[st->idx], st->env, "asString(0)", NULL, 0, (Cont *)nc);
 }
@@ -662,6 +721,7 @@ static PendingStep *lineup_request(GraceObject *self, Env *env, const char *name
         LineupIterCont *lc = CONT_ALLOC(LineupIterCont);
         lc->base.apply    = lineup_iter_next;
         lc->base.gc_trace = lineup_iter_trace;
+        lc->base.cleanup  = lineup_iter_cleanup;
         lc->st = st;
         GraceObject *a[1] = { lu->elems[0] };
         return grace_request(args[0], env, "apply(1)", a, 1, (Cont *)lc);
@@ -701,6 +761,7 @@ static PendingStep *lineup_request(GraceObject *self, Env *env, const char *name
         LineupAsStrCont *lc = CONT_ALLOC(LineupAsStrCont);
         lc->base.apply    = lineup_asstr_next;
         lc->base.gc_trace = lineup_asstr_trace;
+        lc->base.cleanup  = lineup_asstr_cleanup;
         lc->st = st;
         return grace_request(lu->elems[0], env, "asString(0)", NULL, 0, (Cont *)lc);
     }
@@ -787,6 +848,7 @@ static void user_sweep_free(GraceObject *self) {
         MethodEntry *next = m->next;
         if (m->free_data && m->data)
             m->free_data(m->data);
+        free((void *)m->name);
         free(m);
         m = next;
     }
@@ -806,7 +868,7 @@ void user_add_method(GraceObject *obj, const char *name, MethodFn fn, void *data
         grace_fatal("user_add_method on non-user object");
     GraceUserObject *uo = (GraceUserObject *)obj;
     MethodEntry *e = malloc(sizeof(MethodEntry));
-    e->name = name; e->fn = fn; e->data = data; e->next = NULL;
+    e->name = str_dup(name); e->fn = fn; e->data = data; e->next = NULL;
     e->trace_data = NULL; e->free_data = NULL;
     if (!uo->methods) {
         uo->methods = e;
@@ -846,6 +908,7 @@ void user_bind_def(GraceObject *obj, const char *name, GraceObject *value) {
     while (last->next) last = last->next;
     last->trace_data = def_trace_data;
     /* free_data = NULL: data is a GC-managed GraceObject*, don't free it */
+    free(full);
 }
 
 typedef struct { GraceObject **cell; const char *name; } VarCell;
@@ -882,8 +945,12 @@ void user_bind_var(GraceObject *obj, const char *name, GraceObject **cell) {
     VarCell *vc = malloc(sizeof(VarCell));
     vc->cell = cell;
     vc->name = name;
-    user_add_method(obj, str_fmt("%s(0)",    name), var_getter_fn, vc);
-    user_add_method(obj, str_fmt("%s:=(1)",  name), var_setter_fn, vc);
+    char *getter_name = str_fmt("%s(0)",    name);
+    char *setter_name = str_fmt("%s:=(1)",  name);
+    user_add_method(obj, getter_name, var_getter_fn, vc);
+    user_add_method(obj, setter_name, var_setter_fn, vc);
+    free(getter_name);
+    free(setter_name);
     /* Set trace/free on getter and setter entries */
     GraceUserObject *uo = (GraceUserObject *)obj;
     MethodEntry *last = uo->methods;
@@ -981,7 +1048,7 @@ static PendingStep *exception_request(GraceObject *self, Env *env, const char *n
     if (strcmp(name,"message(0)")==0 || strcmp(name,"messageText(0)")==0)
         return cont_apply(k, grace_string_new(ex->message));
     if (strcmp(name,"asString(0)")==0)
-        return cont_apply(k, grace_string_new(str_fmt("%s: %s",
+        return cont_apply(k, grace_string_take(str_fmt("%s: %s",
                 ex->tag ? ex->tag : "Error", ex->message)));
     if (strcmp(name,"raise(1)")==0) {
         grace_raise(env, ex->tag, "%s", grace_string_val(args[0]));

@@ -87,7 +87,7 @@ static void eac_trace(Cont *c) {
 static void eac_cleanup(Cont *c) {
     EvalArgsCont *ea = (EvalArgsCont *)c;
     env_release(ea->env);
-    cont_release(ea->final_k);
+    cont_release_abandon(ea->final_k);
     free(ea->arr);
     free((char *)ea->name);
 }
@@ -134,7 +134,7 @@ static void lineup_build_trace(Cont *c) {
 static void lineup_build_cleanup(Cont *c) {
     LineupBuildCont *lb = (LineupBuildCont *)c;
     env_release(lb->env);
-    cont_release(lb->k);
+    cont_release_abandon(lb->k);
     free(lb->arr);
 }
 
@@ -240,7 +240,7 @@ static void stmts_cont_trace(Cont *c) {
 static void stmts_cont_cleanup(Cont *c) {
     StmtsCont *sc = (StmtsCont *)c;
     env_release(sc->env);
-    cont_release(sc->k);
+    cont_release_abandon(sc->k);
 }
 
 PendingStep *eval_stmts(ASTNode *stmts, Env *env, Cont *k) {
@@ -336,7 +336,7 @@ static void dot_recv_cont_trace(Cont *c) {
 static void dot_recv_cont_cleanup(Cont *c) {
     DotRecvCont *dc = (DotRecvCont *)c;
     env_release(dc->env);
-    cont_release(dc->k);
+    cont_release_abandon(dc->k);
     free(dc->name);
 }
 
@@ -402,29 +402,34 @@ static void interp_expr_cont_trace(Cont *c) {
 }
 static void interp_expr_cont_cleanup(Cont *c) {
     InterpExprCont *ie = (InterpExprCont *)c;
-    cont_release((Cont *)ie->nc);
+    cont_release_abandon((Cont *)ie->nc);
 }
 
 static PendingStep *interp_asstr_cont_apply(Cont *c, GraceObject *str_val) {
     InterpAsStrCont *ic = (InterpAsStrCont *)c;
     const char *s = grace_string_val(str_val);
-    const char *combined = str_cat(ic->accum, s);
+    char *combined = str_cat(ic->accum, s);
     /* Continue with rest */
     if (ic->next_interp == NULL) {
         Cont *outer_k = cont_retain(ic->outer_k);
         cont_consumed(c);
-        PendingStep *r = cont_apply(outer_k, grace_string_new(combined));
+        GraceObject *result = grace_string_new(combined);
+        free(combined);
+        PendingStep *r = cont_apply(outer_k, result);
         cont_release(outer_k);
         return r;
     }
     /* next interp: strval=prefix, a1=expr, a2=next */
     ASTNode *ni = ic->next_interp;
-    const char *np = str_cat(combined, ni->strval ? ni->strval : "");
+    char *np = str_cat(combined, ni->strval ? ni->strval : "");
+    free(combined);
     /* If ni has no expression (e.g. it is a trailing strLit suffix), we're done */
     if (ni->a1 == NULL) {
         Cont *outer_k = cont_retain(ic->outer_k);
         cont_consumed(c);
-        PendingStep *r = cont_apply(outer_k, grace_string_new(np));
+        GraceObject *result = grace_string_new(np);
+        free(np);
+        PendingStep *r = cont_apply(outer_k, result);
         cont_release(outer_k);
         return r;
     }
@@ -455,8 +460,9 @@ static void interp_asstr_cont_trace(Cont *c) {
 }
 static void interp_asstr_cont_cleanup(Cont *c) {
     InterpAsStrCont *ic = (InterpAsStrCont *)c;
+    free((char *)ic->accum);
     env_release(ic->env);
-    cont_release(ic->outer_k);
+    cont_release_abandon(ic->outer_k);
 }
 
 /*
@@ -485,7 +491,7 @@ static void objdone_trace(Cont *c) {
 }
 static void objdone_cleanup(Cont *c) {
     ObjDoneCont *oc = (ObjDoneCont *)c;
-    cont_release(oc->k);
+    cont_release_abandon(oc->k);
 }
 
 /*
@@ -516,7 +522,7 @@ static void defbind_trace(Cont *c) {
 }
 static void defbind_cleanup(Cont *c) {
     DefBindCont *dc = (DefBindCont *)c;
-    cont_release(dc->k);
+    cont_release_abandon(dc->k);
 }
 
 /*
@@ -546,7 +552,7 @@ static void varinit_trace(Cont *c) {
 }
 static void varinit_cleanup(Cont *c) {
     VarInitCont *vc = (VarInitCont *)c;
-    cont_release(vc->k);
+    cont_release_abandon(vc->k);
 }
 
 /*
@@ -584,7 +590,7 @@ static void assign_rhs_trace(Cont *c) {
 static void assign_rhs_cont_cleanup(Cont *c) {
     AssignRHSCont *ac = (AssignRHSCont *)c;
     env_release(ac->env);
-    cont_release(ac->k);
+    cont_release_abandon(ac->k);
     free(ac->setter_name);
 }
 
@@ -630,7 +636,7 @@ static void ret_trace(Cont *c) {
 }
 static void ret_cont_cleanup(Cont *c) {
     RetCont *rc = (RetCont *)c;
-    cont_release(rc->ret);
+    cont_release_abandon(rc->ret);
 }
 
 /* File-scope continuation for dot-assignment LHS receiver */
@@ -670,7 +676,7 @@ static void da_recv_trace(Cont *c) {
 static void da_recv_cont_cleanup(Cont *c) {
     DotAssignRecvCont *d = (DotAssignRecvCont *)c;
     env_release(d->env);
-    cont_release(d->k);
+    cont_release_abandon(d->k);
     free(d->setter);
 }
 
@@ -705,7 +711,7 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
         ic->next_interp = next;
         ic->env         = env_retain(env);
         ic->outer_k     = cont_retain(k);
-        ic->accum       = prefix;
+        ic->accum       = str_dup(prefix);
         InterpStartCont *ec = CONT_ALLOC(InterpStartCont);
         ec->base.apply = interp_start_apply;
         ec->base.gc_trace = interp_start_trace;
@@ -815,6 +821,7 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
             mc->lex_self  = (GraceObject *)obj;
             user_add_method((GraceObject *)obj, mname, method_fn, mc);
             set_last_method_gc((GraceObject *)obj, method_closure_trace, method_closure_free);
+            free(mname);
         }
         ObjDoneCont *oc = CONT_ALLOC(ObjDoneCont);
         oc->base.apply  = objdone_apply;
@@ -877,6 +884,7 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
         mc->lex_self  = env->receiver;
         user_add_method(env->scope, mname, method_fn, mc);  /* bind on scope */
         set_last_method_gc(env->scope, method_closure_trace, method_closure_free);
+        free(mname);
         return cont_apply(k, grace_done);
     }
 
@@ -952,9 +960,11 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
         if (!mod) {
             /* Import loading runs nested synchronous trampolines. Keep the
              * current object/scope rooted so the enclosing evaluation context
-             * cannot be swept while the module is being parsed and evaluated. */
+             * cannot be swept while the module is being parsed and evaluated.
+             * Also protect the outer continuation k from gc_sweep_conts. */
             gc_push_root(&env->receiver);
             gc_push_root(&env->scope);
+            gc_push_cont_root(&k);
             /* Load src.grace from disk, parse, eval, and register */
             char path[512];
             snprintf(path, sizeof(path), "%s.grace", src);
@@ -972,7 +982,7 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
             if (!parser_obj)
                 grace_fatal("Parser not available for loading module '%s'", src);
             GraceObject *pargs[2] = {
-                grace_string_new(str_dup(path)),
+                grace_string_new(path),
                 grace_string_new(msrc)   /* msrc ownership transferred */
             };
             GraceObject *ast_obj = grace_request_sync(parser_obj, env,
@@ -985,10 +995,12 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
             mcc->base.gc_trace = NULL;
             mcc->base.cleanup = NULL;
             mcc->result = grace_done;
+            cont_retain((Cont *)mcc);
             trampoline(eval_node(prog, env, (Cont *)mcc));
             mod = mcc->result;
             cont_release((Cont *)mcc);
             grace_register_module(str_dup(src), mod);
+            gc_pop_cont_root();
             gc_pop_roots(2);
         }
         const char *bname = binding ? binding->strval : src;

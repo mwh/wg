@@ -381,6 +381,7 @@ static void trace_module_registry(void) {
  *  */
 PendingStep *capture_apply(Cont *self, GraceObject *v) {
     ((CaptureCont *)self)->result = v;
+    cont_consumed(self);
     return NULL;
 }
 
@@ -397,6 +398,7 @@ GraceObject *grace_request_sync(GraceObject *recv, Env *env,
     k->base.gc_trace = capture_cont_trace;
     k->base.cleanup = NULL;
     k->result = NULL;
+    cont_retain((Cont *)k);
     trampoline(grace_request(recv, env, name, args, nargs, (Cont *)k));
     GraceObject *result = k->result;
     cont_release((Cont *)k);

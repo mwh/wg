@@ -53,6 +53,9 @@ struct Cont {
     /* Set to 1 after the first cont_consumed call.  Prevents double-decrement
      * when a continuation is re-invoked via non-local return. */
     int consumed;
+    /* Doubly-linked list for GC sweep of abandoned continuations. */
+    Cont *gc_cont_prev;
+    Cont *gc_cont_next;
     /* Concrete cont structs embed base as first member and add payload. */
 };
 
@@ -63,8 +66,24 @@ static inline PendingStep *cont_apply(Cont *k, GraceObject *v) {
 
 #define CONT_REFCOUNT_STATIC 0x7FFFFF00  /* sentinel: never freed */
 
-/* Allocate a zero'd continuation of the given type with refcount = 1. */
-#define CONT_ALLOC(type) ({ type *_c = calloc(1, sizeof(type)); _c->base.refcount = 1; _c; })
+/* Global doubly-linked list of all heap-allocated continuations.
+ * Used by the GC to sweep abandoned conts that refcounting alone cannot free
+ * (e.g. when non-local returns or shift bypass intermediate continuations). */
+extern Cont gc_cont_sentinel;
+void gc_cont_unlink(Cont *k);
+
+/* Allocate a zero'd continuation of the given type with refcount = 1,
+ * and link it into the global cont list for GC sweep. */
+#define CONT_ALLOC(type) ({ \
+    type *_c = calloc(1, sizeof(type)); \
+    _c->base.refcount = 1; \
+    _c->base.gc_epoch = gc_current_epoch(); \
+    _c->base.gc_cont_next = gc_cont_sentinel.gc_cont_next; \
+    _c->base.gc_cont_prev = &gc_cont_sentinel; \
+    gc_cont_sentinel.gc_cont_next->gc_cont_prev = (Cont *)_c; \
+    gc_cont_sentinel.gc_cont_next = (Cont *)_c; \
+    _c; \
+})
 
 static inline Cont *cont_retain(Cont *k) {
     if (k && k->refcount < CONT_REFCOUNT_STATIC) k->refcount++;
@@ -72,6 +91,7 @@ static inline Cont *cont_retain(Cont *k) {
 }
 static inline void cont_release(Cont *k) {
     if (k && k->refcount < CONT_REFCOUNT_STATIC && --k->refcount <= 0) {
+        gc_cont_unlink(k);
         if (k->cleanup) k->cleanup(k);
         free(k);
     }
@@ -84,9 +104,32 @@ static inline void cont_consumed(Cont *k) {
     if (k->consumed) return;   /* re-entrant: don't double-decrement */
     k->consumed = 1;
     if (--k->refcount <= 0) {
+        gc_cont_unlink(k);
         if (k->cleanup) k->cleanup(k);
         free(k);
     }
+}
+
+/* Release a continuation that may have been abandoned (never applied).
+ * If the cont was never consumed, first consumes it (to remove the
+ * creator ref), then releases the holder's ref.  Safe for normally-
+ * consumed conts: cont_consumed is a no-op when already consumed.
+ * If cont_consumed already freed the cont (rc was 1), we stop. */
+static inline void cont_release_abandon(Cont *k) {
+    if (!k || k->refcount >= CONT_REFCOUNT_STATIC) return;
+    if (!k->consumed) {
+        /* Not yet consumed: provide the missing consume decrement.
+         * If this frees the cont (rc was 1), we're done. */
+        k->consumed = 1;
+        if (--k->refcount <= 0) {
+            gc_cont_unlink(k);
+            if (k->cleanup) k->cleanup(k);
+            free(k);
+            return;
+        }
+    }
+    /* Now release the holder's reference. */
+    cont_release(k);
 }
 
 /* A trivial "done" continuation: discards its argument and terminates. */
@@ -189,6 +232,7 @@ double grace_number_val(GraceObject *o);  /* asserts it's a number */
 typedef struct { GraceObject base; const char *value; } GraceString;
 extern const GraceVTable grace_string_vtable;
 GraceObject *grace_string_new(const char *s);
+GraceObject *grace_string_take(char *s);  /* takes ownership of malloc'd s */
 const char *grace_string_val(GraceObject *o);   /* asserts it's a string */
 GraceObject *grace_string_concat(GraceObject *a, GraceObject *b);
 

@@ -27,10 +27,19 @@ static void while_trace(Cont *c) {
     /* Both WhileCondCont and WhileBodyCont have the same layout */
     WhileCondCont *wc = (WhileCondCont *)c;
     WhileState *ws = wc->ws;
+    if (!ws) return;
     gc_mark_grey(ws->cond_blk);
     gc_mark_grey(ws->body_blk);
     gc_trace_env(ws->env);
     gc_trace_cont(ws->exit_k);
+}
+static void while_cleanup(Cont *c) {
+    WhileCondCont *wc = (WhileCondCont *)c;
+    WhileState *ws = wc->ws;
+    if (!ws) return;
+    env_release(ws->env);
+    cont_release_abandon(ws->exit_k);
+    free(ws);
 }
 
 static PendingStep *while_cond_apply(Cont *c, GraceObject *cond_result);
@@ -38,21 +47,24 @@ static PendingStep *while_body_apply(Cont *c, GraceObject *body_result) {
     (void)body_result;
     WhileBodyCont *wb = (WhileBodyCont *)c;
     WhileState *ws = wb->ws;
-    cont_consumed(c);
     /* re-evaluate condition */
     WhileCondCont *wc = CONT_ALLOC(WhileCondCont);
     wc->base.apply = while_cond_apply;
     wc->base.gc_trace = while_trace;
+    wc->base.cleanup = while_cleanup;
     wc->ws = ws;
+    wb->ws = NULL;
+    cont_consumed(c);
     return grace_request(ws->cond_blk, ws->env, "apply(0)", NULL, 0, (Cont *)wc);
 }
 
 static PendingStep *while_cond_apply(Cont *c, GraceObject *cond_result) {
     WhileCondCont *wc = (WhileCondCont *)c;
     WhileState *ws = wc->ws;
-    cont_consumed(c);
     if (cond_result->vt != &grace_bool_vtable || !grace_bool_val(cond_result)) {
         Cont *exit_k = cont_retain(ws->exit_k);
+        wc->ws = NULL;
+        cont_consumed(c);
         env_release(ws->env);
         cont_release(ws->exit_k);
         free(ws);
@@ -63,7 +75,10 @@ static PendingStep *while_cond_apply(Cont *c, GraceObject *cond_result) {
     WhileBodyCont *wb = CONT_ALLOC(WhileBodyCont);
     wb->base.apply = while_body_apply;
     wb->base.gc_trace = while_trace;
+    wb->base.cleanup = while_cleanup;
     wb->ws = ws;
+    wc->ws = NULL;
+    cont_consumed(c);
     return grace_request(ws->body_blk, ws->env, "apply(0)", NULL, 0, (Cont *)wb);
 }
 
@@ -78,7 +93,7 @@ static void print_asstr_trace(Cont *c) {
 static void print_asstr_cleanup(Cont *c) {
     PrintAsStrCont *pc = (PrintAsStrCont *)c;
     env_release(pc->env);
-    cont_release(pc->k);
+    cont_release_abandon(pc->k);
 }
 static PendingStep *print_asstr_apply(Cont *c, GraceObject *str_val) {
     PrintAsStrCont *pc = (PrintAsStrCont *)c;
@@ -127,7 +142,7 @@ static void try_catch_trace(Cont *c) {
 static void try_catch_cleanup(Cont *c) {
     TryCatchData *td = (TryCatchData *)c;
     env_release(td->env);
-    cont_release(td->k);
+    cont_release_abandon(td->k);
 }
 static PendingStep *try_catch_except_apply(Cont *c, GraceObject *ex) {
     TryCatchData *td = (TryCatchData *)c;
@@ -202,7 +217,7 @@ static void match_state_free(MatchState *ms) {
     if (!ms) return;
     free(ms->cases);
     env_release(ms->env);
-    cont_release(ms->k);
+    cont_release_abandon(ms->k);
     free(ms);
 }
 
@@ -213,28 +228,44 @@ typedef struct { Cont base; MatchState *ms; int idx; } MatchCaseCont;
 static void match_case_trace(Cont *c) {
     MatchCaseCont *mc = (MatchCaseCont *)c;
     MatchState *ms = mc->ms;
+    if (!ms) return;
     gc_mark_grey(ms->subject);
     for (int i = 0; i < ms->ncases; i++)
         gc_mark_grey(ms->cases[i]);
     gc_trace_env(ms->env);
     gc_trace_cont(ms->k);
 }
+static void match_case_cleanup(Cont *c) {
+    MatchCaseCont *mc = (MatchCaseCont *)c;
+    match_state_free(mc->ms);
+}
 
 static PendingStep *match_case_apply(Cont *c, GraceObject *result) {
     MatchCaseCont *mc = (MatchCaseCont *)c;
     MatchState *ms = mc->ms;
     int idx = mc->idx;
+    mc->ms = NULL;
     cont_consumed(c);
-    /* result is the match result object: .succeeded, .result */
+    /* result is the match result object: .succeeded, .result
+     * Protect conts from gc_sweep_conts during sync requests. */
+    gc_push_cont_root(&ms->k);
+    gc_push_cont_root(&ms->env->return_k);
+    gc_push_cont_root(&ms->env->except_k);
     GraceObject *succ = grace_request_sync(result, ms->env, "succeeded(0)", NULL, 0);
     if (succ->vt == &grace_bool_vtable && grace_bool_val(succ)) {
         GraceObject *val = grace_request_sync(result, ms->env, "result(0)", NULL, 0);
+        gc_pop_cont_root();
+        gc_pop_cont_root();
+        gc_pop_cont_root();
         Cont *k = cont_retain(ms->k);
         match_state_free(ms);
         PendingStep *r = cont_apply(k, val);
         cont_release(k);
         return r;
     }
+    gc_pop_cont_root();
+    gc_pop_cont_root();
+    gc_pop_cont_root();
     int next = idx + 1;
     if (next >= ms->ncases) {
         Cont *k = cont_retain(ms->k);
@@ -251,6 +282,7 @@ static PendingStep *match_try_case(MatchState *ms, int idx) {
     MatchCaseCont *mc = CONT_ALLOC(MatchCaseCont);
     mc->base.apply = match_case_apply;
     mc->base.gc_trace = match_case_trace;
+    mc->base.cleanup = match_case_cleanup;
     mc->ms  = ms;
     mc->idx = idx;
     GraceObject *args[1] = { ms->subject };
@@ -289,6 +321,7 @@ static PendingStep *prelude_while_do_fn(GraceObject *self, Env *env,
     WhileCondCont *wc = CONT_ALLOC(WhileCondCont);
     wc->base.apply = while_cond_apply;
     wc->base.gc_trace = while_trace;
+    wc->base.cleanup = while_cleanup;
     wc->ws = ws;
     return grace_request(cond_blk, env, "apply(0)", NULL, 0, (Cont *)wc);
 }
@@ -377,7 +410,7 @@ static void elseif_trace(Cont *c) {
 static void elseif_cleanup(Cont *c) {
     ElseifCont *ec = (ElseifCont *)c;
     env_release(ec->env);
-    cont_release(ec->outer_k);
+    cont_release_abandon(ec->outer_k);
 }
 
 static PendingStep *elseif_cont_fn(Cont *ck, GraceObject *cond_result) {
@@ -577,7 +610,7 @@ static PromptBox *promptbox_retain(PromptBox *pb) {
 }
 static void promptbox_release(PromptBox *pb) {
     if (pb && --pb->refcount <= 0) {
-        cont_release(pb->outer_k);
+        cont_release_abandon(pb->outer_k);
         free(pb);
     }
 }
@@ -649,7 +682,7 @@ static void reified_cont_trace_data(void *data) {
 }
 static void reified_cont_free_data(void *data) {
     ReifiedContData *rd = (ReifiedContData *)data;
-    cont_release(rd->captured_k);
+    cont_release_abandon(rd->captured_k);
     promptbox_release(rd->box);
     free(rd);
 }
