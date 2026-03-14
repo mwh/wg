@@ -64,7 +64,7 @@ public class GraceNumber implements GraceObject {
             } else if (name.equals("|")) {
                 return new GracePatternOr(this, parts.get(0).getArgs().get(0));
             } else if (name.equals("hash")) {
-                return new GraceNumber(Double.hashCode(value));
+                return new GraceNumber(Integer.toUnsignedLong(Double.hashCode(value)));
             } else if (name.equals("match")) {
                 GraceObject target = parts.get(0).getArgs().get(0);
                 if (target instanceof GraceNumber num && value == num.value) {

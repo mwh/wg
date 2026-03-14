@@ -75,7 +75,7 @@ public class GraceString implements GraceObject {
             case "concise":
                 return returnCont.returning(ctx, this);
             case "hash":
-                return returnCont.returning(ctx, new GraceNumber(this.value.hashCode()));
+                return returnCont.returning(ctx, new GraceNumber(Integer.toUnsignedLong(this.value.hashCode())));
             case "match(1)": {
                 GraceObject target = args.get(0);
                 if (target instanceof GraceString ts && this.value.equals(ts.value)) {

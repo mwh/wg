@@ -124,7 +124,7 @@ public class UserObject implements GraceObject {
             return cont.returning(ctx, new GraceString("object { " + getMethodNames().stream().map(x -> "method " + x + "; ").toList() + "}"));
         }));
         addMethod("hash(0)", Method.java((ctx, cont, _, _) ->
-            cont.returning(ctx, new GraceNumber(System.identityHashCode(this)))));
+            cont.returning(ctx, new GraceNumber(Integer.toUnsignedLong(System.identityHashCode(this))))));
         addMethod("::(1)", Method.java((ctx, cont, _, args) ->
             cont.returning(ctx, new GraceBinding(this, args.get(0)))));
     }

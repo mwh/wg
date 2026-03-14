@@ -75,7 +75,7 @@ public class GraceNumber implements GraceObject {
             case "::(1)":
                 return returnCont.returning(ctx, new GraceBinding(this, args.get(0)));
             case "hash":
-                return returnCont.returning(ctx, new GraceNumber(Double.hashCode(value.doubleValue())));
+                return returnCont.returning(ctx, new GraceNumber(Integer.toUnsignedLong(Double.hashCode(value.doubleValue()))));
             case "%(1)":
                 GraceNumber modNum = assertNumber(args.get(0));
                 Number modResult;

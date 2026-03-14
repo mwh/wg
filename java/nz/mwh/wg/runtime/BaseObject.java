@@ -39,7 +39,7 @@ public class BaseObject implements GraceObject {
         });
         addMethod("asString(0)", _ -> new GraceString("object {" + String.join("; ", methods.keySet()) + "}"));
         addMethod("asDebugString(0)", _ -> new GraceString("object {" + String.join("; ", methods.keySet()) + "}"));
-        addMethod("hash(0)", _ -> new GraceNumber(System.identityHashCode(this)));
+        addMethod("hash(0)", _ -> new GraceNumber(Integer.toUnsignedLong(System.identityHashCode(this))));
         addMethod("::(1)", request -> new GraceBinding(this, request.getParts().get(0).getArgs().get(0)));
         if (bindSelf) {
             addMethod("self(0)", _ -> this);

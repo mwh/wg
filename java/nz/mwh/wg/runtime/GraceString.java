@@ -49,7 +49,7 @@ public class GraceString implements GraceObject {
             } else if (name.equals("|")) {
                 return new GracePatternOr(this, parts.get(0).getArgs().get(0));
             } else if (name.equals("hash")) {
-                return new GraceNumber(value.hashCode());
+                return new GraceNumber(Integer.toUnsignedLong(value.hashCode()));
             } else if (name.equals("match")) {
                 GraceObject target = parts.get(0).getArgs().get(0);
                 if (target instanceof GraceString str && value.equals(str.value)) {

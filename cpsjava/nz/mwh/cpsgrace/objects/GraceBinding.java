@@ -63,6 +63,15 @@ public class GraceBinding implements GraceObject {
                     }, "asDebugString", List.of());
                 }, "asDebugString", List.of());
             }
+            case "hash": {
+                return key.requestMethod(ctx, (GraceObject keyHash) -> {
+                    return value.requestMethod(ctx, (GraceObject valueHash) -> {
+                        int combinedHash = ((GraceNumber) keyHash).intValue() ^ ((GraceNumber) valueHash).intValue() ^ 0xB14D1465;
+                        returnCont.returning(ctx, new GraceNumber(Integer.toUnsignedLong(combinedHash)));
+                        return null;
+                    }, "hash", List.of());
+                }, "hash", List.of());
+            }
             default:
                 throw new RuntimeException("No such method " + methodName + " on primitive array");
         }
@@ -71,7 +80,7 @@ public class GraceBinding implements GraceObject {
     @Override
     public boolean hasMethod(String name) {
         return switch (name) {
-            case "key", "value", "==(1)", "!=(1)", "::(1)", "asString" -> true;
+            case "key", "value", "==(1)", "!=(1)", "::(1)", "asString", "asDebugString", "hash" -> true;
             default -> false;
         };
     }
