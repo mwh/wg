@@ -180,7 +180,7 @@ def graceDone = object {
 }
 
 class graceObject(scp) {
-    def methods = collections.dictionary
+    def methods = collections.dictionary []
     def surroundingScope is public = scp
 
     var canReturn is public := false
@@ -199,7 +199,7 @@ class graceObject(scp) {
 
     method request(req) {
         def name = req.name
-        if (!methods.has(name)) then {
+        if (!methods.containsKey(name)) then {
             Exception.raise("Method not found in object {self}: " ++ name)
         }
         def meth = methods.at(name)
@@ -207,11 +207,11 @@ class graceObject(scp) {
     }
 
     method hasMethod(name) {
-        return methods.has(name)
+        return methods.containsKey(name)
     }
 
     method findReceiver(name) {
-        if (methods.has(name)) then {
+        if (methods.containsKey(name)) then {
             return self
         }
         return surroundingScope.findReceiver(name)
@@ -484,13 +484,13 @@ class graceLineup(elems) {
                 return graceDone
             }
             case { "++(1)" ->
-                def ret = collections.list
+                def ret = collections.list []
                 def other = req.at(1).arguments.at(1)
                 elems.do { x ->
-                    ret.append(x)
+                    ret.add(x)
                 }
                 other.elements.do { x ->
-                    ret.append(x)
+                    ret.add(x)
                 }
                 return graceLineup(ret)
             }

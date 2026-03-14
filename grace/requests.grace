@@ -39,35 +39,35 @@ class request(pts) {
 }
 
 method nullary(name) {
-    def parts = collections.list
-    parts.append(part(name, collections.list, collections.list))
+    def parts = collections.list []
+    parts.add(part(name, collections.list [], collections.list []))
     return request(parts)
 }
 
 method unary(name, arg) {
-    def parts = collections.list
-    def args = collections.list
-    args.append(arg)
-    parts.append(part(name, args, collections.list))
+    def parts = collections.list []
+    def args = collections.list []
+    args.add(arg)
+    parts.add(part(name, args, collections.list []))
     return request(parts)
 }
 
 method binary(name, arg1, arg2) {
-    def parts = collections.list
-    def args = collections.list
-    args.append(arg1)
-    args.append(arg2)
-    parts.append(part(name, args, collections.list))
+    def parts = collections.list []
+    def args = collections.list []
+    args.add(arg1)
+    args.add(arg2)
+    parts.add(part(name, args, collections.list []))
     return request(parts)
 }
 
 method twoPart(name1, name2, arg1, arg2) {
-    def parts = collections.list
-    def args1 = collections.list
-    def args2 = collections.list
-    args1.append(arg1)
-    args2.append(arg2)
-    parts.append(part(name1, args1, collections.list))
-    parts.append(part(name2, args2, collections.list))
+    def parts = collections.list []
+    def args1 = collections.list []
+    def args2 = collections.list []
+    args1.add(arg1)
+    args2.add(arg2)
+    parts.add(part(name1, args1, collections.list []))
+    parts.add(part(name2, args2, collections.list []))
     return request(parts)
 }

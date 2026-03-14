@@ -20,17 +20,15 @@ class evaluationContext(newScope) {
 }
 
 method nil {
-    collections.list
+    collections.list []
 }
 
 method one(item) {
-    def ret = collections.list
-    ret.append(item)
-    ret
+    collections.list [item]
 }
 
 method cons(head, list) {
-    list.prepend(head)
+    list.add(head) at(1)
     list
 }
 
@@ -218,15 +216,15 @@ class methDec(pts, dtype, anns, bd) {
             def context = ctx.withScope(scope)
             def paramNames = parts.flatMap { pt -> pt.arguments.map { arg -> arg.name } }
             def args = req.parts.flatMap { pt -> pt.arguments }
-            paramNames.zip(args) each { p, a ->
+            paramNames.zip(args) do { p, a ->
                 scope.addMethod(p ++ "(0)") body { req -> a }
             }
-            body.each { item ->
+            body.do { item ->
                 item.evaluateDeclaration(context)
             }
             var lastValue := objects.graceDone
             try {
-                body.each { item ->
+                body.do { item ->
                     lastValue := item.evaluate(context)
                 }
             } catch { e : objects.Return ->
@@ -325,16 +323,16 @@ class block(params, bd) {
             def ctx = context.withScope(scope)
 
             def args = req.at(1).arguments
-            parameters.zip(args) each { p, a ->
+            parameters.zip(args) do { p, a ->
                 scope.addMethod(p.name ++ "(0)") body { req -> a }
             }
 
-            body.each { item ->
+            body.do { item ->
                 item.evaluateDeclaration(ctx)
             }
 
             var lastValue := objects.graceDone
-            body.each { item ->
+            body.do { item ->
                 lastValue := item.evaluate(ctx)
             }
             lastValue
@@ -358,11 +356,11 @@ method objCons(bd, anns) {
                 obj
             }
 
-            body.each { item ->
+            body.do { item ->
                 item.evaluateDeclaration(ctx)
             }
 
-            body.each { item ->
+            body.do { item ->
                 item.evaluate(ctx)
             }
             obj
