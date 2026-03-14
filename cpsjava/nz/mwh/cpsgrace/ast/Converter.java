@@ -134,7 +134,8 @@ public class Converter {
                 GraceObject returnTypeObj = requestSync(node, "returnType", List.of());
                 ASTNode returnType = convertNode(returnTypeObj);
                 GraceObject annotsObj = requestSync(node, "annotations", List.of());
-                List<ASTNode> annots = convertNodeList(annotsObj);
+                List<String> annotsStr = convertStringList(annotsObj);
+                List<ASTNode> annots = annotsStr.stream().map(x -> (ASTNode)new LexReq(List.of(new Part(x, List.of(), List.of())), "<unknown>")).toList();
                 GraceObject bodyObj = requestSync(node, "body", List.of());
                 List<ASTNode> body = convertNodeList(bodyObj);
                 return new MethodDecl(parts.stream().map(x -> (Part)x).toList(), returnType, annots, body);

@@ -17,6 +17,10 @@ public class UserObject implements GraceObject {
 
     @Override
     public PendingStep requestMethod(Context ctx, Continuation returnCont, String methodName, List<GraceObject> args, List<GraceObject> genericArgs) {
+        if (methods == null) {
+            System.out.println("no such method " + methodName + ": methods are " + getMethodNames());
+            throw new RuntimeException("no such method " + methodName);
+        }
         switch (methodName) {
             default:
                 Method method = methods.get(methodName);
@@ -50,6 +54,9 @@ public class UserObject implements GraceObject {
     }
 
     public void addDef(String name) {
+        if (methods == null) {
+            methods = new java.util.HashMap<>();
+        }
         GraceObject[] value = new GraceObject[1];
         Method getter = Method.java((ctx, cont, _, _) -> {
             return cont.returning(ctx, value[0]);
@@ -99,6 +106,23 @@ public class UserObject implements GraceObject {
 
     public void setDebugLabel(String label) {
         this.debugLabel = label;
+    }
+
+    public void addDefaultMethods() {
+        addMethod("==(1)", Method.java((ctx, cont, _, args) -> {
+            GraceObject other = args.get(0);
+            return cont.returning(ctx, new GraceBoolean(this == other));
+        }));
+        addMethod("!=(1)", Method.java((ctx, cont, _, args) -> {
+            GraceObject other = args.get(0);
+            return cont.returning(ctx, new GraceBoolean(this != other));
+        }));
+        addMethod("asString(0)", Method.java((ctx, cont, _, args) -> {
+            return cont.returning(ctx, new GraceString("object {}"));
+        }));
+        addMethod("asDebugString(0)", Method.java((ctx, cont, _, args) -> {
+            return cont.returning(ctx, new GraceString("object { " + getMethodNames().stream().map(x -> "method " + x + "; ").toList() + "}"));
+        }));
     }
 
     public String toString() {

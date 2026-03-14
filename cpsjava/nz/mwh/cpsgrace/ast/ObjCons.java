@@ -26,6 +26,7 @@ public class ObjCons extends ASTNode {
         return (ctx, returnCont) -> {
             UserObject obj = new UserObject();
             obj.setSurrounding(ctx.getScope());
+            obj.addDefaultMethods();
             // System.err.println("Constructing object with surrounding: " + ctx.getScope());
             for (ASTNode member : body) {
                 switch (member) {

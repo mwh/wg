@@ -10,7 +10,9 @@ import nz.mwh.cpsgrace.ast.ASTNode;
 import nz.mwh.cpsgrace.ast.Converter;
 import nz.mwh.cpsgrace.objects.GraceBoolean;
 import nz.mwh.cpsgrace.objects.GraceMatchResult;
+import nz.mwh.cpsgrace.objects.GraceNumber;
 import nz.mwh.cpsgrace.objects.GracePatternOr;
+import nz.mwh.cpsgrace.objects.GracePrimitiveArray;
 import nz.mwh.cpsgrace.objects.GraceString;
 import nz.mwh.cpsgrace.objects.Method;
 import nz.mwh.cpsgrace.objects.UserObject;
@@ -346,6 +348,16 @@ public class Start {
             };
             Context tryCtx = ctx.withExceptionContinuation(exnCont);
             return tryBlock.requestMethod(tryCtx, cont, "apply", java.util.List.of(), java.util.List.of());
+        }));
+
+        UserObject primitiveArray = new UserObject();
+        primitiveArray.setDebugLabel("PrimitiveArray");
+        primitiveArray.addMethod("new(1)", Method.java((ctx, cont, _, args) -> {
+            GraceNumber size = GraceNumber.assertNumber(args.get(0));
+            return cont.returning(ctx, new GracePrimitiveArray(size.intValue()));
+        }));
+        prelude.addMethod("primitiveArray", Method.java((ctx, cont, _, _) -> {
+            return cont.returning(ctx, primitiveArray);
         }));
 
         return prelude;
