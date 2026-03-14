@@ -71,12 +71,73 @@ class list(elems) {
         if (sz >= arraySize) then {
             def newSize = arraySize * 2
             def newElements = primitiveArray.new(newSize)
-            for (0..(arraySize - 1)) do { i ->
+            for (0..(itemSize - 1)) do { i ->
                 newElements.at(i) put(elements.at(i))
             }
             elements := newElements
             arraySize := newSize
         }
+    }
+
+    method reversed {
+        var result := list []
+        for (itemSize..1..(-1)) do { i ->
+            result.add(elements.at(i - 1))
+        }
+        result
+    }
+
+    method reversed(_) {
+        self.reversed
+    }
+
+    method map(transform) {
+        var result := list []
+        do { elem ->
+            result.add(transform.apply(elem))
+        }
+        result
+    }
+
+    method map(transform) combine(combiner) {
+        if (itemSize == 0) then {
+            return list []
+        }
+        var result := transform.apply(elements.at(0))
+        for (1..(itemSize - 1)) do { i ->
+            result := combiner.apply(result, transform.apply(elements.at(i)))
+        }
+        result
+    }
+
+    method zip(otherList) do(block) {
+        if (size != otherList.size) then {
+            Exception.raise("Cannot zip lists of different sizes: " ++ size ++ " and " ++ otherList.size)
+        }
+        var index := 0
+        otherList.do { elem ->
+            block.apply(elements.at(index), elem)
+            index := index + 1
+
+        }
+    }
+
+    method first {
+        if (itemSize == 0) then {
+            Exception.raise("List is empty")
+        }
+        elements.at(0)
+    }
+
+    method flatMap(transform) {
+        var result := list []
+        do { elem ->
+            var transformed := transform.apply(elem)
+            transformed.do { item ->
+                result.add(item)
+            }
+        }
+        result
     }
 
 }
