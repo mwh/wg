@@ -1,6 +1,7 @@
 package nz.mwh.cpsgrace.ast;
 
 import java.util.Collections;
+import java.util.List;
 
 public class ASTEncoding {
     @SuppressWarnings("rawtypes")
@@ -50,7 +51,7 @@ public class ASTEncoding {
         return new VarDec(name, declaredType.single(), annotations.asList(), valueExpr.single());
     }
 
-    protected static DefDec defDec(String name, ConsList<ASTNode> declaredType, ConsList<String> annotations, ASTNode valueExpr) {
+    protected static DefDec defDec(String name, ConsList<ASTNode> declaredType, ConsList<ASTNode> annotations, ASTNode valueExpr) {
         return new DefDec(name, declaredType.single(), annotations.asList(), valueExpr);
     }
 

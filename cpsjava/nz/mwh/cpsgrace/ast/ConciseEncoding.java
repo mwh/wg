@@ -1,6 +1,7 @@
 package nz.mwh.cpsgrace.ast;
 
 import java.util.Collections;
+import java.util.List;
 
 public class ConciseEncoding {
     @SuppressWarnings("rawtypes")
@@ -64,7 +65,8 @@ public class ConciseEncoding {
     }
 
     protected static DefDec d3F(String name, ConsList<ASTNode> declaredType, ConsList<String> annotations, ASTNode valueExpr) {
-        return new DefDec(name, declaredType.single(), annotations.asList(), valueExpr);
+        List<ASTNode> annots = annotations.asList().stream().map(x -> (ASTNode)new LexReq(List.of(new Part(x, List.of(), List.of())), "<unknown>")).toList();
+        return new DefDec(name, declaredType.single(), annots, valueExpr);
     }
 
     protected static Assn a5N(ASTNode left, ASTNode right) {

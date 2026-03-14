@@ -105,6 +105,9 @@ public class MethodDecl extends ASTNode {
 
     public CPS bodyCPS() {
         CPS blockBody = (reqCtx, reqCont) -> {
+            if (body.size() == 0) {
+                return reqCont.apply(GraceObject.DONE);
+            }
             Context evalCtx = reqCtx.withReturnContinuation(reqCont);
             PendingStep step = null;
             Continuation cont = reqCont;

@@ -9,10 +9,10 @@ import nz.mwh.cpsgrace.PendingStep;
 public class DefDec extends ASTNode {
     private String name;
     private ASTNode declaredType;
-    private List<String> annotations;
+    private List<ASTNode> annotations;
     private ASTNode valueExpr;
 
-    public DefDec(String name, ASTNode declaredType, List<String> annotations, ASTNode valueExpr) {
+    public DefDec(String name, ASTNode declaredType, List<ASTNode> annotations, ASTNode valueExpr) {
         this.name = name;
         this.declaredType = declaredType;
         this.annotations = annotations;
@@ -41,7 +41,7 @@ public class DefDec extends ASTNode {
         return declaredType;
     }
 
-    public List<String> getAnnotations() {
+    public List<ASTNode> getAnnotations() {
         return annotations;
     }
 

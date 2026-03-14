@@ -17,6 +17,9 @@ public class Converter {
 
     public ASTNode convertNode(GraceObject node) {
         GraceObject nodeKindObj = requestSync(node, "kind", List.of());
+        if (nodeKindObj == null) {
+            throw new RuntimeException("AST node missing 'kind' property.");
+        }
         String nodeKind = GraceString.assertString(nodeKindObj).toString();
         switch (nodeKind) {
             case "objCons" -> {
@@ -96,7 +99,8 @@ public class Converter {
                 GraceObject dtypeObj = requestSync(node, "decType", List.of());
                 ASTNode dtype = convertNode(dtypeObj);
                 GraceObject annotsObj = requestSync(node, "annotations", List.of());
-                List<String> annots = convertStringList(annotsObj);
+                List<String> annotsStr = convertStringList(annotsObj);
+                List<ASTNode> annots = annotsStr.stream().map(x -> (ASTNode)new LexReq(List.of(new Part(x, List.of(), List.of())), "<unknown>")).toList();
                 GraceObject bodyObj = requestSync(node, "value", List.of());
                 ASTNode body = convertNode(bodyObj);
                 return new DefDec(name, dtype, annots, body);
@@ -107,7 +111,8 @@ public class Converter {
                 GraceObject dtypeObj = requestSync(node, "decType", List.of());
                 ASTNode dtype = convertNode(dtypeObj);
                 GraceObject annotsObj = requestSync(node, "annotations", List.of());
-                List<ASTNode> annots = convertNodeList(annotsObj);
+                List<String> annotsStr = convertStringList(annotsObj);
+                List<ASTNode> annots = annotsStr.stream().map(x -> (ASTNode)new LexReq(List.of(new Part(x, List.of(), List.of())), "<unknown>")).toList();
                 GraceObject valueObj = requestSync(node, "value", List.of());
                 ASTNode value = convertNode(valueObj);
                 return new VarDec(name, dtype, annots, value);
