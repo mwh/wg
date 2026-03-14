@@ -1,9 +1,10 @@
 import "collections" as collections
 
 
-class part(nm, args) {
+class part(nm, args, typeargs) {
     def name is public = nm
     def arguments is public = args
+    def typeArguments is public = typeargs
 }
 
 class request(pts) {
@@ -39,7 +40,7 @@ class request(pts) {
 
 method nullary(name) {
     def parts = collections.list
-    parts.append(part(name, collections.list))
+    parts.append(part(name, collections.list, collections.list))
     return request(parts)
 }
 
@@ -47,7 +48,7 @@ method unary(name, arg) {
     def parts = collections.list
     def args = collections.list
     args.append(arg)
-    parts.append(part(name, args))
+    parts.append(part(name, args, collections.list))
     return request(parts)
 }
 
@@ -56,7 +57,7 @@ method binary(name, arg1, arg2) {
     def args = collections.list
     args.append(arg1)
     args.append(arg2)
-    parts.append(part(name, args))
+    parts.append(part(name, args, collections.list))
     return request(parts)
 }
 
@@ -66,7 +67,7 @@ method twoPart(name1, name2, arg1, arg2) {
     def args2 = collections.list
     args1.append(arg1)
     args2.append(arg2)
-    parts.append(part(name1, args1))
-    parts.append(part(name2, args2))
+    parts.append(part(name1, args1, collections.list))
+    parts.append(part(name2, args2, collections.list))
     return request(parts)
 }

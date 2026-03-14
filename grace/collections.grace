@@ -57,6 +57,10 @@ class list {
         current.value
     }
 
+    method do(block) {
+        each(block)
+    }
+
     method first {
         if (size == 0) then {
             Exception.raise("List is empty")

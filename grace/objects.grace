@@ -226,6 +226,15 @@ class graceString(val) {
             case { "asString(0)" ->
                 return self
             }
+            case { "asDebugString(0)" ->
+                return graceString("\"" ++
+                    value.replace "\\" with "\\\\"
+                        .replace "\"" with "\\"
+                        .replace "\n" with "\\n"
+                        .replace "\r" with "\\r"
+                        .replace "\t" with "\\t"
+                    ++ "\"")
+            }
             case { "size(0)" ->
                 return graceNumber(value.size)
             }
@@ -292,7 +301,7 @@ class graceNumber(val) {
 
     method request(req) {
         match (req.name)
-            case { "asString(0)" ->
+            case { "asString(0)" | "asDebugString(0)" ->
                 return graceString(value.asString)
             }
             case { "==(1)" ->
@@ -346,7 +355,7 @@ class graceBoolean(val) {
 
     method request(req) {
         match(req.name)
-            case { "asString(0)" ->
+            case { "asString(0)" | "asDebugString(0)" ->
                 return graceString(booleanValue.asString)
             }
             case { "==(1)" ->
@@ -394,6 +403,44 @@ class graceBoolean(val) {
             case { other ->
                 Exception.raise("Method not found in boolean: {other}")
             }
+    }
+}
+
+class graceLineup(elems) {
+    def elements = elems
+
+    method request(req) {
+        match (req.name)
+            case { "size(0)" -> return graceNumber(elements.size) }
+            case { "asString(0)" | "asDebugString(0)" -> 
+                return graceString("[" ++ elements.map { x ->
+                    x.request(requests.nullary "asDebugString").value }
+                        combine { a, b -> a ++ ", " ++ b }
+                    ++  "]") }
+            case { "do(1)" -> 
+                def blk = req.at(1).arguments.at(1)
+                elements.do { x ->
+                    blk.request(requests.unary("apply", x))
+                }
+                return graceDone
+            }
+            case { "++(1)" ->
+                def ret = collections.list
+                def other = req.at(1).arguments.at(1)
+                elems.do { x ->
+                    ret.append(x)
+                }
+                other.elements.do { x ->
+                    ret.append(x)
+                }
+                return graceLineup(ret)
+            }
+    }
+
+    method hasMethod(name) {
+        match(name)
+            case { "do(1)" | "size(0)" | "asString(0)" | "asDebugString(0)" -> true }
+            case { _ -> false }
     }
 }
 

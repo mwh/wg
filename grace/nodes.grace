@@ -60,7 +60,19 @@ method numLit(val) {
     }
 }
 
-method part(nm, args) { requests.part(nm, args) }
+class lineup(elems) {
+    def kind is public = "lineup"
+    def elements is public = elems
+
+    method evaluate(context) {
+        objects.graceLineup(elements.map { x -> x.evaluate(context) } )
+    }
+
+    method evaluateDeclaration(context) { }
+}
+
+method part(nm, args) { requests.part(nm, args, nil) }
+method part(nm, args, typeargs) { requests.part(nm, args, typeargs) }
 
 method lexReq(partList) {
     object {
@@ -133,7 +145,7 @@ method varDec(nm, dtype, anns, val) {
 
         method evaluate(context) {
             if (value.size > 0) then {
-                context.scope.request(requests.request(one(part(name ++ ":=", one(value.at(1).evaluate(context))))))
+                context.scope.request(requests.request(one(part(name ++ ":=", one(value.at(1).evaluate(context)), nil))))
             }
         }
 
@@ -372,6 +384,7 @@ class listWrapper(l) {
     method first { list.first }
     method last { list.last }
     method each(block) { list.each(block) }
+    method do(block) { list.do(block) }
     method map(transform) { listWrapper(list.map(transform)) }
     method flatMap(transform) { listWrapper(list.flatMap(transform)) }
     method map(transform) combine(combiner) {
@@ -429,11 +442,13 @@ def astModule = object {
             case { "lexicalRequest(2)" -> return lexReq(req.at(1).arguments.at(2)) }
             case { "explicitRequest(2)" -> return dotReq(req.at(1).arguments.at(1), req.at(1).arguments.at(2)) }
             case { "explicitRequest(3)" -> return dotReq(req.at(1).arguments.at(2), req.at(1).arguments.at(3)) }
-            case { "part(2)" -> return part(req.at(1).arguments.at(1).value, req.at(1).arguments.at(2)) }
+            case { "part(2)" -> return part(req.at(1).arguments.at(1).value, req.at(1).arguments.at(2), listWrapper(nil) ) }
+            case { "part(3)" -> return part(req.at(1).arguments.at(1).value, req.at(1).arguments.at(2), req.at(1).arguments.at(3)) }
             case { "methodDecl(4)" -> return methDec(req.at(1).arguments.at(1), req.at(1).arguments.at(2), req.at(1).arguments.at(3), req.at(1).arguments.at(4)) }
             case { "objectConstructor(2)" -> return objCons(req.at(1).arguments.at(1), req.at(1).arguments.at(2)) }
             case { "assign(2)" -> return assn(req.at(1).arguments.at(1), req.at(1).arguments.at(2)) }
             case { "returnStmt(1)" -> return returnStmt(req.at(1).arguments.at(1)) }
+            case { "lineup(1)" -> return lineup(req.at(1).arguments.at(1)) }
             case { "identifierDeclaration(2)" -> return identifierDeclaration(req.at(1).arguments.at(1).value, req.at(1).arguments.at(2)) }
             case { "comment(1)" -> return comment(req.at(1).arguments.at(1).value) }
             case { "importStmt(2)" -> return importStmt(req.at(1).arguments.at(1).value, req.at(1).arguments.at(2)) }

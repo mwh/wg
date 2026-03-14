@@ -7,7 +7,7 @@ method one(item) { nodes.one(item) }
 method cons(head, list) { nodes.cons(head, list) }
 method strLit(val) { nodes.strLit(val) }
 method numLit(val) { nodes.numLit(val) }
-method part(nm, args) { nodes.part(nm, args) }
+method part(nm, args, typeargs) { nodes.part(nm, args, typeargs) }
 method lexReq(partList) { nodes.lexReq(partList) }
 method dotReq(rec, partList) { nodes.dotReq(rec, partList) }
 method assn(lhs, val) { nodes.assn(lhs, val) }
