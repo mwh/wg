@@ -716,7 +716,7 @@ method parseMethodDeclaration(lxr) {
         }
         args := ast.cons(ast.identifierDeclaration(idToken.value, dtype), args)
         lxr.advance
-        def part = ast.part(id, args.reversed(ast.nil), nil)
+        def part = ast.part(id, args.reversed(ast.nil), ast.nil)
         parts := ast.cons(part, parts)
     } else {
         parseError(lxr.current.line, lxr.current.column, "Expected method name or operator")
