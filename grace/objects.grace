@@ -35,6 +35,13 @@ def terminalObject = object {
                 }
                 return graceDone
             }
+            case { "for(1)do(1)" ->
+                def collection = req.at(1).arguments.at(1)
+                def bodyBlock = req.at(2).arguments.at(1)
+                def doReq = requests.unary("do", bodyBlock)
+                collection.request(doReq)
+                return graceDone
+            }
             case { "true(0)" ->
                 return graceBoolean(true)
             }
@@ -344,9 +351,51 @@ class graceNumber(val) {
                 def other = req.at(1).arguments.at(1)
                 return graceBoolean(value <= other.value)
             }
+            case { "..(1)" ->
+                def other = req.at(1).arguments.at(1)
+                return graceRange(self, other, graceNumber(1))
+            }
             case { other ->
                 Exception.raise "Method not found in number: {other}"
             }
+    }
+}
+
+class graceRange(start, end, step) {
+
+    method request(req) {
+        match (req.name)
+            case { "asString(0)" ->
+                return graceString("{start}..{end}")
+            }
+            case { "asDebugString(0)" ->
+                return graceString("graceRange(" ++ start.asDebugString ++ ", " ++ end.asDebugString ++ ", " ++ step.asDebugString ++ ")")
+            }
+            case { "do(1)" ->
+                def blk = req.at(1).arguments.at(1)
+                var i := start.value
+                if (step.value > 0) then {
+                    while { i <= end.value } do {
+                        blk.request(requests.unary("apply", graceNumber(i)))
+                        i := i + step.value
+                    }
+                } elseif (step.value < 0) then {
+                    while { i >= end.value } do {
+                        blk.request(requests.unary("apply", graceNumber(i)))
+                        i := i + step.value
+                    }
+                }
+                return graceDone
+            }
+            case { other ->
+                Exception.raise "Method not found in range: {other}"
+            }
+    }
+
+    method hasMethod(name) {
+        match(name)
+            case { "asString(0)" | "asDebugString(0)" | "do(1)" -> true }
+            case { _ -> false }
     }
 }
 

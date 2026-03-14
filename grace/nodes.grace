@@ -394,6 +394,10 @@ class listWrapper(l) {
         list.zip(otherList) each(block)
     }
 
+    method reversed(rest) {
+        listWrapper(list.reversed)
+    }
+
     method request(req) {
         match (req.name)
             case { "map(1)" -> 

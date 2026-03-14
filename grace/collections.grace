@@ -145,6 +145,10 @@ class list {
         result
     }
 
+    method reversed(e) {
+        reversed
+    }
+
     method tail {
         if (size == 0) then {
             Exception.raise("List is empty")
