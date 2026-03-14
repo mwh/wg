@@ -72,6 +72,8 @@ public class GraceNumber implements GraceObject {
                 GraceNumber endNum = assertNumber(args.get(0));
                 GraceRange range = new GraceRange(this.value.doubleValue(), endNum.value.doubleValue());
                 return returnCont.returning(ctx, range);
+            case "::(1)":
+                return returnCont.returning(ctx, new GraceBinding(this, args.get(0)));
             case "hash":
                 return returnCont.returning(ctx, new GraceNumber(Double.hashCode(value.doubleValue())));
             case "%(1)":

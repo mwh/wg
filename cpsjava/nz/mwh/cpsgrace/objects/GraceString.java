@@ -70,6 +70,8 @@ public class GraceString implements GraceObject {
                 GraceNumber endNum = GraceNumber.assertNumber(args.get(1));
                 String substring = this.value.substring(startNum.intValue() - 1, endNum.intValue());
                 return returnCont.returning(ctx, new GraceString(substring));
+            case "::(1)":
+                return returnCont.returning(ctx, new GraceBinding(this, args.get(0)));
             case "concise":
                 return returnCont.returning(ctx, this);
             case "hash":

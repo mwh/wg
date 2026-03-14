@@ -125,6 +125,8 @@ public class UserObject implements GraceObject {
         }));
         addMethod("hash(0)", Method.java((ctx, cont, _, _) ->
             cont.returning(ctx, new GraceNumber(System.identityHashCode(this)))));
+        addMethod("::(1)", Method.java((ctx, cont, _, args) ->
+            cont.returning(ctx, new GraceBinding(this, args.get(0)))));
     }
 
     public String toString() {

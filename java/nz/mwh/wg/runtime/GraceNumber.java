@@ -52,6 +52,8 @@ public class GraceNumber implements GraceObject {
                 return new GraceBoolean(value == ((GraceNumber) parts.get(0).getArgs().get(0)).value);
             } else if (name.equals("!=")) {
                 return new GraceBoolean(value != ((GraceNumber) parts.get(0).getArgs().get(0)).value);
+            } else if (name.equals("::")) {
+                return new GraceBinding(this, parts.get(0).getArgs().get(0));
             } else if (name.equals("%")) {
                 return switch (parts.get(0).getArgs().get(0)) {
                     case GraceNumber n -> new GraceNumber(value % n.value);

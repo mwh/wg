@@ -65,6 +65,8 @@ public class GraceBoolean implements GraceObject {
                 }
                 return returnCont.returning(ctx, new GraceMatchResult(false, target));
             }
+            case "::(1)":
+                return returnCont.returning(ctx, new GraceBinding(this, args.get(0)));
             case "|(1)":
                 return returnCont.returning(ctx, new GracePatternOr(this, args.get(0)));
             default:
