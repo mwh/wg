@@ -760,6 +760,15 @@ static PendingStep *prelude_shift_fn(GraceObject *self, Env *env,
     return r;
 }
 
+/* primitiveArray factory: primitiveArray.new(size) creates a mutable array */
+static PendingStep *primarray_new_fn(GraceObject *self, Env *env,
+                                      GraceObject **args, int nargs, Cont *k,
+                                      void *data) {
+    (void)self; (void)env; (void)nargs; (void)data;
+    int size = (int)grace_number_val(args[0]);
+    return cont_apply(k, grace_primarray_new(size));
+}
+
 GraceObject *make_prelude(void) {
     GraceObject *p = grace_user_new(NULL);
 
@@ -799,6 +808,11 @@ GraceObject *make_prelude(void) {
     /* delimited continuations */
     user_add_method(p, "reset(1)",  prelude_reset_fn,  NULL);
     user_add_method(p, "shift(1)",  prelude_shift_fn,  NULL);
+
+    /* primitiveArray factory */
+    GraceObject *pa_factory = grace_user_new(NULL);
+    user_add_method(pa_factory, "new(1)", primarray_new_fn, NULL);
+    user_bind_def(p, "primitiveArray", pa_factory);
 
     return p;
 }

@@ -272,6 +272,17 @@ extern const GraceVTable grace_lineup_vtable;
 GraceObject *grace_lineup_new(GraceObject **elems, int n);
 
 /* 
+ * GracePrimitiveArray  (mutable fixed-size array)
+ *  */
+typedef struct {
+    GraceObject  base;
+    int          capacity;
+    GraceObject **elems;  /* malloc'd array of capacity elements */
+} GracePrimitiveArray;
+extern const GraceVTable grace_primarray_vtable;
+GraceObject *grace_primarray_new(int capacity);
+
+/* 
  * GraceUserObject (objects created by `object { ... }`, modules, scope frames)
  *  */
 

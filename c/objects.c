@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include <math.h>
 #include "ast.h"
 #include "grace.h"
@@ -228,13 +229,19 @@ static PendingStep *number_request(GraceObject *self, Env *env,
     if (strcmp(name,"sqrt(0)")==0)      return cont_apply(k, grace_number_new(sqrt(v)));
     if (strcmp(name,"asInteger(0)")==0) return cont_apply(k, grace_number_new(trunc(v)));
     if (strcmp(name,"..(1)")==0)        return cont_apply(k, grace_range_new(v, grace_number_val(args[0])));
-    if (strcmp(name,"asString(0)")==0) {
+    if (strcmp(name,"asString(0)")==0 || strcmp(name,"asDebugString(0)")==0) {
         char buf[64];
         if (v == trunc(v) && fabs(v) < 1e15)
             snprintf(buf, sizeof(buf), "%.0f", v);
         else
             snprintf(buf, sizeof(buf), "%g", v);
         return cont_apply(k, grace_string_new(buf));
+    }
+    if (strcmp(name,"hash(0)")==0) {
+        union { double d; uint64_t u; } bits;
+        bits.d = v;
+        int32_t hash = (int32_t)(bits.u ^ (bits.u >> 32));
+        return cont_apply(k, grace_number_new((double)hash));
     }
     if (strcmp(name,"match(1)")==0) {
         if (args[0]->vt == &grace_number_vtable)
@@ -367,6 +374,38 @@ static PendingStep *string_request(GraceObject *self, Env *env,
     if (strcmp(name,"<=(1)")==0) return cont_apply(k, grace_bool(strcmp(v, grace_string_val(args[0])) <= 0));
     if (strcmp(name,">=(1)")==0) return cont_apply(k, grace_bool(strcmp(v, grace_string_val(args[0])) >= 0));
     if (strcmp(name,"asString(0)")==0) return cont_apply(k, self);
+    if (strcmp(name,"asDebugString(0)")==0) {
+        /* Escape special characters and wrap in double quotes */
+        size_t esc_len = 2; /* opening and closing quote */
+        for (size_t i = 0; i < len; i++) {
+            switch (v[i]) {
+                case '\\': case '\n': case '\t': case '\r': case '"': esc_len += 2; break;
+                default: esc_len += 1; break;
+            }
+        }
+        char *esc = malloc(esc_len + 1);
+        char *p = esc;
+        *p++ = '"';
+        for (size_t i = 0; i < len; i++) {
+            switch (v[i]) {
+                case '\\': *p++ = '\\'; *p++ = '\\'; break;
+                case '\n':  *p++ = '\\'; *p++ = 'n'; break;
+                case '\t':  *p++ = '\\'; *p++ = 't'; break;
+                case '\r':  *p++ = '\\'; *p++ = 'r'; break;
+                case '"':  *p++ = '\\'; *p++ = '"'; break;
+                default:    *p++ = v[i]; break;
+            }
+        }
+        *p++ = '"';
+        *p = '\0';
+        return cont_apply(k, grace_string_take(esc));
+    }
+    if (strcmp(name,"hash(0)")==0) {
+        unsigned long hash = 5381;
+        for (const char *p = v; *p; p++)
+            hash = ((hash << 5) + hash) + (unsigned char)*p;
+        return cont_apply(k, grace_number_new((double)(int32_t)hash));
+    }
     if (strcmp(name,"asNumber(0)")==0) {
         char *end; double num = strtod(v, &end);
         if (end == v) grace_raise(env, "TypeError", "Not a number: '%s'", v);
@@ -471,8 +510,10 @@ static PendingStep *bool_request(GraceObject *self, Env *env, const char *name,
         return cont_apply(k, grace_bool(args[0]->vt == &grace_bool_vtable && grace_bool_val(args[0]) == v));
     if (strcmp(name,"!=(1)")==0)
         return cont_apply(k, grace_bool(!(args[0]->vt == &grace_bool_vtable && grace_bool_val(args[0]) == v)));
-    if (strcmp(name,"asString(0)")==0)
+    if (strcmp(name,"asString(0)")==0 || strcmp(name,"asDebugString(0)")==0)
         return cont_apply(k, grace_string_new(v ? "true" : "false"));
+    if (strcmp(name,"hash(0)")==0)
+        return cont_apply(k, grace_number_new(v ? 3.0 : 7.0));
     if (strcmp(name,"ifTrue(1)")==0)           { if (v)  return apply_lazy(args[0], env, k); return cont_apply(k, grace_done); }
     if (strcmp(name,"ifFalse(1)")==0)          { if (!v) return apply_lazy(args[0], env, k); return cont_apply(k, grace_done); }
     if (strcmp(name,"ifTrue(1)ifFalse(1)")==0) return apply_lazy(v ? args[0] : args[1], env, k);
@@ -650,6 +691,7 @@ typedef struct {
     char        *so_far;
     Env         *env;
     Cont        *k;
+    const char  *elem_method; /* "asString(0)" or "asDebugString(0)" */
 } LineupAsStrState;
 typedef struct { Cont base; LineupAsStrState *st; } LineupAsStrCont;
 
@@ -701,7 +743,7 @@ static PendingStep *lineup_asstr_next(Cont *c, GraceObject *str_v) {
     nc->st = st;
     lc->st = NULL;
     cont_consumed(c);
-    return grace_request(lu->elems[st->idx], st->env, "asString(0)", NULL, 0, (Cont *)nc);
+    return grace_request(lu->elems[st->idx], st->env, st->elem_method, NULL, 0, (Cont *)nc);
 }
 
 /* vtable dispatch */
@@ -750,20 +792,23 @@ static PendingStep *lineup_request(GraceObject *self, Env *env, const char *name
         return cont_apply(k, grace_lineup_new(arr, n2));
     }
 
-    if (strcmp(name, "asString(0)") == 0) {
+    if (strcmp(name, "asString(0)") == 0 || strcmp(name, "asDebugString(0)") == 0) {
         if (lu->n == 0) return cont_apply(k, grace_string_new("[]"));
+        const char *elem_meth = (strcmp(name, "asDebugString(0)") == 0)
+                                ? "asDebugString(0)" : "asString(0)";
         LineupAsStrState *st = malloc(sizeof(LineupAsStrState));
         st->idx    = 0;
         st->lineup = self;
         st->so_far = str_dup("");
         st->env    = env_retain(env);
         st->k      = cont_retain(k);
+        st->elem_method = elem_meth;
         LineupAsStrCont *lc = CONT_ALLOC(LineupAsStrCont);
         lc->base.apply    = lineup_asstr_next;
         lc->base.gc_trace = lineup_asstr_trace;
         lc->base.cleanup  = lineup_asstr_cleanup;
         lc->st = st;
-        return grace_request(lu->elems[0], env, "asString(0)", NULL, 0, (Cont *)lc);
+        return grace_request(lu->elems[0], env, elem_meth, NULL, 0, (Cont *)lc);
     }
 
     if (strcmp(name, "==(1)") == 0)
@@ -798,6 +843,129 @@ GraceObject *grace_lineup_new(GraceObject **elems, int n) {
     return (GraceObject *)lu;
 }
 
+/*  GracePrimitiveArray  (mutable fixed-size array) */
+
+/* Iteration continuation structures for primitiveArray.do(1) */
+typedef struct {
+    int           idx;
+    GracePrimitiveArray *arr;
+    GraceObject  *block;
+    Env          *env;
+    Cont         *k;
+} PrimArrayIterState;
+typedef struct { Cont base; PrimArrayIterState *st; } PrimArrayIterCont;
+
+static void primarray_iter_trace(Cont *c) {
+    PrimArrayIterCont *pc = (PrimArrayIterCont *)c;
+    PrimArrayIterState *st = pc->st;
+    if (!st) return;
+    gc_mark_grey((GraceObject *)st->arr);
+    gc_mark_grey(st->block);
+    gc_trace_env(st->env);
+    gc_trace_cont(st->k);
+}
+static void primarray_iter_cleanup(Cont *c) {
+    PrimArrayIterCont *pc = (PrimArrayIterCont *)c;
+    PrimArrayIterState *st = pc->st;
+    if (!st) return;
+    env_release(st->env);
+    cont_release_abandon(st->k);
+    free(st);
+}
+static PendingStep *primarray_iter_next(Cont *c, GraceObject *v) {
+    (void)v;
+    PrimArrayIterCont *pc = (PrimArrayIterCont *)c;
+    PrimArrayIterState *st = pc->st;
+    st->idx++;
+    if (st->idx >= st->arr->capacity) {
+        Cont *k = cont_retain(st->k);
+        pc->st = NULL;
+        env_release(st->env);
+        cont_release(st->k);
+        free(st);
+        cont_consumed(c);
+        PendingStep *r = cont_apply(k, grace_done);
+        cont_release(k);
+        return r;
+    }
+    PrimArrayIterCont *nc = CONT_ALLOC(PrimArrayIterCont);
+    nc->base.apply    = primarray_iter_next;
+    nc->base.gc_trace = primarray_iter_trace;
+    nc->base.cleanup  = primarray_iter_cleanup;
+    nc->st = st;
+    pc->st = NULL;
+    cont_consumed(c);
+    GraceObject *a[1] = { st->arr->elems[st->idx] };
+    return grace_request(st->block, st->env, "apply(1)", a, 1, (Cont *)nc);
+}
+
+static PendingStep *primarray_request(GraceObject *self, Env *env,
+                                       const char *name,
+                                       GraceObject **args, int nargs, Cont *k) {
+    (void)nargs;
+    GracePrimitiveArray *pa = (GracePrimitiveArray *)self;
+    if (strcmp(name, "at(1)") == 0) {
+        int idx = (int)grace_number_val(args[0]);
+        if (idx < 0 || idx >= pa->capacity)
+            grace_raise(env, "BoundsError", "primitiveArray index %d out of bounds (size %d)",
+                        idx, pa->capacity);
+        if (pa->elems[idx] == grace_uninit)
+            grace_raise(env, "UninitError", "primitiveArray element at %d uninitialised", idx);
+        return cont_apply(k, pa->elems[idx]);
+    }
+    if (strcmp(name, "at(1)put(1)") == 0) {
+        int idx = (int)grace_number_val(args[0]);
+        if (idx < 0 || idx >= pa->capacity)
+            grace_raise(env, "BoundsError", "primitiveArray index %d out of bounds (size %d)",
+                        idx, pa->capacity);
+        gc_write_barrier(args[1]);
+        pa->elems[idx] = args[1];
+        return cont_apply(k, grace_done);
+    }
+    if (strcmp(name, "size(0)") == 0)
+        return cont_apply(k, grace_number_new((double)pa->capacity));
+    if (strcmp(name, "do(1)") == 0 || strcmp(name, "each(1)") == 0) {
+        if (pa->capacity == 0) return cont_apply(k, grace_done);
+        PrimArrayIterState *st = malloc(sizeof(PrimArrayIterState));
+        st->idx   = 0;
+        st->arr   = pa;
+        st->block = args[0];
+        st->env   = env_retain(env);
+        st->k     = cont_retain(k);
+        PrimArrayIterCont *pc = CONT_ALLOC(PrimArrayIterCont);
+        pc->base.apply    = primarray_iter_next;
+        pc->base.gc_trace = primarray_iter_trace;
+        pc->base.cleanup  = primarray_iter_cleanup;
+        pc->st = st;
+        GraceObject *a[1] = { pa->elems[0] };
+        return grace_request(args[0], env, "apply(1)", a, 1, (Cont *)pc);
+    }
+    if (strcmp(name, "asString(0)") == 0)
+        return cont_apply(k, grace_string_new("a primitiveArray"));
+    grace_fatal("No method '%s' on primitiveArray", name);
+}
+static const char *primarray_describe(GraceObject *self) { (void)self; return "a primitiveArray"; }
+static void primarray_trace(GraceObject *self) {
+    GracePrimitiveArray *pa = (GracePrimitiveArray *)self;
+    for (int i = 0; i < pa->capacity; i++)
+        if (pa->elems[i]) gc_mark_grey(pa->elems[i]);
+}
+static void primarray_sweep_free(GraceObject *self) {
+    GracePrimitiveArray *pa = (GracePrimitiveArray *)self;
+    free(pa->elems);
+    pa->elems = NULL;
+}
+const GraceVTable grace_primarray_vtable = { primarray_request, primarray_describe, primarray_trace, primarray_sweep_free };
+
+GraceObject *grace_primarray_new(int capacity) {
+    GracePrimitiveArray *pa = (GracePrimitiveArray *)gc_alloc(sizeof(GracePrimitiveArray));
+    pa->base.vt   = &grace_primarray_vtable;
+    pa->capacity   = capacity;
+    pa->elems     = malloc((size_t)(capacity > 0 ? capacity : 1) * sizeof(GraceObject *));
+    for (int i = 0; i < capacity; i++) pa->elems[i] = grace_uninit;
+    return (GraceObject *)pa;
+}
+
 /*  GraceUserObject  */
 static PendingStep *user_request(GraceObject *self, Env *env, const char *name,
                                   GraceObject **args, int nargs, Cont *k) {
@@ -824,6 +992,25 @@ static PendingStep *user_request(GraceObject *self, Env *env, const char *name,
         return cont_apply(k, grace_bool(self != args[0]));
     if (strcmp(name, "asString(0)") == 0)
         return cont_apply(k, grace_string_new("an object"));
+    if (strcmp(name, "asDebugString(0)") == 0) {
+        /* Build "object { method name1; method name2; ... }" */
+        char *buf = str_dup("object {");
+        for (MethodEntry *m = uo->methods; m; m = m->next) {
+            /* Skip duplicates (methods are hoisted then re-added) */
+            int dup = 0;
+            for (MethodEntry *prev = uo->methods; prev != m; prev = prev->next)
+                if (strcmp(prev->name, m->name) == 0) { dup = 1; break; }
+            if (dup) continue;
+            char *next = str_fmt("%s method %s;", buf, m->name);
+            free(buf);
+            buf = next;
+        }
+        char *result = str_fmt("%s }", buf);
+        free(buf);
+        return cont_apply(k, grace_string_take(result));
+    }
+    if (strcmp(name, "hash(0)") == 0)
+        return cont_apply(k, grace_number_new((double)(int32_t)(intptr_t)self));
     grace_fatal("No method '%s' on object", name);
 }
 static const char *user_describe(GraceObject *self) { (void)self; return "an object"; }
