@@ -35,6 +35,7 @@ public class GraceBoolean implements GraceObject {
     public PendingStep requestMethod(Context ctx, Continuation returnCont, String methodName, List<GraceObject> args, List<GraceObject> genericArgs) {
         switch (methodName) {
             case "asString":
+            case "asDebugString":
                 return new PendingStep(ctx, returnCont, new GraceString(toString()));
             case "not":
             case "prefix!":
@@ -55,6 +56,8 @@ public class GraceBoolean implements GraceObject {
                 GraceBoolean orBool = assertBoolean(args.get(0));
                 boolean orResult = this.value || orBool.value;
                 return returnCont.returning(ctx, GraceBoolean.of(orResult));
+            case "hash":
+                return returnCont.returning(ctx, new GraceNumber(value ? 3 : 7));
             case "match(1)": {
                 GraceObject target = args.get(0);
                 if (target instanceof GraceBoolean tb && this.value == tb.value) {

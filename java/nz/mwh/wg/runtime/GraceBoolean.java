@@ -28,7 +28,7 @@ public class GraceBoolean implements GraceObject {
                 return new GraceBoolean(value && ((GraceBoolean) parts.get(0).getArgs().get(0)).value);
             } else if (name.equals("||")) {
                 return new GraceBoolean(value || ((GraceBoolean) parts.get(0).getArgs().get(0)).value);
-            } else if (name.equals("asString")) {
+            } else if (name.equals("asString") || name.equals("asDebugString")) {
                 return new GraceString("" + value);
             } else if (name.equals("==")) {
                 return new GraceBoolean(value == ((GraceBoolean) parts.get(0).getArgs().get(0)).value);
@@ -41,6 +41,8 @@ public class GraceBoolean implements GraceObject {
                 return GraceDone.done;
             } else if (name.equals("value")) {
                 return this;
+            } else if (name.equals("hash")) {
+                return new GraceNumber(value ? 3 : 7);
             }
         } else if (parts.size() == 2) {
             String name = request.getName();

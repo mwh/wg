@@ -26,6 +26,9 @@ public class GraceString implements GraceObject {
                 return new GraceString(value + parts.get(0).getArgs().get(0).toString());
             } else if (name.equals("asString")) {
                 return new GraceString(value);
+            } else if (name.equals("asDebugString")) {
+                String escaped = value.replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t").replace("\r", "\\r").replace("\"", "\\\"");
+                return new GraceString("\"" + escaped + "\"");
             } else if (name.equals("size")) {
                 return new GraceNumber(value.length());
             } else if (name.equals("==")) {
@@ -43,6 +46,8 @@ public class GraceString implements GraceObject {
                 return new GraceNumber(value.codePointAt(0));
             } else if (name.equals("|")) {
                 return new GracePatternOr(this, parts.get(0).getArgs().get(0));
+            } else if (name.equals("hash")) {
+                return new GraceNumber(value.hashCode());
             } else if (name.equals("match")) {
                 GraceObject target = parts.get(0).getArgs().get(0);
                 if (target instanceof GraceString str && value.equals(str.value)) {

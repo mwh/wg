@@ -123,6 +123,8 @@ public class UserObject implements GraceObject {
         addMethod("asDebugString(0)", Method.java((ctx, cont, _, args) -> {
             return cont.returning(ctx, new GraceString("object { " + getMethodNames().stream().map(x -> "method " + x + "; ").toList() + "}"));
         }));
+        addMethod("hash(0)", Method.java((ctx, cont, _, _) ->
+            cont.returning(ctx, new GraceNumber(System.identityHashCode(this)))));
     }
 
     public String toString() {

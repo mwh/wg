@@ -47,6 +47,9 @@ public class GraceLineup implements GraceObject {
             case "asString": {
                 return asStringHelper(ctx, returnCont, 0, new StringBuilder("["));
             }
+            case "asDebugString": {
+                return asStringHelper(ctx, returnCont, 0, new StringBuilder("["));
+            }
             default:
                 throw new RuntimeException("No such method " + methodName + " on Lineup");
         }
@@ -81,7 +84,7 @@ public class GraceLineup implements GraceObject {
         return elements.get(index).requestMethod(ctx, (GraceObject strObj) -> {
             sb.append(strObj.toString());
             return asStringHelper(ctx, returnCont, index + 1, sb);
-        }, "asString", List.of());
+        }, "asDebugString", List.of());
     }
 
     @Override

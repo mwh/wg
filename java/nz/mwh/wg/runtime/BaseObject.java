@@ -38,6 +38,8 @@ public class BaseObject implements GraceObject {
             return new GraceBoolean(this != other);
         });
         addMethod("asString(0)", _ -> new GraceString("object {" + String.join("; ", methods.keySet()) + "}"));
+        addMethod("asDebugString(0)", _ -> new GraceString("object {" + String.join("; ", methods.keySet()) + "}"));
+        addMethod("hash(0)", _ -> new GraceNumber(System.identityHashCode(this)));
         if (bindSelf) {
             addMethod("self(0)", _ -> this);
         }

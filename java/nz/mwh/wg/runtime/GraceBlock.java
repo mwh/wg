@@ -31,6 +31,18 @@ public class GraceBlock implements GraceObject {
             if (matchingBlock && request.getName().equals("|(1)")) {
                 return new GracePatternOr(this, request.parts.get(0).getArgs().get(0));
             }
+            if (request.parts.get(0).getName().equals("asDebugString")) {
+                return new GraceString("Block< " + parameters.stream().map(x -> {
+                    return switch (x) {
+                        case IdentifierDeclaration id -> id.getName();
+                        case LexicalRequest lr -> lr.getParts().get(0).getName();
+                        case NumberNode n -> "" + n.getValue();
+                        case StringNode s -> "\"" + s.getValue() + "\"";
+                        case ExplicitRequest er -> er.getParts().stream().map(p -> p.getName() + "()").reduce((a, b) -> a + " " + b).orElse("");
+                        default -> "?";
+                    };
+                }) + ">");
+            }
         }
         throw new GraceException(request.getVisitor(), "No such method in Block(" + parameters.size() + "): " + request.getName());
     }

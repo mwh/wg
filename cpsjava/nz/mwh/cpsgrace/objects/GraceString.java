@@ -24,6 +24,9 @@ public class GraceString implements GraceObject {
         switch (methodName) {
             case "asString":
                 return new PendingStep(ctx, returnCont, this);
+            case "asDebugString":
+                String escaped = value.replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t").replace("\r", "\\r").replace("\"", "\\\"");
+                return new PendingStep(ctx, returnCont, new GraceString("\"" + escaped + "\""));
             case "++(1)":
                 GraceObject arg0 = args.get(0);
                 return arg0.requestMethod(ctx, (GraceObject obj) -> {
@@ -69,6 +72,8 @@ public class GraceString implements GraceObject {
                 return returnCont.returning(ctx, new GraceString(substring));
             case "concise":
                 return returnCont.returning(ctx, this);
+            case "hash":
+                return returnCont.returning(ctx, new GraceNumber(this.value.hashCode()));
             case "match(1)": {
                 GraceObject target = args.get(0);
                 if (target instanceof GraceString ts && this.value.equals(ts.value)) {

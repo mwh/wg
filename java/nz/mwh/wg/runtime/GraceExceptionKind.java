@@ -26,6 +26,7 @@ public class GraceExceptionKind implements GraceObject {
     public GraceObject request(Request request) {
         switch (request.getName()) {
             case "asString(0)":
+            case "asDebugString(0)":
                 return new GraceString("Exception[" + name + "]");
             case "refine(1)":
                 var child = new GraceExceptionKind(this, request.getParts().get(0).getArgs().get(0).toString());

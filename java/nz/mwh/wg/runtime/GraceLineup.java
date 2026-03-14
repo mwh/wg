@@ -55,14 +55,14 @@ public class GraceLineup implements GraceObject {
                     return new GraceLineup(combined);
                 }
                 throw new RuntimeException("Cannot concatenate lineup with " + other);
-            } else if (name.equals("asString")) {
+            } else if (name.equals("asString") || name.equals("asDebugString")) {
                 StringBuilder sb = new StringBuilder();
                 sb.append("[");
                 for (int i = 0; i < elements.size(); i++) {
                     if (i > 0) {
                         sb.append(", ");
                     }
-                    sb.append(elements.get(i).request(new Request(request.getVisitor(), List.of(new RequestPartR("asString", List.of())))).toString());
+                    sb.append(elements.get(i).request(new Request(request.getVisitor(), List.of(new RequestPartR("asDebugString", List.of())))).toString());
                 }
                 sb.append("]");
                 return new GraceString(sb.toString());

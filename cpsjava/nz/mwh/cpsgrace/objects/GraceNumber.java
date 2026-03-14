@@ -23,6 +23,7 @@ public class GraceNumber implements GraceObject {
     public PendingStep requestMethod(Context ctx, Continuation returnCont, String methodName, List<GraceObject> args, List<GraceObject> genericArgs) {
         switch (methodName) {
             case "asString":
+            case "asDebugString":
                 if (value instanceof Double d && d == d.intValue()) {
                     return new PendingStep(ctx, returnCont, new GraceString(Integer.toString(d.intValue())));
                 }
@@ -71,6 +72,8 @@ public class GraceNumber implements GraceObject {
                 GraceNumber endNum = assertNumber(args.get(0));
                 GraceRange range = new GraceRange(this.value.doubleValue(), endNum.value.doubleValue());
                 return returnCont.returning(ctx, range);
+            case "hash":
+                return returnCont.returning(ctx, new GraceNumber(Double.hashCode(value.doubleValue())));
             case "%(1)":
                 GraceNumber modNum = assertNumber(args.get(0));
                 Number modResult;

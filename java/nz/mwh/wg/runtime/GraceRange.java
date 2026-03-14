@@ -21,6 +21,7 @@ public class GraceRange implements GraceObject {
     public GraceObject request(Request request) {
         switch(request.getName()) {
             case "asString(0)": return new GraceString(toString());
+            case "asDebugString(0)": return new GraceString("Range( " + toString() + ")");
             case "do(1)":
             case "each(1)": {
                 GraceObject block = request.getParts().getFirst().getArgs().getFirst();
@@ -44,6 +45,8 @@ public class GraceRange implements GraceObject {
                 newRange.step = newStep;
                 return newRange;
             }
+            case "hash(0)":
+                return new GraceNumber(Double.hashCode(start) * 31 + Double.hashCode(end));
         }
         throw new GraceException(request.getVisitor(), "No such method in Range: " + request.getName());
     }

@@ -42,6 +42,7 @@ public class GraceException extends RuntimeException implements GraceObject {
     public GraceObject request(Request request) {
         switch (request.getName()) {
             case "asString(0)":
+            case "asDebugString(0)":
                 return new GraceString(toString());
             case "reraise(0)":
                 throw this;

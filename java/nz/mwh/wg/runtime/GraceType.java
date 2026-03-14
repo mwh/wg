@@ -16,6 +16,7 @@ public class GraceType  implements GraceObject {
     public GraceObject request(Request request) {
         switch(request.getName()) {
             case "asString(0)":
+            case "asDebugString(0)":
                 return new GraceString(toString());
             case "match(1)":
                 GraceObject obj = request.getParts().get(0).getArgs().get(0);
