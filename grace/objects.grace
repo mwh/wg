@@ -187,6 +187,16 @@ class graceObject(scp) {
     var returnedValue is public
     var hasReturned is public := false
 
+    methods.at("==(1)") put { req ->
+        def other = req.at(1).arguments.at(1)
+        graceBoolean(self == other)
+    }
+
+    methods.at("!=(1)") put { req ->
+        def other = req.at(1).arguments.at(1)
+        graceBoolean(self != other)
+    }
+
     method request(req) {
         def name = req.name
         if (!methods.has(name)) then {
@@ -264,7 +274,7 @@ class graceString(val) {
             case { "substringFrom(1)to(1)" ->
                 def startIndex = req.at(1).arguments.at(1)
                 def endIndex = req.at(2).arguments.at(1)
-                return graceString(value.substring(startIndex.value, endIndex.value))
+                return graceString(value.substringFrom(startIndex.value) to(endIndex.value))
             }
             case { "replace(1)with(1)" ->
                 def oldValue = req.at(1).arguments.at(1)

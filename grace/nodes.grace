@@ -293,7 +293,7 @@ class interpStr(beforeStr, expr, afterNode) {
         def evaluatedExpr = expression.evaluate(context)
         def evaluatedAsString = evaluatedExpr.request(requests.request(one(part("asString", nil))))
         def restStr = rest.evaluate(context)
-        objects.graceString(before ++ evaluatedExpr.value ++ restStr.value)
+        objects.graceString(before ++ evaluatedAsString.value ++ restStr.value)
     }
 
     method evaluateDeclaration(ctx) { }
