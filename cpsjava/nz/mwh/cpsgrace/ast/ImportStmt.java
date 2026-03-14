@@ -1,6 +1,8 @@
 package nz.mwh.cpsgrace.ast;
 
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 
 import nz.mwh.cpsgrace.CPS;
 import nz.mwh.cpsgrace.GraceObject;
@@ -12,9 +14,12 @@ public class ImportStmt extends ASTNode {
     private String moduleName;
     private IdentifierDeclaration asName;
 
+    public static Set<String> IMPORTED_MODULES = new HashSet<>();
+
     public ImportStmt(String moduleName, IdentifierDeclaration asName) {
         this.moduleName = moduleName;
         this.asName = asName;
+        IMPORTED_MODULES.add(moduleName);
     }
 
     public String getModuleName() {
@@ -29,7 +34,7 @@ public class ImportStmt extends ASTNode {
         ASTNode moduleNode = TheProgram.getModuleAST(moduleName);
         CPS moduleCPS = moduleNode.toCPS();
         return (ctx, cont) -> {
-            GraceObject receiver = ctx.findReceiver(moduleName + " =(1)");
+            GraceObject receiver = ctx.findReceiver(asName.getName() + " =(1)");
             return moduleCPS.run(ctx.withScope(Start.prelude), (moduleObj) -> {
                 ((UserObject)moduleObj).setDebugLabel("imported module " + moduleName);
                 return receiver.requestMethod(ctx, cont, asName.getName() + " =(1)", List.of(moduleObj));

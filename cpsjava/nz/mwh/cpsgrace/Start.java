@@ -5,8 +5,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 
 import nz.mwh.cpsgrace.ast.ASTNode;
+import nz.mwh.cpsgrace.ast.ImportStmt;
 import nz.mwh.cpsgrace.ast.Converter;
 import nz.mwh.cpsgrace.objects.GraceBoolean;
 import nz.mwh.cpsgrace.objects.GraceMatchResult;
@@ -20,6 +23,7 @@ import nz.mwh.cpsgrace.objects.UserObject;
 public class Start {
     
     public static UserObject prelude;
+    private static GraceObject parserObj;
 
     public static void main(String[] args) {
         if (args.length > 0) {
@@ -67,7 +71,23 @@ public class Start {
                         step = step.go();
                     }
                 } else {
+                    TheProgram.moduleASTs.clear(); // Clear cached module ASTs to ensure we get fresh ones after imports
+                    TheProgram.importedModules.clear();
+                    ImportStmt.IMPORTED_MODULES.clear();
                     ASTNode prog = graceASTtoASTNode(graceAST);
+                    // Handle imports
+                    while (!TheProgram.moduleASTs.keySet().containsAll(ImportStmt.IMPORTED_MODULES)) {
+                        Set<String> missingModules = new HashSet<>(ImportStmt.IMPORTED_MODULES);
+                        missingModules.removeAll(TheProgram.moduleASTs.keySet());
+                        for (String moduleName : missingModules) {
+                            GraceObject moduleAST = parseToGraceAST(moduleName + ".grace");
+                            if (moduleAST == null) {
+                                throw new RuntimeException("Failed to parse module " + moduleName);
+                            }
+                            TheProgram.moduleASTs.put(moduleName, graceASTtoASTNode(moduleAST));
+                        }
+                    }
+                    // End handling imports
                     Context ctx = new Context();
                     addPrelude(ctx);
                     PendingStep step = prog.toCPS().run(ctx, (GraceObject _) -> {
@@ -91,12 +111,20 @@ public class Start {
             Context ctx = new Context();
             addPrelude(ctx);
             String content = Files.readString(Path.of(filename));
-            PendingStep step = TheProgram.getModuleAST("parser").toCPS().run(ctx, (GraceObject o) -> {
-                return o.requestMethod(ctx, (result) -> {
+            PendingStep step;
+            if (parserObj == null)
+                step = TheProgram.getModuleAST("parser").toCPS().run(ctx, (GraceObject o) -> {
+                    parserObj = o;
+                    return o.requestMethod(ctx, (result) -> {
+                        returnVal[0] = result;
+                        return null;
+                    }, "parseModule(2)", List.of(new GraceString(filename), new GraceString(content)));
+                });
+            else
+                step = parserObj.requestMethod(ctx, (result) -> {
                     returnVal[0] = result;
                     return null;
                 }, "parseModule(2)", List.of(new GraceString(filename), new GraceString(content)));
-            });
             while (step != null) {
                 step = step.go();
             }
