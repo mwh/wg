@@ -64,7 +64,7 @@ public class Block extends ASTNode {
             obj.setSurrounding(ctx.getScope());
             obj.setDebugLabel("a block");
             CPS blockBody = (reqCtx, reqCont) -> {
-                Context evalCtx = reqCtx.withReturnContinuation(returnContinuation);
+                Context evalCtx = reqCtx.withReturnContinuation(returnContinuation).withSelf(ctx.getSelf());
                 PendingStep step = null;
                 Continuation cont = reqCont;
                 for (int j = body.size() - 1; j > 0; j--) {

@@ -67,7 +67,7 @@ public class Context {
         return callStack;
     }
 
-    public GraceObject getSelf() {
+    public UserObject getSelf() {
         return self;
     }
 
