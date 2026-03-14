@@ -513,6 +513,12 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
                 throw new GraceException(request.getVisitor(), "Error reading file: " + filename);
             }
         });
+        BaseObject primitiveArray = new BaseObject(lexicalParent);
+        primitiveArray.addMethod("new(1)", request -> {
+            int size = GraceNumber.assertInt(request.getParts().get(0).getArgs().get(0), "size for primitive array");
+            return new GracePrimitiveArray(size);
+        });
+        lexicalParent.addMethod("primitiveArray(0)", _ -> primitiveArray);
         return lexicalParent;
     }
 

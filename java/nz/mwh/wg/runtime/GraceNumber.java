@@ -52,6 +52,11 @@ public class GraceNumber implements GraceObject {
                 return new GraceBoolean(value == ((GraceNumber) parts.get(0).getArgs().get(0)).value);
             } else if (name.equals("!=")) {
                 return new GraceBoolean(value != ((GraceNumber) parts.get(0).getArgs().get(0)).value);
+            } else if (name.equals("%")) {
+                return switch (parts.get(0).getArgs().get(0)) {
+                    case GraceNumber n -> new GraceNumber(value % n.value);
+                    default -> throw new GraceException(request.getVisitor(), "invalid modulus argument at " + request.getLocation());
+                };
             } else if (name.equals("..")) {
                 return new GraceRange(value, ((GraceNumber) parts.get(0).getArgs().get(0)).value);
             } else if (name.equals("|")) {
@@ -67,6 +72,20 @@ public class GraceNumber implements GraceObject {
             }
         }
         throw new GraceException(request.getVisitor(), "No such method in Number: " + request.getName());
+    }
+
+    public static int assertInt(GraceObject obj, String label) {
+        if (obj instanceof GraceNumber num && num.value == (int) num.value) {
+            return (int) num.value;
+        }
+        throw new RuntimeException("Integer value required for " + label + ", not " + obj);
+    }
+
+    public static double assertDouble(GraceObject obj, String label) {
+        if (obj instanceof GraceNumber num) {
+            return num.value;
+        }
+        throw new RuntimeException("Number value required for " + label + ", not " + obj);
     }
 
     @Override

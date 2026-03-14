@@ -24,11 +24,25 @@ public class GraceRange implements GraceObject {
             case "do(1)":
             case "each(1)": {
                 GraceObject block = request.getParts().getFirst().getArgs().getFirst();
-                for (double val = start; val <= end; val += step) {
-                    Request req = Request.unary(request.getVisitor(), "apply", new GraceNumber(val));
-                    block.request(req);
+                if (start <= end && step > 0) {
+                    for (double val = start; val <= end; val += step) {
+                        Request req = Request.unary(request.getVisitor(), "apply", new GraceNumber(val));
+                        block.request(req);
+                    }
+                } else if (start >= end && step < 0) {
+                    for (double val = start; val >= end; val += step) {
+                        Request req = Request.unary(request.getVisitor(), "apply", new GraceNumber(val));
+                        block.request(req);
+                    }
+
                 }
                 return GraceDone.done;
+            }
+            case "..(1)": {
+                double newStep = GraceNumber.assertDouble(request.getParts().getFirst().getArgs().getFirst(), "step for range");
+                GraceRange newRange = new GraceRange(start, end);
+                newRange.step = newStep;
+                return newRange;
             }
         }
         throw new GraceException(request.getVisitor(), "No such method in Range: " + request.getName());

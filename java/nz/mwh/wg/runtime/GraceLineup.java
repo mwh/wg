@@ -38,6 +38,8 @@ public class GraceLineup implements GraceObject {
                     block.request(new Request(request.getVisitor(), List.of(new RequestPartR("apply", List.of(element)))));
                 }
                 return GraceDone.done;
+            } else if (name.equals("size")) {
+                return new GraceNumber(elements.size());
             } else if (name.equals("map")) {
                 GraceObject block = parts.get(0).getArgs().get(0);
                 List<GraceObject> results = new ArrayList<>();

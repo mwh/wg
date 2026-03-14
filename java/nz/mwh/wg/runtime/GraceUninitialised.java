@@ -12,4 +12,8 @@ public class GraceUninitialised implements GraceObject {
     public GraceObject findReceiver(String name) {
         return null;
     }
+
+    public String toString() {
+        return "<uninitialised>";
+    }
 }
