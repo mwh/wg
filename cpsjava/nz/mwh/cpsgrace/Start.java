@@ -12,6 +12,7 @@ import nz.mwh.cpsgrace.ast.ASTNode;
 import nz.mwh.cpsgrace.ast.ImportStmt;
 import nz.mwh.cpsgrace.ast.Converter;
 import nz.mwh.cpsgrace.objects.GraceBoolean;
+import nz.mwh.cpsgrace.objects.GraceExceptionKind;
 import nz.mwh.cpsgrace.objects.GraceMatchResult;
 import nz.mwh.cpsgrace.objects.GraceNumber;
 import nz.mwh.cpsgrace.objects.GracePatternOr;
@@ -319,52 +320,7 @@ public class Start {
         }));
 
         // Exception object with refine(1) and raise(1)
-        UserObject exceptionObj = new UserObject();
-        exceptionObj.setDebugLabel("Exception");
-        exceptionObj.addMethod("refine(1)", Method.java((ctx, cont, self, args) -> {
-            GraceObject nameObj = args.get(0);
-            return nameObj.requestMethod(ctx, (GraceObject nameStr) -> {
-                String name = nameStr.toString();
-                UserObject refinedExn = new UserObject();
-                refinedExn.setDebugLabel(name);
-                refinedExn.addMethod("raise(1)", Method.java((raiseCtx, raiseCont, _, raiseArgs) -> {
-                    GraceObject messageObj = raiseArgs.get(0);
-                    return messageObj.requestMethod(raiseCtx, (GraceObject msgStr) -> {
-                        UserObject exnValue = new UserObject();
-                        exnValue.setDebugLabel("exception: " + name);
-                        exnValue.addMethod("message", Method.java((c, k, _, _) -> k.returning(c, msgStr)));
-                        exnValue.addMethod("name", Method.java((c, k, _, _) -> k.returning(c, new GraceString(name))));
-                        exnValue.addMethod("asString", Method.java((c, k, _, _) -> k.returning(c, new GraceString(name + ": " + msgStr))));
-                        Continuation exnK = raiseCtx.getExceptionContinuation();
-                        if (exnK != null) {
-                            return exnK.apply(exnValue);
-                        }
-                        throw new RuntimeException("Unhandled exception: " + name + ": " + msgStr);
-                    }, "asString", java.util.List.of());
-                }));
-                refinedExn.addMethod("match(1)", Method.java((matchCtx, matchCont, _, matchArgs) -> {
-                    // For now, exception types always match
-                    GraceObject target = matchArgs.get(0);
-                    return matchCont.returning(matchCtx, new GraceMatchResult(true, target));
-                }));
-                return cont.returning(ctx, refinedExn);
-            }, "asString", java.util.List.of());
-        }));
-        exceptionObj.addMethod("raise(1)", Method.java((ctx, cont, _, args) -> {
-            GraceObject messageObj = args.get(0);
-            return messageObj.requestMethod(ctx, (GraceObject msgStr) -> {
-                UserObject exnValue = new UserObject();
-                exnValue.setDebugLabel("exception");
-                exnValue.addMethod("message", Method.java((c, k, _, _) -> k.returning(c, msgStr)));
-                exnValue.addMethod("name", Method.java((c, k, _, _) -> k.returning(c, new GraceString("Exception"))));
-                exnValue.addMethod("asString", Method.java((c, k, _, _) -> k.returning(c, new GraceString("Exception: " + msgStr))));
-                Continuation exnK = ctx.getExceptionContinuation();
-                if (exnK != null) {
-                    return exnK.apply(exnValue);
-                }
-                throw new RuntimeException("Unhandled exception: " + msgStr);
-            }, "asString", java.util.List.of());
-        }));
+        GraceObject exceptionObj = new GraceExceptionKind(null, "Exception");
         prelude.addMethod("Exception", Method.java((ctx, cont, _, _) -> cont.returning(ctx, exceptionObj)));
 
         // try(1)catch(1)
