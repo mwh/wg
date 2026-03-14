@@ -418,6 +418,16 @@ method parseParamOrStatement(lxr) {
         }
         lxr.restore(memo)
         parseStatement(lxr)
+    } elseif { (lxr.current.nature == "STRING") || (lxr.current.nature == "NUMBER") } then {
+        // Might be a pattern
+        def memo = lxr.save
+        def expr = parseExpression(lxr)
+        if (lxr.current.nature == "ARROW") then {
+            // Definitely a pattern
+            return ast.identifierDeclaration("_", ast.cons(expr, ast.nil))
+        }
+        lxr.restore(memo)
+        parseStatement(lxr)
     } else {
         parseStatement(lxr)
     }
