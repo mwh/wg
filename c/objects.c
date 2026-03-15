@@ -253,7 +253,7 @@ static PendingStep *number_request(GraceObject *self, Env *env,
     if (strcmp(name,"hash(0)")==0) {
         union { double d; uint64_t u; } bits;
         bits.d = v;
-        int32_t hash = (int32_t)(bits.u ^ (bits.u >> 32));
+        uint32_t hash = (uint32_t)(bits.u ^ (bits.u >> 32));
         return cont_apply(k, grace_number_new((double)hash));
     }
     if (strcmp(name,"match(1)")==0) {
@@ -417,7 +417,7 @@ static PendingStep *string_request(GraceObject *self, Env *env,
         unsigned long hash = 5381;
         for (const char *p = v; *p; p++)
             hash = ((hash << 5) + hash) + (unsigned char)*p;
-        return cont_apply(k, grace_number_new((double)(int32_t)hash));
+        return cont_apply(k, grace_number_new((double)(uint32_t)hash));
     }
     if (strcmp(name,"asNumber(0)")==0) {
         char *end; double num = strtod(v, &end);
@@ -1023,7 +1023,7 @@ static PendingStep *user_request(GraceObject *self, Env *env, const char *name,
         return cont_apply(k, grace_string_take(result));
     }
     if (strcmp(name, "hash(0)") == 0)
-        return cont_apply(k, grace_number_new((double)(int32_t)(intptr_t)self));
+        return cont_apply(k, grace_number_new((double)(uint32_t)(intptr_t)self));
     grace_fatal("No method '%s' on object", name);
 }
 static const char *user_describe(GraceObject *self) { (void)self; return "an object"; }
