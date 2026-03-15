@@ -47,9 +47,10 @@ GraceObject *grace_done   = &_grace_done_obj;
 GraceObject *grace_uninit = &_grace_uninit_obj;
 
 /*  Range object  */
-typedef struct { double start, end; } RangeData;
-typedef struct { double current, end_val; GraceObject *block; Env *env; Cont *k; } RangeIterState;
+typedef struct { double start, end, step; } RangeData;
+typedef struct { double current, end_val, step; GraceObject *block; Env *env; Cont *k; } RangeIterState;
 typedef struct { Cont base; RangeIterState *st; } RangeIterCont;
+GraceObject *grace_range_new(double start, double end, double step);
 
 static void range_iter_trace(Cont *c) {
     RangeIterCont *rc = (RangeIterCont *)c;
@@ -71,8 +72,8 @@ static PendingStep *range_iter_next(Cont *c, GraceObject *v) {
     (void)v;
     RangeIterCont *rc = (RangeIterCont *)c;
     RangeIterState *st = rc->st;
-    st->current += 1.0;
-    if (st->current > st->end_val) {
+    st->current += st->step;
+    if ((st->step > 0 && st->current > st->end_val) || (st->step < 0 && st->current < st->end_val)) {
         Cont *k = cont_retain(st->k);
         rc->st = NULL;
         cont_consumed(c);
@@ -97,9 +98,10 @@ static PendingStep *range_do_fn(GraceObject *self, Env *env, GraceObject **args,
                                  int nargs, Cont *k, void *data) {
     (void)self;(void)nargs;
     RangeData *d = (RangeData *)data;
-    if (d->start > d->end) return cont_apply(k, grace_done);
+    if (d->step > 0 && d->start > d->end) return cont_apply(k, grace_done);
+    if (d->step < 0 && d->start < d->end) return cont_apply(k, grace_done);
     RangeIterState *st = malloc(sizeof(RangeIterState));
-    st->current = d->start; st->end_val = d->end;
+    st->current = d->start; st->end_val = d->end; st->step = d->step;
     st->block = args[0]; st->env = env_retain(env); st->k = cont_retain(k);
     GraceObject *num = grace_number_new(st->current);
     GraceObject *a[1] = {num};
@@ -109,7 +111,7 @@ static PendingStep *range_do_fn(GraceObject *self, Env *env, GraceObject **args,
     return grace_request(args[0], env, "apply(1)", a, 1, (Cont *)rc);
 }
 
-typedef struct { double current, start_val; GraceObject *block; Env *env; Cont *k; } RevIterState;
+typedef struct { double current, start_val, step; GraceObject *block; Env *env; Cont *k; } RevIterState;
 typedef struct { Cont base; RevIterState *st; } RevIterCont;
 
 static void rev_iter_trace(Cont *c) {
@@ -132,8 +134,8 @@ static PendingStep *rev_iter_next(Cont *c, GraceObject *v) {
     (void)v;
     RevIterCont *rc = (RevIterCont *)c;
     RevIterState *st = rc->st;
-    st->current -= 1.0;
-    if (st->current < st->start_val) {
+    st->current -= st->step;
+    if ((st->step > 0 && st->current < st->start_val) || (st->step < 0 && st->current > st->start_val)) {
         Cont *k = cont_retain(st->k);
         rc->st = NULL;
         cont_consumed(c);
@@ -158,9 +160,10 @@ static PendingStep *range_revdo_fn(GraceObject *self, Env *env, GraceObject **ar
                                     int nargs, Cont *k, void *data) {
     (void)self;(void)nargs;
     RangeData *d = (RangeData *)data;
-    if (d->end < d->start) return cont_apply(k, grace_done);
+    if (d->step > 0 && d->end < d->start) return cont_apply(k, grace_done);
+    if (d->step < 0 && d->end > d->start) return cont_apply(k, grace_done);
     RevIterState *st = malloc(sizeof(RevIterState));
-    st->current = d->end; st->start_val = d->start;
+    st->current = d->end; st->start_val = d->start; st->step = d->step;
     st->block = args[0]; st->env = env_retain(env); st->k = cont_retain(k);
     GraceObject *num = grace_number_new(st->current);
     GraceObject *a[1] = {num};
@@ -177,15 +180,25 @@ static PendingStep *range_asstr_fn(GraceObject *self, Env *env, GraceObject **ar
     return cont_apply(k, grace_string_take(str_fmt("%.0f..%.0f", d->start, d->end)));
 }
 
-GraceObject *grace_range_new(double start, double end) {
+static PendingStep *range_range_fn(GraceObject *self, Env *env, GraceObject **args,
+                                    int nargs, Cont *k, void *data) {
+    (void)self;(void)env;(void)nargs;
+    RangeData *d = (RangeData *)data;
+    double step = grace_number_val(args[0]);
+    return cont_apply(k, grace_range_new(d->start, d->end, step));
+}
+
+GraceObject *grace_range_new(double start, double end, double step) {
     GraceObject *range = grace_user_new(NULL);
     user_bind_def(range, "start", grace_number_new(start));
     user_bind_def(range, "end",   grace_number_new(end));
+    user_bind_def(range, "step",  grace_number_new(step));
     RangeData *rd = malloc(sizeof(RangeData));
-    rd->start = start; rd->end = end;
+    rd->start = start; rd->end = end; rd->step = step;
     user_add_method(range, "do(1)",        range_do_fn,    rd);
     user_add_method(range, "reverseDo(1)", range_revdo_fn, rd);
     user_add_method(range, "asString(0)",  range_asstr_fn, rd);
+    user_add_method(range, "..(1)", range_range_fn, rd);
     /* Set free_data on the range method entries (RangeData is shared,
      * only the first one frees it) */
     GraceUserObject *uo = (GraceUserObject *)range;
@@ -228,7 +241,7 @@ static PendingStep *number_request(GraceObject *self, Env *env,
     if (strcmp(name,"abs(0)")==0)       return cont_apply(k, grace_number_new(fabs(v)));
     if (strcmp(name,"sqrt(0)")==0)      return cont_apply(k, grace_number_new(sqrt(v)));
     if (strcmp(name,"asInteger(0)")==0) return cont_apply(k, grace_number_new(trunc(v)));
-    if (strcmp(name,"..(1)")==0)        return cont_apply(k, grace_range_new(v, grace_number_val(args[0])));
+    if (strcmp(name,"..(1)")==0)        return cont_apply(k, grace_range_new(v, grace_number_val(args[0]), 1.0));
     if (strcmp(name,"asString(0)")==0 || strcmp(name,"asDebugString(0)")==0) {
         char buf[64];
         if (v == trunc(v) && fabs(v) < 1e15)
