@@ -799,6 +799,24 @@ GraceObject *make_prelude(void) {
     user_add_method(p, "match(1)case(1)case(1)", build_match_fn, NULL);
     user_add_method(p, "match(1)case(1)case(1)case(1)", build_match_fn, NULL);
     user_add_method(p, "match(1)case(1)case(1)case(1)case(1)", build_match_fn, NULL);
+    user_add_method(p, "match(1)case(1)case(1)case(1)case(1)case(1)", build_match_fn, NULL);
+    user_add_method(p, "match(1)case(1)case(1)case(1)case(1)case(1)case(1)", build_match_fn, NULL);
+    user_add_method(p, "match(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)", build_match_fn, NULL);
+    user_add_method(p, "match(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)", build_match_fn, NULL);
+    user_add_method(p, "match(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)", build_match_fn, NULL);
+    user_add_method(p, "match(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)", build_match_fn, NULL);
+    user_add_method(p, "match(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)", build_match_fn, NULL);
+    user_add_method(p, "match(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)", build_match_fn, NULL);
+    user_add_method(p, "match(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)", build_match_fn, NULL);
+    user_add_method(p, "match(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)", build_match_fn, NULL);
+    user_add_method(p, "match(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)", build_match_fn, NULL);
+    user_add_method(p, "match(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)", build_match_fn, NULL);
+    user_add_method(p, "match(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)", build_match_fn, NULL);
+    user_add_method(p, "match(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)", build_match_fn, NULL);
+    user_add_method(p, "match(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)", build_match_fn, NULL);
+    user_add_method(p, "match(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)", build_match_fn, NULL);
+    user_add_method(p, "match(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)", build_match_fn, NULL);
+    user_add_method(p, "match(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)case(1)", build_match_fn, NULL);
 
     /* Bind true/false/done as direct values too */
     user_bind_def(p, "true",  grace_true);

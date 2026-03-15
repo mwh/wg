@@ -9,6 +9,9 @@
 #include "gc.h"
 
 extern PendingStep *eval_stmts(ASTNode *stmts, Env *env, Cont *k);
+extern PendingStep *eval_node(ASTNode *node, Env *env, Cont *k);
+
+static GraceObject *grace_patternor_new(GraceObject *left, GraceObject *right);
 
 /* VTable forward declarations */
 const GraceVTable grace_number_vtable;
@@ -261,6 +264,7 @@ static PendingStep *number_request(GraceObject *self, Env *env,
             return cont_apply(k, make_match_result(((GraceNumber*)args[0])->value == v, args[0]));
         return cont_apply(k, make_match_result(0, grace_done));
     }
+    if (strcmp(name,"|(1)")==0) return cont_apply(k, grace_patternor_new(self, args[0]));
     grace_fatal("No method '%s' on Number(%g)", name, v);
 }
 static const char *number_describe(GraceObject *self) {
@@ -456,6 +460,7 @@ static PendingStep *string_request(GraceObject *self, Env *env,
                 strcmp(((GraceString*)args[0])->value, v) == 0, args[0]));
         return cont_apply(k, make_match_result(0, grace_done));
     }
+    if (strcmp(name,"|(1)")==0) return cont_apply(k, grace_patternor_new(self, args[0]));
     grace_fatal("No method '%s' on String(\"%s\")", name, v);
 }
 static const char *string_describe(GraceObject *self) {
@@ -552,6 +557,92 @@ int grace_bool_val(GraceObject *o) {
     return ((GraceBool *)o)->value;
 }
 
+/*  GracePatternOr  */
+typedef struct {
+    GraceObject  base;
+    GraceObject *left;
+    GraceObject *right;
+} GracePatternOr;
+
+typedef struct {
+    Cont         base;
+    GraceObject *right;
+    GraceObject *target;
+    Env         *env;
+    Cont        *k;
+} PatternOrLeftCont;
+
+static void por_left_trace(Cont *c) {
+    PatternOrLeftCont *pc = (PatternOrLeftCont *)c;
+    gc_mark_grey(pc->right);
+    gc_mark_grey(pc->target);
+    gc_trace_env(pc->env);
+    gc_trace_cont(pc->k);
+}
+static void por_left_cleanup(Cont *c) {
+    PatternOrLeftCont *pc = (PatternOrLeftCont *)c;
+    env_release(pc->env);
+    cont_release_abandon(pc->k);
+}
+static PendingStep *por_left_apply(Cont *c, GraceObject *result) {
+    PatternOrLeftCont *pc = (PatternOrLeftCont *)c;
+    GraceObject *right = pc->right;
+    GraceObject *target = pc->target;
+    Env *env = pc->env;
+    Cont *k = pc->k;
+    pc->env = NULL; pc->k = NULL;
+    cont_consumed(c);
+    gc_push_cont_root(&k);
+    GraceObject *succ = grace_request_sync(result, env, "succeeded(0)", NULL, 0);
+    gc_pop_cont_root();
+    if (succ->vt == &grace_bool_vtable && grace_bool_val(succ)) {
+        PendingStep *r = cont_apply(k, result);
+        env_release(env); cont_release(k);
+        return r;
+    }
+    GraceObject *a[1] = { target };
+    PendingStep *r = grace_request(right, env, "match(1)", a, 1, k);
+    env_release(env); cont_release(k);
+    return r;
+}
+
+static PendingStep *patternor_request(GraceObject *self, Env *env, const char *name,
+                                       GraceObject **args, int nargs, Cont *k) {
+    GracePatternOr *po = (GracePatternOr *)self;
+    (void)nargs;
+    if (strcmp(name, "match(1)") == 0) {
+        PatternOrLeftCont *pc = CONT_ALLOC(PatternOrLeftCont);
+        pc->base.apply = por_left_apply;
+        pc->base.gc_trace = por_left_trace;
+        pc->base.cleanup = por_left_cleanup;
+        pc->right = po->right;
+        pc->target = args[0];
+        pc->env = env_retain(env);
+        pc->k = cont_retain(k);
+        GraceObject *a[1] = { args[0] };
+        return grace_request(po->left, env, "match(1)", a, 1, (Cont *)pc);
+    }
+    if (strcmp(name, "|(1)") == 0)
+        return cont_apply(k, grace_patternor_new(self, args[0]));
+    grace_fatal("No method '%s' on PatternOr", name);
+}
+static const char *patternor_describe(GraceObject *self) { (void)self; return "PatternOr"; }
+static void patternor_trace(GraceObject *self) {
+    GracePatternOr *po = (GracePatternOr *)self;
+    gc_mark_grey(po->left);
+    gc_mark_grey(po->right);
+}
+static const GraceVTable grace_patternor_vtable = {
+    patternor_request, patternor_describe, patternor_trace, NULL
+};
+static GraceObject *grace_patternor_new(GraceObject *left, GraceObject *right) {
+    GracePatternOr *po = (GracePatternOr *)gc_alloc(sizeof(GracePatternOr));
+    po->base.vt = &grace_patternor_vtable;
+    po->left = left;
+    po->right = right;
+    return (GraceObject *)po;
+}
+
 /*  GraceBlock  */
 typedef struct {
     PendingStep base;
@@ -575,6 +666,111 @@ static PendingStep *block_body_go(PendingStep *self) {
     cont_release(k);
     env_release(inner);
     return r;
+}
+
+/* Block match continuations */
+
+static PendingStep *block_request(GraceObject *self, Env *env, const char *name,
+                                   GraceObject **args, int nargs, Cont *k);
+
+/* Wrap body result in MatchResult(true, result) */
+typedef struct { Cont base; Cont *k; } BlockMatchWrapCont;
+static void bmw_trace(Cont *c)   { gc_trace_cont(((BlockMatchWrapCont *)c)->k); }
+static void bmw_cleanup(Cont *c) { cont_release_abandon(((BlockMatchWrapCont *)c)->k); }
+static PendingStep *bmw_apply(Cont *c, GraceObject *body_result) {
+    BlockMatchWrapCont *bc = (BlockMatchWrapCont *)c;
+    Cont *k = bc->k; bc->k = NULL;
+    cont_consumed(c);
+    PendingStep *r = cont_apply(k, make_match_result(1, body_result));
+    cont_release(k);
+    return r;
+}
+
+/* After pattern.match(target) returns, check succeeded; if yes apply body */
+typedef struct {
+    Cont         base;
+    GraceObject *blk;
+    GraceObject *target;
+    Env         *env;
+    Cont        *k;
+} BlockMatchCheckCont;
+static void bmc_trace(Cont *c) {
+    BlockMatchCheckCont *bc = (BlockMatchCheckCont *)c;
+    gc_mark_grey(bc->blk);
+    gc_mark_grey(bc->target);
+    gc_trace_env(bc->env);
+    gc_trace_cont(bc->k);
+}
+static void bmc_cleanup(Cont *c) {
+    BlockMatchCheckCont *bc = (BlockMatchCheckCont *)c;
+    env_release(bc->env);
+    cont_release_abandon(bc->k);
+}
+static PendingStep *bmc_apply(Cont *c, GraceObject *match_result) {
+    BlockMatchCheckCont *bc = (BlockMatchCheckCont *)c;
+    GraceObject *blk = bc->blk;
+    GraceObject *target = bc->target;
+    Env *env = bc->env;
+    Cont *k = bc->k;
+    bc->env = NULL; bc->k = NULL;
+    cont_consumed(c);
+    gc_push_cont_root(&k);
+    GraceObject *succ = grace_request_sync(match_result, env, "succeeded(0)", NULL, 0);
+    gc_pop_cont_root();
+    if (succ->vt == &grace_bool_vtable && grace_bool_val(succ)) {
+        BlockMatchWrapCont *wc = CONT_ALLOC(BlockMatchWrapCont);
+        wc->base.apply = bmw_apply;
+        wc->base.gc_trace = bmw_trace;
+        wc->base.cleanup = bmw_cleanup;
+        wc->k = k; /* transfer ownership */
+        GraceObject *a[1] = { target };
+        PendingStep *r = block_request(blk, env, "apply(1)", a, 1, (Cont *)wc);
+        env_release(env);
+        return r;
+    }
+    PendingStep *r = cont_apply(k, match_result);
+    env_release(env); cont_release(k);
+    return r;
+}
+
+/* After pattern expression is evaluated, call pattern.match(target) */
+typedef struct {
+    Cont         base;
+    GraceObject *blk;
+    GraceObject *target;
+    Env         *env;
+    Cont        *k;
+} BlockMatchPatternCont;
+static void bmp_trace(Cont *c) {
+    BlockMatchPatternCont *bc = (BlockMatchPatternCont *)c;
+    gc_mark_grey(bc->blk);
+    gc_mark_grey(bc->target);
+    gc_trace_env(bc->env);
+    gc_trace_cont(bc->k);
+}
+static void bmp_cleanup(Cont *c) {
+    BlockMatchPatternCont *bc = (BlockMatchPatternCont *)c;
+    env_release(bc->env);
+    cont_release_abandon(bc->k);
+}
+static PendingStep *bmp_apply(Cont *c, GraceObject *pattern) {
+    BlockMatchPatternCont *bc = (BlockMatchPatternCont *)c;
+    GraceObject *blk = bc->blk;
+    GraceObject *target = bc->target;
+    Env *env = bc->env;
+    Cont *k = bc->k;
+    bc->env = NULL; bc->k = NULL;
+    cont_consumed(c);
+    BlockMatchCheckCont *chk = CONT_ALLOC(BlockMatchCheckCont);
+    chk->base.apply = bmc_apply;
+    chk->base.gc_trace = bmc_trace;
+    chk->base.cleanup = bmc_cleanup;
+    chk->blk = blk;
+    chk->target = target;
+    chk->env = env;  /* transfer ownership */
+    chk->k = k;      /* transfer ownership */
+    GraceObject *a[1] = { target };
+    return grace_request(pattern, env, "match(1)", a, 1, (Cont *)chk);
 }
 
 static PendingStep *block_request(GraceObject *self, Env *env, const char *name,
@@ -606,9 +802,41 @@ static PendingStep *block_request(GraceObject *self, Env *env, const char *name,
     if (strcmp(name,"match(1)")==0) {
         if (list_length(blk->params) != 1)
             return cont_apply(k, make_match_result(0, grace_done));
-        GraceObject *a[1] = { args[0] };
-        return block_request(self, env, "apply(1)", a, 1, k);
+        ASTNode *param = blk->params->a1;  /* first param: NK_IDENT_DECL */
+        ASTNode *pat_list = param ? param->a1 : NULL;
+        ASTNode *pat_expr = (pat_list && pat_list->kind == NK_CONS) ? pat_list->a1 : NULL;
+        if (!pat_expr) {
+            /* No pattern - catch-all, always matches. Apply and wrap. */
+            BlockMatchWrapCont *wc = CONT_ALLOC(BlockMatchWrapCont);
+            wc->base.apply = bmw_apply;
+            wc->base.gc_trace = bmw_trace;
+            wc->base.cleanup = bmw_cleanup;
+            wc->k = cont_retain(k);
+            GraceObject *a[1] = { args[0] };
+            return block_request(self, env, "apply(1)", a, 1, (Cont *)wc);
+        }
+        /* Has pattern - evaluate it in block's lexical scope, then match */
+        Env *lex_env = malloc(sizeof(Env));
+        lex_env->refcount = 1;
+        lex_env->receiver = blk->lex_self ? blk->lex_self : env->receiver;
+        lex_env->scope    = blk->lex_scope;
+        lex_env->return_k = cont_retain(env->return_k);
+        lex_env->except_k = cont_retain(env->except_k);
+        lex_env->reset_k  = cont_retain(env->reset_k);
+        BlockMatchPatternCont *pc = CONT_ALLOC(BlockMatchPatternCont);
+        pc->base.apply = bmp_apply;
+        pc->base.gc_trace = bmp_trace;
+        pc->base.cleanup = bmp_cleanup;
+        pc->blk    = self;
+        pc->target = args[0];
+        pc->env    = env_retain(env);
+        pc->k      = cont_retain(k);
+        PendingStep *r = eval_node(pat_expr, lex_env, (Cont *)pc);
+        env_release(lex_env);
+        return r;
     }
+    if (strcmp(name,"|(1)")==0)
+        return cont_apply(k, grace_patternor_new(self, args[0]));
     if (strcmp(name,"asString(0)")==0) return cont_apply(k, grace_string_new("a block"));
     grace_fatal("No method '%s' on Block", name);
 }
