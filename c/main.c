@@ -34,7 +34,7 @@ static char *read_file(const char *path) {
 static GraceObject *eval_baked(ASTNode *ast, Env *env) {
     CaptureCont *cc = CONT_ALLOC(CaptureCont);
     cc->base.apply = capture_apply;
-    cc->base.gc_trace = NULL;
+    cc->base.gc_trace = capture_cont_trace;
     cc->base.cleanup = NULL;
     cc->result = grace_done;
     cont_retain((Cont *)cc);
@@ -93,18 +93,23 @@ int main(int argc, char *argv[]) {
         grace_string_new(source)
     };
     // puts("Parsing...");
+    gc_push_root(&env->receiver);
+    gc_push_root(&env->scope);
     GraceObject *grace_ast_obj = grace_request_sync(parser_obj, env,
                                                      "parseModule(2)",
                                                      parse_args, 2);
     if (print_ast == 1) {
         GraceObject *ast_str = grace_request_sync(grace_ast_obj, env, "asString(0)", NULL, 0);
+        gc_pop_roots(2);
         printf("%s\n", grace_string_val(ast_str));
         return 0;
     } else if (print_ast == 2) {
         GraceObject *ast_str = grace_request_sync(grace_ast_obj, env, "concise(0)", NULL, 0);
+        gc_pop_roots(2);
         printf("%s\n", grace_string_val(ast_str));
         return 0;
     }
+    gc_pop_roots(2);
     // puts("Parsing done. Converting...");
     /*  7. Convert Grace AST object -> ASTNode* tree  */
     ASTNode *program = grace_ast_to_astnode(grace_ast_obj, env);
@@ -122,7 +127,7 @@ int main(int argc, char *argv[]) {
     //log_requests = 1;
     CaptureCont *result_cc = CONT_ALLOC(CaptureCont);
     result_cc->base.apply = capture_apply;
-    result_cc->base.gc_trace = NULL;
+    result_cc->base.gc_trace = capture_cont_trace;
     result_cc->base.cleanup = NULL;
     result_cc->result = grace_done;
     cont_retain((Cont *)result_cc);

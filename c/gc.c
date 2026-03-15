@@ -112,6 +112,7 @@ void gc_pop_cont_root(void) {
  */
 void gc_trampoline_enter(void) { gc_tramp_depth++; }
 void gc_trampoline_exit(void)  { gc_tramp_depth--; }
+int  gc_trampoline_depth(void) { return gc_tramp_depth; }
 
 /*
  * Marking
@@ -133,17 +134,59 @@ void gc_mark_grey(GraceObject *obj) {
  * once per GC cycle - this prevents O(chain_length) work when the same
  * continuation is reachable from many live objects (common in deep CPS stacks).
  * Always sets the epoch even when gc_trace is NULL, so that the GC cont sweep
- * correctly identifies conts without trace callbacks as reachable. */
+ * correctly identifies conts without trace callbacks as reachable.
+ *
+ * To avoid stack overflow on deeply-chained continuations (meta-interpreter),
+ * gc_trace_cont pushes the continuation onto a worklist and the outermost
+ * caller drains it iteratively. */
+
+/* Worklist for iterative continuation tracing. */
+#define CONT_TRACE_STACK_CAP 256
+static Cont **ct_stack = NULL;
+static int    ct_sp = 0;
+static int    ct_cap = 0;
+static int    ct_draining = 0;  /* 1 while draining the worklist */
+
+static inline void ct_push(Cont *k) {
+    if (ct_sp == ct_cap) {
+        ct_cap = ct_cap ? ct_cap * 2 : CONT_TRACE_STACK_CAP;
+        ct_stack = realloc(ct_stack, ct_cap * sizeof(Cont *));
+    }
+    ct_stack[ct_sp++] = k;
+}
+
+/* Drain the worklist iteratively. */
+static void gc_drain_cont_worklist(void) {
+    while (ct_sp > 0) {
+        Cont *k = ct_stack[--ct_sp];
+        if (!k) continue;
+        if (k->gc_epoch == gc_trace_epoch) continue;
+        k->gc_epoch = gc_trace_epoch;
+        /* k->gc_trace may push more conts onto the worklist via gc_trace_cont;
+         * those will be drained by subsequent iterations of this loop. */
+        if (k->gc_trace) k->gc_trace(k);
+    }
+}
+
 void gc_trace_cont(Cont *k) {
     if (!k) return;
     if (k->gc_epoch == gc_trace_epoch) return;  /* already traced this cycle */
+    if (ct_draining) {
+        /* Inside a trace callback - defer to the worklist. */
+        ct_push(k);
+        return;
+    }
+    /* Top-level call: process this cont and drain anything it enqueues. */
+    ct_draining = 1;
     k->gc_epoch = gc_trace_epoch;
     if (k->gc_trace) k->gc_trace(k);
+    gc_drain_cont_worklist();
+    ct_draining = 0;
 }
 
 unsigned int gc_current_epoch(void) { return gc_trace_epoch; }
 
-/* Trace an environment: mark receiver/scope and trace continuations */
+/* Trace an environment: mark receiver/scope and trace continuations. */
 void gc_trace_env(Env *env) {
     if (!env) return;
     gc_mark_grey(env->receiver);
@@ -244,7 +287,11 @@ static void gc_print_heap_summary(void) {
     size_t user_with_lex_parent = 0;
     size_t user_without_methods = 0;
     size_t exceptions = 0;
+    size_t lineups = 0;
+    size_t primarrays = 0;
     size_t other = 0;
+    size_t conts_live = 0;
+    size_t conts_total = 0;
 
     for (GraceObject *obj = gc_heap_head; obj; obj = obj->gc_next) {
         if (obj->vt == &grace_number_vtable) {
@@ -266,16 +313,33 @@ static void gc_print_heap_summary(void) {
                 user_without_methods++;
         } else if (obj->vt == &grace_exception_vtable) {
             exceptions++;
+        } else if (obj->vt == &grace_lineup_vtable) {
+            lineups++;
+        } else if (obj->vt == &grace_primarray_vtable) {
+            primarrays++;
         } else {
             other++;
         }
     }
 
+    /* Count live continuations */
+    size_t conts_consumed = 0;
+    for (Cont *c = gc_cont_sentinel.gc_cont_next; c != &gc_cont_sentinel; c = c->gc_cont_next) {
+        conts_total++;
+        if (c->gc_epoch == gc_trace_epoch) {
+            conts_live++;
+            if (c->consumed) conts_consumed++;
+        }
+    }
+
     fprintf(stderr,
-            "GC %zu heap summary: freed %zu living %zu; user=%zu userLex=%zu userReturn=%zu userNoMethods=%zu number=%zu string=%zu block=%zu bool=%zu exception=%zu other=%zu\n",
+            "GC %zu heap summary: freed %zu living %zu conts=%zu/%zu consumed=%zu roots=%d cont_roots=%d tramp=%d; user=%zu userLex=%zu userReturn=%zu userNoMethods=%zu number=%zu string=%zu block=%zu lineup=%zu primarray=%zu bool=%zu exception=%zu other=%zu\n",
             gc_statistics.collections,
             gc_phase_start_live - gc_statistics.heap_size,
             gc_statistics.heap_size,
+            conts_live, conts_total,
+            conts_consumed,
+            gc_root_sp, gc_cont_root_sp, gc_tramp_depth,
             users,
             user_with_lex_parent,
             user_return_targets,
@@ -283,6 +347,8 @@ static void gc_print_heap_summary(void) {
             numbers,
             strings,
             blocks,
+            lineups,
+            primarrays,
             bools,
             exceptions,
             other);
@@ -354,8 +420,8 @@ static void gc_begin_sweep(void) {
 
 static void gc_finish_cycle(void) {
     /* Sweep abandoned continuations that were not traced in this GC cycle.
-     * Safe because GC only runs at trampoline depth <= 1 (between steps),
-     * where all live conts are reachable via GC tracing. */
+     * All live conts on the C stack must be protected via gc_push_cont_root
+     * so gc_sweep_conts does not free them. */
     gc_sweep_conts();
     size_t surviving = gc_statistics.heap_size;
     gc_next_threshold = (surviving * 2 > GC_MIN_THRESHOLD)
@@ -451,7 +517,6 @@ static void gc_mark_slice(int n) {
  * Intended for explicit calls (e.g. end-of-program cleanup); normal
  * operation uses gc_maybe_collect() instead. */
 void gc_collect(void) {
-    if (gc_tramp_depth > 1) return;
     if (gc_phase == GC_PHASE_IDLE)
         gc_start_cycle();
     else if (gc_phase == GC_PHASE_MARKING)
@@ -467,13 +532,25 @@ void gc_collect(void) {
 }
 
 void gc_maybe_collect(void) {
-    if (gc_tramp_depth > 1) return;
     if (gc_phase == GC_PHASE_IDLE) {
         if (gc_alloc_counter >= gc_next_threshold)
             gc_start_cycle();
+    }
+    /* If allocation has far exceeded the threshold (e.g. after bursty
+     * allocation in nested trampolines), complete the cycle now rather
+     * than falling behind with small incremental slices. */
+    if (gc_alloc_counter > gc_next_threshold * 4 && gc_phase != GC_PHASE_IDLE) {
+        if (gc_phase == GC_PHASE_MARKING) {
+            process_grey_list();
+            gc_begin_sweep();
+        }
+        while (gc_sweep_cur)
+            gc_sweep_slice(GC_SWEEP_SLICE);
+        if (gc_phase != GC_PHASE_IDLE)
+            gc_finish_cycle();
     } else if (gc_phase == GC_PHASE_MARKING) {
         gc_mark_slice(GC_MARK_SLICE);
-    } else {
+    } else if (gc_phase == GC_PHASE_SWEEPING) {
         gc_sweep_slice(GC_SWEEP_SLICE);
     }
 }

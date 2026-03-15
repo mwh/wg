@@ -225,7 +225,7 @@ static PendingStep *number_request(GraceObject *self, Env *env,
     if (strcmp(name,"*(1)")==0)   return cont_apply(k, grace_number_new(v * N1));
     if (strcmp(name,"/(1)")==0) {
         double d = N1;
-        if (d == 0.0) grace_raise(env, "ZeroDivision", "Division by zero");
+        if (d == 0.0) return grace_raise(env, "ZeroDivision", "Division by zero");
         return cont_apply(k, grace_number_new(v / d));
     }
     if (strcmp(name,"%(1)")==0)    return cont_apply(k, grace_number_new(fmod(v, N1)));
@@ -349,12 +349,12 @@ static PendingStep *string_request(GraceObject *self, Env *env,
     if (strcmp(name,"at(1)")==0) {
         int idx = (int)grace_number_val(args[0]) - 1;
         if (idx < 0 || idx >= (int)len)
-            grace_raise(env, "BoundsError", "String index %d out of bounds", idx+1);
+            return grace_raise(env, "BoundsError", "String index %d out of bounds", idx+1);
         char ch[2] = { v[idx], 0 };
         return cont_apply(k, grace_string_new(ch));
     }
     if (strcmp(name,"firstCodepoint(0)")==0) {
-        if (len == 0) grace_raise(env, "BoundsError", "Empty string");
+        if (len == 0) return grace_raise(env, "BoundsError", "Empty string");
         return cont_apply(k, grace_number_new((double)(unsigned char)v[0]));
     }
     if (strcmp(name,"substringFrom(1)to(1)")==0) {
@@ -425,7 +425,7 @@ static PendingStep *string_request(GraceObject *self, Env *env,
     }
     if (strcmp(name,"asNumber(0)")==0) {
         char *end; double num = strtod(v, &end);
-        if (end == v) grace_raise(env, "TypeError", "Not a number: '%s'", v);
+        if (end == v) return grace_raise(env, "TypeError", "Not a number: '%s'", v);
         return cont_apply(k, grace_number_new(num));
     }
     if (strcmp(name,"startsWith(1)")==0) {
@@ -592,9 +592,15 @@ static PendingStep *por_left_apply(Cont *c, GraceObject *result) {
     Cont *k = pc->k;
     pc->env = NULL; pc->k = NULL;
     cont_consumed(c);
+    gc_push_root(&result);
+    gc_push_root(&right);
+    gc_push_root(&target);
+    gc_push_root(&env->receiver);
+    gc_push_root(&env->scope);
     gc_push_cont_root(&k);
     GraceObject *succ = grace_request_sync(result, env, "succeeded(0)", NULL, 0);
     gc_pop_cont_root();
+    gc_pop_roots(5);
     if (succ->vt == &grace_bool_vtable && grace_bool_val(succ)) {
         PendingStep *r = cont_apply(k, result);
         env_release(env); cont_release(k);
@@ -714,9 +720,15 @@ static PendingStep *bmc_apply(Cont *c, GraceObject *match_result) {
     Cont *k = bc->k;
     bc->env = NULL; bc->k = NULL;
     cont_consumed(c);
+    gc_push_root(&match_result);
+    gc_push_root(&blk);
+    gc_push_root(&target);
+    gc_push_root(&env->receiver);
+    gc_push_root(&env->scope);
     gc_push_cont_root(&k);
     GraceObject *succ = grace_request_sync(match_result, env, "succeeded(0)", NULL, 0);
     gc_pop_cont_root();
+    gc_pop_roots(5);
     if (succ->vt == &grace_bool_vtable && grace_bool_val(succ)) {
         BlockMatchWrapCont *wc = CONT_ALLOC(BlockMatchWrapCont);
         wc->base.apply = bmw_apply;
@@ -845,13 +857,22 @@ static void block_trace(GraceObject *self) {
     GraceBlock *blk = (GraceBlock *)self;
     gc_mark_grey(blk->lex_scope);
     gc_mark_grey(blk->lex_self);
+    /* Once the enclosing method has returned (return_k consumed), replace
+     * the block's return_k with the static cont_dead sentinel.  This breaks
+     * the GC retention chain (cont_dead has no gc_trace) while preserving
+     * error-on-use semantics for non-local return.
+     * Don't replace except_k, because exception propagation may still
+     * need to walk through it.
+     * Also don't cont_release here - gc_sweep_conts will reclaim the
+     * detached continuation once it's no longer traced in a later cycle. */
     gc_trace_cont(blk->return_k);
     gc_trace_cont(blk->except_k);
 }
 static void block_sweep_free(GraceObject *self) {
-    GraceBlock *blk = (GraceBlock *)self;
-    cont_release(blk->return_k);
-    cont_release(blk->except_k);
+    (void)self;
+    /* Don't cont_release here - cascading cleanup during sweep can
+     * free conts still referenced by other not-yet-swept objects.
+     * gc_sweep_conts handles all dead continuation cleanup safely. */
 }
 const GraceVTable grace_block_vtable = { block_request, block_describe, block_trace, block_sweep_free };
 GraceObject *grace_block_new(ASTNode *params, ASTNode *body, GraceObject *scope,
@@ -1016,7 +1037,7 @@ static PendingStep *lineup_request(GraceObject *self, Env *env, const char *name
     if (strcmp(name, "at(1)") == 0) {
         int idx = (int)grace_number_val(args[0]) - 1;
         if (idx < 0 || idx >= lu->n)
-            grace_raise(env, "BoundsError", "lineup index %d out of range (size %d)",
+            return grace_raise(env, "BoundsError", "lineup index %d out of range (size %d)",
                         idx + 1, lu->n);
         return cont_apply(k, lu->elems[idx]);
     }
@@ -1024,7 +1045,7 @@ static PendingStep *lineup_request(GraceObject *self, Env *env, const char *name
     if (strcmp(name, "++(1)") == 0) {
         GraceObject *other = args[0];
         if (other->vt != &grace_lineup_vtable)
-            grace_raise(env, "TypeError", "++ requires a lineup argument");
+            return grace_raise(env, "TypeError", "++ requires a lineup argument");
         GraceLineup *b = (GraceLineup *)other;
         int n2 = lu->n + b->n;
         GraceObject **arr = malloc((size_t)(n2 > 0 ? n2 : 1) * sizeof(GraceObject *));
@@ -1148,16 +1169,16 @@ static PendingStep *primarray_request(GraceObject *self, Env *env,
     if (strcmp(name, "at(1)") == 0) {
         int idx = (int)grace_number_val(args[0]);
         if (idx < 0 || idx >= pa->capacity)
-            grace_raise(env, "BoundsError", "primitiveArray index %d out of bounds (size %d)",
+            return grace_raise(env, "BoundsError", "primitiveArray index %d out of bounds (size %d)",
                         idx, pa->capacity);
         if (pa->elems[idx] == grace_uninit)
-            grace_raise(env, "UninitError", "primitiveArray element at %d uninitialised", idx);
+            return grace_raise(env, "UninitError", "primitiveArray element at %d uninitialised", idx);
         return cont_apply(k, pa->elems[idx]);
     }
     if (strcmp(name, "at(1)put(1)") == 0) {
         int idx = (int)grace_number_val(args[0]);
         if (idx < 0 || idx >= pa->capacity)
-            grace_raise(env, "BoundsError", "primitiveArray index %d out of bounds (size %d)",
+            return grace_raise(env, "BoundsError", "primitiveArray index %d out of bounds (size %d)",
                         idx, pa->capacity);
         gc_write_barrier(args[1]);
         pa->elems[idx] = args[1];
@@ -1215,15 +1236,6 @@ static PendingStep *user_request(GraceObject *self, Env *env, const char *name,
     for (MethodEntry *m = uo->methods; m; m = m->next)
         if (strcmp(m->name, name) == 0)
             return m->fn(self, env, args, nargs, k, m->data);
-    /* Walk lexical parent chain */
-    for (GraceObject *c = uo->lex_parent; c; ) {
-        if (c->vt != &grace_user_vtable) break;
-        GraceUserObject *pu = (GraceUserObject *)c;
-        for (MethodEntry *m = pu->methods; m; m = m->next)
-            if (strcmp(m->name, name) == 0)
-                return m->fn(c, env, args, nargs, k, m->data);
-        c = pu->lex_parent;
-    }
     if (uo->dialect)
         return grace_request(uo->dialect, env, name, args, nargs, k);
     /* Default identity equality/inequality available on all objects */
@@ -1346,7 +1358,7 @@ static PendingStep *var_getter_fn(GraceObject *self, Env *env, GraceObject **arg
     (void)self;(void)args;(void)nargs;
     VarCell *vc = (VarCell *)data;
     if (*vc->cell == grace_uninit)
-        grace_raise(env, "UninitliasedVariable", "Variable '%s' used before initialisation", vc->name);
+        return grace_raise(env, "UninitliasedVariable", "Variable '%s' used before initialisation", vc->name);
     return cont_apply(k, *vc->cell);
 }
 static PendingStep *var_setter_fn(GraceObject *self, Env *env, GraceObject **args,
@@ -1429,12 +1441,11 @@ static PendingStep *excproto_raise_fn(GraceObject *self, Env *env, GraceObject *
     for (int i = 0; i < d->nancestors; i++)
         gex->ancestors[i] = str_dup(d->ancestors[i]);
     if (env && env->except_k && env->except_k != cont_done) {
-        trampoline(cont_apply(env->except_k, ex));
+        return cont_apply(env->except_k, ex);
     } else {
         fprintf(stderr, "%s: %s\n", d->tag, msg);
         exit(1);
     }
-    return NULL;
 }
 static PendingStep *excproto_refine_fn(GraceObject *self, Env *env, GraceObject **args,
                                         int nargs, Cont *k, void *data) {
@@ -1512,16 +1523,14 @@ static PendingStep *exception_request(GraceObject *self, Env *env, const char *n
                 ex->tag ? ex->tag : "Error", ex->message)));
     if (strcmp(name,"reraise(0)")==0) {
         if (ex->outer_except_k && ex->outer_except_k != cont_done) {
-            trampoline(cont_apply(ex->outer_except_k, self));
+            return cont_apply(ex->outer_except_k, self);
         } else {
             fprintf(stderr, "%s: %s\n", ex->tag ? ex->tag : "Error", ex->message);
             exit(1);
         }
-        return NULL;
     }
     if (strcmp(name,"raise(1)")==0) {
-        grace_raise(env, ex->tag, "%s", grace_string_val(args[0]));
-        return NULL;
+        return grace_raise(env, ex->tag, "%s", grace_string_val(args[0]));
     }
     if (strcmp(name,"refine(1)")==0)
         return cont_apply(k, make_exception_proto_with_ancestry(
@@ -1545,7 +1554,7 @@ static void exception_sweep_free(GraceObject *self) {
         for (int i = 0; i < ex->nancestors; i++) free(ex->ancestors[i]);
         free(ex->ancestors);
     }
-    if (ex->outer_except_k) cont_release(ex->outer_except_k);
+    /* Don't cont_release outer_except_k - gc_sweep_conts handles it. */
 }
 const GraceVTable grace_exception_vtable = { exception_request, exception_describe, exception_trace, exception_sweep_free };
 GraceObject *grace_exception_new(const char *tag, const char *msg) {

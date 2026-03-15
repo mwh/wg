@@ -810,6 +810,9 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
         inner->return_k = cont_retain(cont_done);      /* return inside object body is unusual */
         inner->except_k = cont_retain(env->except_k);
         inner->reset_k  = cont_retain(env->reset_k);
+        /* Bind self(0) on the object so blocks in the constructor body
+         * can refer to `self` and get this object, not an outer scope's self. */
+        user_bind_def((GraceObject *)obj, "self", (GraceObject *)obj);
         /* Pre-pass: hoist all method declarations so they are visible
          * to var/def initializers in the same body (Grace semantics). */
         for (ASTNode *n = node->a1; n; ) {
@@ -996,7 +999,7 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
                 grace_fatal("Parser returned nothing for module '%s'", src);
             CaptureCont *mcc = CONT_ALLOC(CaptureCont);
             mcc->base.apply = capture_apply;
-            mcc->base.gc_trace = NULL;
+            mcc->base.gc_trace = capture_cont_trace;
             mcc->base.cleanup = NULL;
             mcc->result = grace_done;
             cont_retain((Cont *)mcc);

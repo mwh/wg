@@ -58,6 +58,7 @@ void gc_pop_cont_root(void);
 
 void gc_trampoline_enter(void);
 void gc_trampoline_exit(void);
+int  gc_trampoline_depth(void);
 
 /*
  * Collection

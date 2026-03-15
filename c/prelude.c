@@ -200,6 +200,10 @@ static PendingStep *tc_match_apply(Cont *c, GraceObject *result) {
     mc->ms = NULL;
     cont_consumed(c);
 
+    gc_push_root(&result);
+    gc_push_root(&ms->exception);
+    gc_push_root(&ms->env->receiver);
+    gc_push_root(&ms->env->scope);
     gc_push_cont_root(&ms->k);
     gc_push_cont_root(&ms->env->return_k);
     gc_push_cont_root(&ms->env->except_k);
@@ -209,6 +213,7 @@ static PendingStep *tc_match_apply(Cont *c, GraceObject *result) {
         gc_pop_cont_root();
         gc_pop_cont_root();
         gc_pop_cont_root();
+        gc_pop_roots(4);
         Cont *k = cont_retain(ms->k);
         tc_match_state_free(ms);
         PendingStep *r = cont_apply(k, val);
@@ -218,6 +223,7 @@ static PendingStep *tc_match_apply(Cont *c, GraceObject *result) {
     gc_pop_cont_root();
     gc_pop_cont_root();
     gc_pop_cont_root();
+    gc_pop_roots(4);
 
     int next = idx + 1;
     if (next >= ms->ncatch) {
@@ -321,7 +327,7 @@ static PendingStep *prelude_getFileContents_fn(GraceObject *self, Env *env,
     (void)self; (void)nargs; (void)data;
     const char *path = grace_string_val(args[0]);
     FILE *f = fopen(path, "r");
-    if (!f) grace_raise(env, "FileNotFound", "Cannot open file '%s'", path);
+    if (!f) return grace_raise(env, "FileNotFound", "Cannot open file '%s'", path);
     fseek(f, 0, SEEK_END);
     long sz = ftell(f);
     fseek(f, 0, SEEK_SET);
@@ -379,7 +385,11 @@ static PendingStep *match_case_apply(Cont *c, GraceObject *result) {
     mc->ms = NULL;
     cont_consumed(c);
     /* result is the match result object: .succeeded, .result
-     * Protect conts from gc_sweep_conts during sync requests. */
+     * Protect object+cont roots from GC during sync requests. */
+    gc_push_root(&result);
+    gc_push_root(&ms->subject);
+    gc_push_root(&ms->env->receiver);
+    gc_push_root(&ms->env->scope);
     gc_push_cont_root(&ms->k);
     gc_push_cont_root(&ms->env->return_k);
     gc_push_cont_root(&ms->env->except_k);
@@ -389,6 +399,7 @@ static PendingStep *match_case_apply(Cont *c, GraceObject *result) {
         gc_pop_cont_root();
         gc_pop_cont_root();
         gc_pop_cont_root();
+        gc_pop_roots(4);
         Cont *k = cont_retain(ms->k);
         match_state_free(ms);
         PendingStep *r = cont_apply(k, val);
@@ -398,6 +409,7 @@ static PendingStep *match_case_apply(Cont *c, GraceObject *result) {
     gc_pop_cont_root();
     gc_pop_cont_root();
     gc_pop_cont_root();
+    gc_pop_roots(4);
     int next = idx + 1;
     if (next >= ms->ncases) {
         Cont *k = cont_retain(ms->k);
@@ -692,7 +704,7 @@ static PendingStep *prelude_number_fn(GraceObject *s, Env *e, GraceObject **a,
     if (a[0]->vt == &grace_number_vtable) return cont_apply(k, a[0]);
     const char *sv = grace_string_val(a[0]);
     char *ep; double num = strtod(sv, &ep);
-    if (ep == sv) grace_raise(e, "TypeError", "Not a number: '%s'", sv);
+    if (ep == sv) return grace_raise(e, "TypeError", "Not a number: '%s'", sv);
     return cont_apply(k, grace_number_new(num));
 }
 
@@ -851,7 +863,7 @@ static PendingStep *prelude_shift_fn(GraceObject *self, Env *env,
     GraceObject *shift_body = args[0];  /* { k -> ... } */
     /* Find the nearest reset prompt */
     if (!env->reset_k || env->reset_k == cont_done)
-        grace_raise(env, "ContinuationError", "shift called outside of reset");
+        return grace_raise(env, "ContinuationError", "shift called outside of reset");
     ResetPrompt *prompt = (ResetPrompt *)env->reset_k;
     /* Reify the current continuation k as a Grace object with apply(1).
      * k is the continuation from the shift point to the prompt. */

@@ -59,8 +59,27 @@ struct Cont {
     /* Concrete cont structs embed base as first member and add payload. */
 };
 
-/* Call a continuation with a value (shorthand). */
+/* Thunk every N-th inline cont_apply to give the trampoline a chance
+ * to run GC.  Also thunk when the inline depth exceeds the depth limit
+ * to prevent C stack overflow. */
+extern int cont_apply_depth;
+#define CONT_APPLY_GC_INTERVAL 100
+#define MAX_CONT_APPLY_DEPTH   500
+
+/* Slow path: create a trampoline thunk (defined in grace.c). */
+PendingStep *cont_apply_thunk(Cont *k, GraceObject *v);
+
+/* Forward declaration of gc_maybe_collect (defined in gc.c). */
+void gc_maybe_collect(void);
+
+/* Call a continuation with a value.  Most calls are inlined (direct call
+ * to k->apply) to avoid trampoline overhead.  Periodically thunks back
+ * to the trampoline so GC can run, or when the C stack is too deep. */
 static inline PendingStep *cont_apply(Cont *k, GraceObject *v) {
+    if (++cont_apply_depth % CONT_APPLY_GC_INTERVAL == 0
+        || cont_apply_depth > MAX_CONT_APPLY_DEPTH) {
+        return cont_apply_thunk(k, v);
+    }
     return k->apply(k, v);
 }
 
@@ -108,6 +127,7 @@ static inline void cont_consumed(Cont *k) {
         if (k->cleanup) k->cleanup(k);
         free(k);
     }
+    /* else: still alive - keep data intact for multi-shot continuations */
 }
 
 /* Release a continuation that may have been abandoned (never applied).
@@ -134,6 +154,10 @@ static inline void cont_release_abandon(Cont *k) {
 
 /* A trivial "done" continuation: discards its argument and terminates. */
 extern Cont *cont_done;
+
+/* Static sentinel for consumed continuations.  Blocks replace expired
+ * return_k / except_k with cont_dead so the GC stops tracing through them. */
+extern Cont *cont_dead;
 
 /* 
  * GraceObject and its vtable
@@ -350,8 +374,9 @@ extern const GraceVTable grace_exception_vtable;
 GraceObject *grace_exception_new(const char *tag, const char *msg);
 /* Create an exception prototype (with raise/refine/match methods). */
 GraceObject *grace_exception_proto_new(const char *name);
-/* Raise: calls except_k with an exception object, or aborts if NULL. */
-void grace_raise(Env *env, const char *tag, const char *fmt, ...);
+/* Raise: returns a PendingStep* that feeds the exception to except_k,
+ * or prints the error and exits if no handler is installed. */
+PendingStep *grace_raise(Env *env, const char *tag, const char *fmt, ...);
 /* Raise as a pending step - for use inside ongoing CPS chains.
  * Returns a PendingStep* that invokes except_k on the next trampoline tick. */
 PendingStep *grace_raise_step(Env *env, const char *tag,
@@ -364,6 +389,7 @@ typedef struct {
     GraceObject *result;
 } CaptureCont;
 PendingStep *capture_apply(Cont *self, GraceObject *v);
+void capture_cont_trace(Cont *self);
 
 /* 
  * Module registry (for import resolution)

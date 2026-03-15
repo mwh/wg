@@ -206,6 +206,54 @@ ASTNode *l0N(ASTNode *elements) {
     n->a1 = elements; return n;
 }
 
+/*
+ * Trampoline thunk for cont_apply - breaks C recursion by deferring
+ * the continuation call to the next trampoline iteration.
+ */
+typedef struct {
+    PendingStep base;
+    Cont *k;
+    GraceObject *v;
+} ContApplyStep;
+
+/* Single-element cache to avoid malloc/free per trampoline thunk. */
+static ContApplyStep *cas_cache = NULL;
+
+/* Inline depth counter for cont_apply (declared in grace.h). */
+int cont_apply_depth = 0;
+
+static PendingStep *cont_apply_step_go(PendingStep *self) {
+    ContApplyStep *s = (ContApplyStep *)self;
+    Cont *k = s->k;
+    GraceObject *v = s->v;
+    if (!cas_cache) cas_cache = s;
+    else free(s);
+    cont_apply_depth = 0;  /* reset after thunking */
+    gc_push_cont_root(&k);
+    PendingStep *r = k->apply(k, v);
+    gc_pop_cont_root();
+    cont_release(k);
+    return r;
+}
+
+static void cont_apply_step_trace(PendingStep *self) {
+    ContApplyStep *s = (ContApplyStep *)self;
+    if (s->k) gc_trace_cont(s->k);
+    if (s->v) gc_mark_grey(s->v);
+}
+
+PendingStep *cont_apply_thunk(Cont *k, GraceObject *v) {
+    cont_apply_depth = 0;
+    ContApplyStep *s = cas_cache;
+    if (s) cas_cache = NULL;
+    else s = malloc(sizeof(ContApplyStep));
+    s->base.go = cont_apply_step_go;
+    s->base.gc_trace = cont_apply_step_trace;
+    s->k = cont_retain(k);
+    s->v = v;
+    return (PendingStep *)s;
+}
+
 /* 
  * Trampoline
  *  */
@@ -227,13 +275,14 @@ void trampoline(PendingStep *step) {
         gc_register_root_tracer(trace_current_step);
         gc_step_tracer_registered = 1;
     }
+    PendingStep *saved_step = gc_current_step;
     gc_trampoline_enter();
     while (step) {
         step = step->go(step);
         gc_current_step = step;  /* update to new step before potential GC */
         gc_maybe_collect();
     }
-    gc_current_step = NULL;
+    gc_current_step = saved_step;
     gc_trampoline_exit();
 }
 
@@ -246,6 +295,18 @@ static PendingStep *cont_done_apply(Cont *self, GraceObject *value) {
 }
 static Cont _cont_done = { .apply = cont_done_apply, .gc_trace = NULL, .cleanup = NULL, .refcount = CONT_REFCOUNT_STATIC };
 Cont *cont_done = &_cont_done;
+
+/* cont_dead - sentinel for consumed continuations in blocks.
+ * Blocks that outlive their enclosing method replace return_k/except_k
+ * with cont_dead so the GC doesn't trace through expired chains. */
+static PendingStep *cont_dead_apply(Cont *self, GraceObject *value) {
+    (void)self; (void)value;
+    grace_fatal("Attempted to use an expired continuation (method already returned)");
+    return NULL;
+}
+static Cont _cont_dead = { .apply = cont_dead_apply, .gc_trace = NULL, .cleanup = NULL,
+                            .refcount = CONT_REFCOUNT_STATIC, .consumed = 1 };
+Cont *cont_dead = &_cont_dead;
 
 /* 
  * Environment helpers
@@ -292,7 +353,7 @@ void grace_fatal(const char *fmt, ...) {
     exit(1);
 }
 
-void grace_raise(Env *env, const char *tag, const char *fmt, ...) {
+PendingStep *grace_raise(Env *env, const char *tag, const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
     char buf[2048];
@@ -300,7 +361,7 @@ void grace_raise(Env *env, const char *tag, const char *fmt, ...) {
     va_end(ap);
     if (env && env->except_k && env->except_k != cont_done) {
         GraceObject *ex = grace_exception_new(tag, buf);
-        trampoline(cont_apply(env->except_k, ex));
+        return cont_apply(env->except_k, ex);
     } else {
         fprintf(stderr, "%s: %s\n", tag ? tag : "Error", buf);
         exit(1);
@@ -319,8 +380,14 @@ typedef struct {
 
 static PendingStep *raise_step_go(PendingStep *self) {
     RaiseStep *rs = (RaiseStep *)self;
-    grace_raise(rs->env, rs->tag, "%s", rs->msg);
-    return NULL; /* grace_raise may not return */
+    Env *env = rs->env;
+    char *tag = rs->tag;
+    char *msg = rs->msg;
+    free(rs);
+    PendingStep *r = grace_raise(env, tag, "%s", msg);
+    free(tag);
+    free(msg);
+    return r;
 }
 
 static void raise_step_trace(PendingStep *self) {
@@ -395,7 +462,7 @@ PendingStep *capture_apply(Cont *self, GraceObject *v) {
     return NULL;
 }
 
-static void capture_cont_trace(Cont *self) {
+void capture_cont_trace(Cont *self) {
     CaptureCont *cc = (CaptureCont *)self;
     gc_mark_grey(cc->result);
 }
