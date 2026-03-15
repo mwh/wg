@@ -366,6 +366,7 @@ PendingStep *capture_apply(Cont *self, GraceObject *v);
  * Module registry (for import resolution)
  *  */
 void   grace_register_module(const char *name, GraceObject *module);
+void   grace_clear_module_registry(void);
 GraceObject *grace_find_module(const char *name);  /* NULL if not found */
 
 /* 

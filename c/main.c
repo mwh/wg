@@ -84,7 +84,8 @@ int main(int argc, char *argv[]) {
 
     /*  5. Evaluate baked/parser.c  */
     GraceObject *parser_obj = eval_baked(parser_ast, env);
-    grace_register_module("parser", parser_obj);
+    grace_clear_module_registry(); // Mask away lexer/ast/parser for user code.
+    grace_register_module("//parser", parser_obj);
 
     /*  6. Parse the user file  */
     GraceObject *parse_args[2] = {

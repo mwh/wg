@@ -978,7 +978,7 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
             fread(msrc, 1, msz, mf);
             msrc[msz] = '\0';
             fclose(mf);
-            GraceObject *parser_obj = grace_find_module("parser");
+            GraceObject *parser_obj = grace_find_module("//parser");
             if (!parser_obj)
                 grace_fatal("Parser not available for loading module '%s'", src);
             GraceObject *pargs[2] = {

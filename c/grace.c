@@ -359,6 +359,16 @@ void grace_register_module(const char *name, GraceObject *module) {
     mod_registry = e;
 }
 
+void grace_clear_module_registry(void) {
+    ModEntry *e = mod_registry;
+    while (e) {
+        ModEntry *next = e->next;
+        free(e);
+        e = next;
+    }
+    mod_registry = NULL;
+}
+
 GraceObject *grace_find_module(const char *name) {
     for (ModEntry *e = mod_registry; e; e = e->next)
         if (strcmp(e->name, name) == 0) return e->mod;
