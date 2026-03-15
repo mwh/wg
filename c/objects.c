@@ -1407,20 +1407,41 @@ GraceObject *scope_find_receiver(GraceObject *scope, const char *name) {
 }
 
 /*  Exception prototype (for raise/refine)  */
-typedef struct { char *tag; } ExcProtoData;
+typedef struct {
+    char  *tag;
+    char **ancestors;   /* [own_tag, parent_tag, ..., "Exception"] */
+    int    nancestors;
+} ExcProtoData;
 
-static GraceObject *make_exception_proto(const char *name);   /* forward */
+static GraceObject *make_exception_proto_with_ancestry(
+        const char *name, char **parent_ancestors, int parent_nancestors);
 
 static PendingStep *excproto_raise_fn(GraceObject *self, Env *env, GraceObject **args,
                                        int nargs, Cont *k, void *data) {
     (void)self;(void)nargs;(void)k;
-    grace_raise(env, ((ExcProtoData*)data)->tag, "%s", grace_string_val(args[0]));
-    return NULL; /* unreachable */
+    ExcProtoData *d = (ExcProtoData*)data;
+    const char *msg = grace_string_val(args[0]);
+    GraceObject *ex = grace_exception_new(d->tag, msg);
+    GraceException *gex = (GraceException*)ex;
+    /* Set ancestry from proto */
+    gex->nancestors = d->nancestors;
+    gex->ancestors = malloc(d->nancestors * sizeof(char*));
+    for (int i = 0; i < d->nancestors; i++)
+        gex->ancestors[i] = str_dup(d->ancestors[i]);
+    if (env && env->except_k && env->except_k != cont_done) {
+        trampoline(cont_apply(env->except_k, ex));
+    } else {
+        fprintf(stderr, "%s: %s\n", d->tag, msg);
+        exit(1);
+    }
+    return NULL;
 }
 static PendingStep *excproto_refine_fn(GraceObject *self, Env *env, GraceObject **args,
                                         int nargs, Cont *k, void *data) {
-    (void)self;(void)env;(void)nargs;(void)data;
-    return cont_apply(k, make_exception_proto(grace_string_val(args[0])));
+    (void)self;(void)env;(void)nargs;
+    ExcProtoData *parent = (ExcProtoData*)data;
+    return cont_apply(k, make_exception_proto_with_ancestry(
+        grace_string_val(args[0]), parent->ancestors, parent->nancestors));
 }
 static PendingStep *excproto_name_fn(GraceObject *self, Env *env, GraceObject **args,
                                       int nargs, Cont *k, void *data) {
@@ -1434,7 +1455,10 @@ static PendingStep *excproto_match_fn(GraceObject *self, Env *env, GraceObject *
     GraceObject *target = args[0];
     if (target->vt == &grace_exception_vtable) {
         GraceException *ex = (GraceException*)target;
-        return cont_apply(k, make_match_result(ex->tag && strcmp(ex->tag, tag) == 0, target));
+        for (int i = 0; i < ex->nancestors; i++) {
+            if (strcmp(ex->ancestors[i], tag) == 0)
+                return cont_apply(k, make_match_result(1, target));
+        }
     }
     return cont_apply(k, make_match_result(0, grace_done));
 }
@@ -1442,13 +1466,21 @@ static PendingStep *excproto_match_fn(GraceObject *self, Env *env, GraceObject *
 static void excproto_free_data(void *data) {
     ExcProtoData *d = (ExcProtoData *)data;
     free(d->tag);
+    for (int i = 0; i < d->nancestors; i++) free(d->ancestors[i]);
+    free(d->ancestors);
     free(d);
 }
 
-static GraceObject *make_exception_proto(const char *name) {
+static GraceObject *make_exception_proto_with_ancestry(
+        const char *name, char **parent_ancestors, int parent_nancestors) {
     GraceObject *p = grace_user_new(NULL);
     ExcProtoData *d = malloc(sizeof(ExcProtoData));
     d->tag = str_dup(name);
+    d->nancestors = parent_nancestors + 1;
+    d->ancestors = malloc(d->nancestors * sizeof(char*));
+    d->ancestors[0] = str_dup(name);
+    for (int i = 0; i < parent_nancestors; i++)
+        d->ancestors[i + 1] = str_dup(parent_ancestors[i]);
     user_add_method(p, "raise(1)",    excproto_raise_fn,  d);
     user_add_method(p, "refine(1)",   excproto_refine_fn, d);
     user_add_method(p, "name(0)",     excproto_name_fn,   d);
@@ -1465,7 +1497,7 @@ static GraceObject *make_exception_proto(const char *name) {
     return p;
 }
 GraceObject *grace_exception_proto_new(const char *name) {
-    return make_exception_proto(name);
+    return make_exception_proto_with_ancestry(name, NULL, 0);
 }
 
 /*  GraceException instances  */
@@ -1478,12 +1510,22 @@ static PendingStep *exception_request(GraceObject *self, Env *env, const char *n
     if (strcmp(name,"asString(0)")==0)
         return cont_apply(k, grace_string_take(str_fmt("%s: %s",
                 ex->tag ? ex->tag : "Error", ex->message)));
+    if (strcmp(name,"reraise(0)")==0) {
+        if (ex->outer_except_k && ex->outer_except_k != cont_done) {
+            trampoline(cont_apply(ex->outer_except_k, self));
+        } else {
+            fprintf(stderr, "%s: %s\n", ex->tag ? ex->tag : "Error", ex->message);
+            exit(1);
+        }
+        return NULL;
+    }
     if (strcmp(name,"raise(1)")==0) {
         grace_raise(env, ex->tag, "%s", grace_string_val(args[0]));
         return NULL;
     }
     if (strcmp(name,"refine(1)")==0)
-        return cont_apply(k, make_exception_proto(grace_string_val(args[0])));
+        return cont_apply(k, make_exception_proto_with_ancestry(
+            grace_string_val(args[0]), NULL, 0));
     grace_fatal("No method '%s' on Exception", name);
 }
 static const char *exception_describe(GraceObject *self) {
@@ -1491,16 +1533,28 @@ static const char *exception_describe(GraceObject *self) {
     snprintf(buf, sizeof(buf), "Exception(%s)", ((GraceException*)self)->tag);
     return buf;
 }
+static void exception_trace(GraceObject *self) {
+    GraceException *ex = (GraceException *)self;
+    if (ex->outer_except_k) gc_trace_cont(ex->outer_except_k);
+}
 static void exception_sweep_free(GraceObject *self) {
     GraceException *ex = (GraceException *)self;
     if (ex->tag) free(ex->tag);
     if (ex->message) free(ex->message);
+    if (ex->ancestors) {
+        for (int i = 0; i < ex->nancestors; i++) free(ex->ancestors[i]);
+        free(ex->ancestors);
+    }
+    if (ex->outer_except_k) cont_release(ex->outer_except_k);
 }
-const GraceVTable grace_exception_vtable = { exception_request, exception_describe, NULL, exception_sweep_free };
+const GraceVTable grace_exception_vtable = { exception_request, exception_describe, exception_trace, exception_sweep_free };
 GraceObject *grace_exception_new(const char *tag, const char *msg) {
     GraceException *ex = (GraceException *)gc_alloc(sizeof(GraceException));
     ex->base.vt = &grace_exception_vtable;
     ex->tag     = tag ? str_dup(tag) : str_dup("Error");
     ex->message = msg ? str_dup(msg) : str_dup("");
+    ex->ancestors = NULL;
+    ex->nancestors = 0;
+    ex->outer_except_k = NULL;
     return (GraceObject *)ex;
 }

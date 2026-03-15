@@ -80,8 +80,10 @@ static void eac_trace(Cont *c) {
     EvalArgsCont *ea = (EvalArgsCont *)c;
     gc_mark_grey(ea->recv);
     gc_trace_env(ea->env);
-    for (int i = 0; i < ea->idx; i++)
-        gc_mark_grey(ea->arr[i]);
+    if (ea->arr) {
+        for (int i = 0; i < ea->idx; i++)
+            gc_mark_grey(ea->arr[i]);
+    }
     gc_trace_cont(ea->final_k);
 }
 static void eac_cleanup(Cont *c) {
@@ -126,8 +128,10 @@ static PendingStep *lineup_build_apply(Cont *c, GraceObject *v) {
 static void lineup_build_trace(Cont *c) {
     LineupBuildCont *lb = (LineupBuildCont *)c;
     gc_trace_env(lb->env);
-    for (int i = 0; i < lb->idx; i++)
-        gc_mark_grey(lb->arr[i]);
+    if (lb->arr) {
+        for (int i = 0; i < lb->idx; i++)
+            gc_mark_grey(lb->arr[i]);
+    }
     gc_trace_cont(lb->k);
 }
 

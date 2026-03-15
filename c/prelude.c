@@ -121,55 +121,187 @@ static PendingStep *prelude_print_fn(GraceObject *self, Env *env,
     return grace_request(args[0], env, "asString(0)", NULL, 0, (Cont *)pc);
 }
 
-/*  try(1)catch(1)  */
+/*  try(1)catch(N)  */
 /*
- * try { body } catch { exc -> ... }
- * args[0] = body block, args[1] = catch block (takes one arg: the exception)
+ * try { body } catch { exc -> ... } catch { exc : Kind -> ... } ...
+ * args[0] = body block, args[1..nargs-1] = catch blocks
+ * Each catch block is tried via match(1). First match wins.
+ * If no block matches, re-raise to the outer exception handler.
  */
 typedef struct TryCatchData {
-    Cont         base;
-    GraceObject *catch_blk;
-    Env         *env;
-    Cont        *k;
+    Cont          base;
+    GraceObject **catch_blks;
+    int           ncatch;
+    Env          *env;
+    Cont         *k;
+    Cont         *outer_except_k;
 } TryCatchData;
 
 static void try_catch_trace(Cont *c) {
     TryCatchData *td = (TryCatchData *)c;
-    gc_mark_grey(td->catch_blk);
+    if (td->catch_blks) {
+        for (int i = 0; i < td->ncatch; i++)
+            gc_mark_grey(td->catch_blks[i]);
+    }
     gc_trace_env(td->env);
     gc_trace_cont(td->k);
+    gc_trace_cont(td->outer_except_k);
 }
 static void try_catch_cleanup(Cont *c) {
     TryCatchData *td = (TryCatchData *)c;
+    free(td->catch_blks);
     env_release(td->env);
     cont_release_abandon(td->k);
+    if (td->outer_except_k) cont_release_abandon(td->outer_except_k);
 }
+
+/* match loop for trying catch blocks in order */
+typedef struct {
+    GraceObject  *exception;
+    GraceObject **catch_blks;
+    int           ncatch;
+    Env          *env;
+    Cont         *k;
+    Cont         *outer_except_k;
+} TCMatchState;
+
+static void tc_match_state_free(TCMatchState *ms) {
+    if (!ms) return;
+    free(ms->catch_blks);
+    env_release(ms->env);
+    cont_release_abandon(ms->k);
+    if (ms->outer_except_k) cont_release_abandon(ms->outer_except_k);
+    free(ms);
+}
+
+static PendingStep *tc_try_block(TCMatchState *ms, int idx);
+
+typedef struct { Cont base; TCMatchState *ms; int idx; } TCMatchCont;
+
+static void tc_match_trace(Cont *c) {
+    TCMatchCont *mc = (TCMatchCont *)c;
+    TCMatchState *ms = mc->ms;
+    if (!ms) return;
+    gc_mark_grey(ms->exception);
+    for (int i = 0; i < ms->ncatch; i++)
+        gc_mark_grey(ms->catch_blks[i]);
+    gc_trace_env(ms->env);
+    gc_trace_cont(ms->k);
+    gc_trace_cont(ms->outer_except_k);
+}
+static void tc_match_cleanup(Cont *c) {
+    tc_match_state_free(((TCMatchCont *)c)->ms);
+}
+
+static PendingStep *tc_match_apply(Cont *c, GraceObject *result) {
+    TCMatchCont *mc = (TCMatchCont *)c;
+    TCMatchState *ms = mc->ms;
+    int idx = mc->idx;
+    mc->ms = NULL;
+    cont_consumed(c);
+
+    gc_push_cont_root(&ms->k);
+    gc_push_cont_root(&ms->env->return_k);
+    gc_push_cont_root(&ms->env->except_k);
+    GraceObject *succ = grace_request_sync(result, ms->env, "succeeded(0)", NULL, 0);
+    if (succ->vt == &grace_bool_vtable && grace_bool_val(succ)) {
+        GraceObject *val = grace_request_sync(result, ms->env, "result(0)", NULL, 0);
+        gc_pop_cont_root();
+        gc_pop_cont_root();
+        gc_pop_cont_root();
+        Cont *k = cont_retain(ms->k);
+        tc_match_state_free(ms);
+        PendingStep *r = cont_apply(k, val);
+        cont_release(k);
+        return r;
+    }
+    gc_pop_cont_root();
+    gc_pop_cont_root();
+    gc_pop_cont_root();
+
+    int next = idx + 1;
+    if (next >= ms->ncatch) {
+        /* No catch block matched - re-raise to outer handler */
+        Cont *outer = ms->outer_except_k;
+        if (outer) cont_retain(outer);
+        GraceObject *exception = ms->exception;
+        tc_match_state_free(ms);
+        if (outer && outer != cont_done) {
+            PendingStep *r = cont_apply(outer, exception);
+            cont_release(outer);
+            return r;
+        }
+        if (outer) cont_release(outer);
+        /* No outer handler - abort */
+        if (exception->vt == &grace_exception_vtable) {
+            GraceException *ex = (GraceException *)exception;
+            fprintf(stderr, "%s: %s\n", ex->tag ? ex->tag : "Error", ex->message);
+        } else {
+            fprintf(stderr, "Unhandled exception\n");
+        }
+        exit(1);
+        return NULL;
+    }
+    return tc_try_block(ms, next);
+}
+
+static PendingStep *tc_try_block(TCMatchState *ms, int idx) {
+    GraceObject *blk = ms->catch_blks[idx];
+    TCMatchCont *mc = CONT_ALLOC(TCMatchCont);
+    mc->base.apply = tc_match_apply;
+    mc->base.gc_trace = tc_match_trace;
+    mc->base.cleanup = tc_match_cleanup;
+    mc->ms  = ms;
+    mc->idx = idx;
+    GraceObject *args[1] = { ms->exception };
+    return grace_request(blk, ms->env, "match(1)", args, 1, (Cont *)mc);
+}
+
+/* exception handler continuation (fires on raise) */
 static PendingStep *try_catch_except_apply(Cont *c, GraceObject *ex) {
     TryCatchData *td = (TryCatchData *)c;
-    GraceObject *catch_blk = td->catch_blk;
+    /* Set reraise info on exception packet */
+    if (ex->vt == &grace_exception_vtable) {
+        GraceException *gex = (GraceException*)ex;
+        if (gex->outer_except_k) cont_release(gex->outer_except_k);
+        gex->outer_except_k = td->outer_except_k
+            ? cont_retain(td->outer_except_k) : NULL;
+    }
+    /* Transfer catch_blks ownership to match state */
+    GraceObject **catch_blks = td->catch_blks;
+    int ncatch = td->ncatch;
+    td->catch_blks = NULL;
     Env *env = env_retain(td->env);
     Cont *k = cont_retain(td->k);
+    Cont *outer = td->outer_except_k ? cont_retain(td->outer_except_k) : NULL;
     cont_consumed(c);
-    GraceObject *args[1] = { ex };
-    PendingStep *r = grace_request(catch_blk, env, "apply(1)", args, 1, k);
-    env_release(env);
-    cont_release(k);
-    return r;
+
+    TCMatchState *ms = malloc(sizeof(TCMatchState));
+    ms->exception    = ex;
+    ms->catch_blks   = catch_blks;
+    ms->ncatch       = ncatch;
+    ms->env          = env;
+    ms->k            = k;
+    ms->outer_except_k = outer;
+    return tc_try_block(ms, 0);
 }
 
 static PendingStep *prelude_try_catch_fn(GraceObject *self, Env *env,
                                           GraceObject **args, int nargs,
                                           Cont *k, void *data) {
-    (void)self; (void)nargs; (void)data;
-    GraceObject *body_blk  = args[0];
-    GraceObject *catch_blk = args[1];
+    (void)self; (void)data;
+    GraceObject *body_blk = args[0];
+    int ncatch = nargs - 1;
     TryCatchData *td = CONT_ALLOC(TryCatchData);
-    td->base.apply  = try_catch_except_apply;
+    td->base.apply    = try_catch_except_apply;
     td->base.gc_trace = try_catch_trace;
-    td->base.cleanup = try_catch_cleanup;
-    td->catch_blk   = catch_blk;
-    td->env         = env_retain(env);
-    td->k           = cont_retain(k);
+    td->base.cleanup  = try_catch_cleanup;
+    td->catch_blks    = malloc(ncatch * sizeof(GraceObject *));
+    for (int i = 0; i < ncatch; i++) td->catch_blks[i] = args[1 + i];
+    td->ncatch        = ncatch;
+    td->env           = env_retain(env);
+    td->k             = cont_retain(k);
+    td->outer_except_k = env->except_k ? cont_retain(env->except_k) : NULL;
     /* Override except_k in env */
     Env *try_env = malloc(sizeof(Env));
     *try_env = *env;
@@ -781,6 +913,10 @@ GraceObject *make_prelude(void) {
     user_add_method(p, "while(1)do(1)",  prelude_while_do_fn,        NULL);
     user_add_method(p, "for(1)do(1)",    prelude_for_do_fn,          NULL);
     user_add_method(p, "try(1)catch(1)", prelude_try_catch_fn,       NULL);
+    user_add_method(p, "try(1)catch(1)catch(1)", prelude_try_catch_fn, NULL);
+    user_add_method(p, "try(1)catch(1)catch(1)catch(1)", prelude_try_catch_fn, NULL);
+    user_add_method(p, "try(1)catch(1)catch(1)catch(1)catch(1)", prelude_try_catch_fn, NULL);
+    user_add_method(p, "try(1)catch(1)catch(1)catch(1)catch(1)catch(1)", prelude_try_catch_fn, NULL);
     user_add_method(p, "getFileContents(1)", prelude_getFileContents_fn, NULL);
 
     /* if/then variants */

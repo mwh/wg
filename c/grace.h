@@ -342,6 +342,9 @@ struct GraceException {
     GraceObject base;
     char       *message;
     char       *tag;        /* e.g. "RuntimeError", "ParseError" */
+    char      **ancestors;  /* tag ancestry: [own, parent, ..., "Exception"] */
+    int         nancestors;
+    Cont       *outer_except_k; /* outer handler for reraise, or NULL */
 };
 extern const GraceVTable grace_exception_vtable;
 GraceObject *grace_exception_new(const char *tag, const char *msg);
