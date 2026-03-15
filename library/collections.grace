@@ -233,7 +233,7 @@ class dictionary(elems) {
                 itemSize
             }
             method do(blk) {
-                for (0..(itemSize - 1)) do { i ->
+                for (0..(arraySize - 1)) do { i ->
                     def atSpot = elements.at(i)
                     if ((atSpot != vacant) && (atSpot != tombstone)) then {
                         blk.apply(transform.apply(atSpot))
