@@ -89,13 +89,14 @@ public class Start {
                         System.err.println("  " + entry);
                     }
                     System.err.println("Crash during evaluation: " + e);
+                    System.exit(1);
                 }
             }
         } catch (GraceException e) {
             var kind = e.getKind();
             if (kind != null && "ParseError".equals(kind.getName())) {
                 System.err.println(e.getMessage());
-                System.exit(1);
+                System.exit(2);
             }
             System.err.println("Grace crash during parsing: " + e);
             System.err.println("At:");
@@ -103,6 +104,7 @@ public class Start {
                 System.err.println("  " + entry);
             }
             System.err.println("Grace crash during parsing: " + e);
+            System.exit(3);
         } catch (IOException e) {
             throw new RuntimeException("Error reading file: " + filename);
         } catch (RuntimeException e) {
@@ -111,6 +113,7 @@ public class Start {
                 System.err.println("  " + element);
             }
             System.err.println("Java crash: " + e.getMessage());
+            System.exit(4);
         }
     }
 
