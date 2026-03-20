@@ -342,6 +342,9 @@ GraceObject *grace_user_new(GraceObject *lex_parent);
 /* Add a method to a user object. */
 void user_add_method(GraceObject *obj, const char *name, MethodFn fn, void *data);
 
+/* Check whether a user object has a method with the given name (own methods only). */
+int user_has_method(GraceObject *obj, const char *name);
+
 /* Bind a name to a fixed value: adds a zero-arg method returning value.
  * Also adds a setter name:=(1) using a mutable cell. */
 void user_bind_def(GraceObject *obj, const char *name, GraceObject *value);

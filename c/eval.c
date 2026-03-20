@@ -161,6 +161,49 @@ static void method_closure_free(void *data) {
     free(data);
 }
 
+/* Forward declarations for inheritance support */
+static PendingStep *method_inherit_fn(GraceObject *self, Env *env,
+                                       GraceObject **args, int nargs, Cont *k,
+                                       void *data);
+static PendingStep *eval_objcons_inherit(ASTNode *node, Env *env,
+                                          GraceObject *inherit_obj, Cont *k);
+
+/* Check if the last statement of a body cons list is NK_OBJCONS */
+static int body_tail_is_objcons(ASTNode *body) {
+    if (!body) return 0;
+    while (body->kind == NK_CONS) {
+        if (!body->a2) return body->a1 && body->a1->kind == NK_OBJCONS;
+        body = body->a2;
+    }
+    return body->kind == NK_OBJCONS;
+}
+
+/* Get the last element of a cons list */
+static ASTNode *cons_last(ASTNode *list) {
+    if (!list) return NULL;
+    while (list->kind == NK_CONS) {
+        if (!list->a2) return list->a1;
+        list = list->a2;
+    }
+    return list;
+}
+
+/* Build a cons list of all elements except the last.
+ * Returns NULL if list has 0 or 1 elements.
+ * Allocates new NK_CONS cells but shares original sub-nodes. */
+static ASTNode *cons_init(ASTNode *list) {
+    if (!list) return NULL;
+    if (list->kind != NK_CONS) return NULL;
+    if (!list->a2) return NULL;
+    ASTNode *rest = cons_init(list->a2);
+    ASTNode *n = malloc(sizeof(ASTNode));
+    memset(n, 0, sizeof(*n));
+    n->kind = NK_CONS;
+    n->a1 = list->a1;
+    n->a2 = rest;
+    return n;
+}
+
 /* Helper: set trace_data/free_data on the last method entry of a user object */
 static void set_last_method_gc(GraceObject *obj, void (*trace)(void*), void (*freefn)(void*)) {
     GraceUserObject *uo = (GraceUserObject *)obj;
@@ -499,6 +542,256 @@ static void objdone_cleanup(Cont *c) {
 }
 
 /*
+ * Inherit support: InheritTailCont, method_inherit_fn, eval_objcons_inherit
+ */
+
+/* After evaluating the prefix body of an inheritable method,
+ * evaluate the tail NK_OBJCONS using the inheriting object. */
+typedef struct {
+    Cont         base;
+    ASTNode     *tail_node;
+    GraceObject *inheriting;
+    Env         *env;
+    Cont        *k;
+} InheritTailCont;
+
+static PendingStep *inherit_tail_apply(Cont *c, GraceObject *val) {
+    (void)val;
+    InheritTailCont *itc = (InheritTailCont *)c;
+    ASTNode *tail = itc->tail_node;
+    GraceObject *inheriting = itc->inheriting;
+    Env *env = env_retain(itc->env);
+    Cont *k = cont_retain(itc->k);
+    cont_consumed(c);
+    PendingStep *r = eval_objcons_inherit(tail, env, inheriting, k);
+    env_release(env);
+    cont_release(k);
+    return r;
+}
+static void inherit_tail_trace(Cont *c) {
+    InheritTailCont *itc = (InheritTailCont *)c;
+    gc_mark_grey(itc->inheriting);
+    gc_trace_env(itc->env);
+    gc_trace_cont(itc->k);
+}
+static void inherit_tail_cleanup(Cont *c) {
+    InheritTailCont *itc = (InheritTailCont *)c;
+    env_release(itc->env);
+    cont_release_abandon(itc->k);
+}
+
+/* Inherit-variant method: like method_fn but the last argument is the
+ * inheriting object.  Evaluates the body prefix normally, then evaluates
+ * the tail NK_OBJCONS using the inheriting object. */
+static PendingStep *method_inherit_fn(GraceObject *self, Env *env,
+                                       GraceObject **args, int nargs, Cont *k,
+                                       void *data) {
+    (void)env;
+    MethodClosure *mc = (MethodClosure *)data;
+    GraceObject *inheriting = args[nargs - 1];
+
+    GraceObject *frame = grace_user_new(mc->lex_scope);
+    user_bind_def(frame, "self", self);
+
+    /* Bind params from original parts (excluding the trailing inherit arg) */
+    int ai = 0;
+    for (ASTNode *pl = mc->parts; pl != NULL; pl = pl->a2) {
+        if (pl->kind != NK_CONS) break;
+        ASTNode *part = pl->a1;
+        if (!part || part->kind != NK_PART) break;
+        for (ASTNode *pm = part->a1; pm != NULL; pm = pm->a2) {
+            if (pm->kind != NK_CONS) break;
+            ASTNode *decl = pm->a1;
+            if (!decl) break;
+            const char *pname = decl->strval;
+            GraceObject *val = (ai < nargs - 1) ? args[ai] : grace_done;
+            user_bind_def(frame, pname, val);
+            ai++;
+        }
+    }
+
+    Env *inner = malloc(sizeof(Env));
+    inner->refcount = 1;
+    inner->receiver = self;
+    inner->scope    = frame;
+    inner->return_k = cont_retain(k);
+    inner->except_k = cont_retain(env->except_k);
+    inner->reset_k  = cont_retain(env->reset_k);
+
+    ASTNode *tail = cons_last(mc->body);
+    ASTNode *prefix = cons_init(mc->body);
+
+    if (prefix) {
+        InheritTailCont *itc = CONT_ALLOC(InheritTailCont);
+        itc->base.apply    = inherit_tail_apply;
+        itc->base.gc_trace = inherit_tail_trace;
+        itc->base.cleanup  = inherit_tail_cleanup;
+        itc->tail_node   = tail;
+        itc->inheriting  = inheriting;
+        itc->env         = env_retain(inner);
+        itc->k           = cont_retain(k);
+        PendingStep *r = eval_stmts(prefix, inner, (Cont *)itc);
+        env_release(inner);
+        return r;
+    } else {
+        PendingStep *r = eval_objcons_inherit(tail, inner, inheriting, k);
+        env_release(inner);
+        return r;
+    }
+}
+
+/* Evaluate an object constructor body, building into an existing object
+ * (inherit_obj) instead of creating a new one.  Methods already on the
+ * object (from a more-derived level) are skipped during hoisting. */
+static PendingStep *eval_objcons_inherit(ASTNode *node, Env *env,
+                                          GraceObject *inherit_obj, Cont *k) {
+    GraceUserObject *obj = (GraceUserObject *)inherit_obj;
+
+    /* Inherit dialect from outer scope if not already set */
+    GraceObject *outer = env->scope;
+    if (outer && outer->vt == &grace_user_vtable && !obj->dialect)
+        obj->dialect = ((GraceUserObject *)outer)->dialect;
+
+    Env *inner = malloc(sizeof(Env));
+    inner->refcount = 1;
+    inner->receiver = (GraceObject *)obj;
+    inner->scope    = (GraceObject *)obj;
+    inner->return_k = cont_retain(cont_done);
+    inner->except_k = cont_retain(env->except_k);
+    inner->reset_k  = cont_retain(env->reset_k);
+
+    user_bind_def((GraceObject *)obj, "self", (GraceObject *)obj);
+
+    /* Pre-pass: hoist method and def declarations, skipping names
+     * already on the object (overridden by the more-derived level). */
+    for (ASTNode *n = node->a1; n; ) {
+        ASTNode *stmt;
+        if (n->kind == NK_CONS) { stmt = n->a1; n = n->a2; }
+        else                    { stmt = n;     n = NULL;  }
+        if (!stmt) continue;
+        if (stmt->kind == NK_METH_DECL) {
+            char *mname = parts_to_name(stmt->a1);
+            if (!user_has_method((GraceObject *)obj, mname)) {
+                MethodClosure *mc = malloc(sizeof(MethodClosure));
+                mc->parts     = stmt->a1;
+                mc->body      = stmt->a4;
+                mc->lex_scope = (GraceObject *)obj;
+                mc->lex_self  = (GraceObject *)obj;
+                user_add_method((GraceObject *)obj, mname, method_fn, mc);
+                set_last_method_gc((GraceObject *)obj, method_closure_trace, method_closure_free);
+                if (body_tail_is_objcons(stmt->a4)) {
+                    char *iname = str_fmt("%sinherit(1)", mname);
+                    MethodClosure *imc = malloc(sizeof(MethodClosure));
+                    imc->parts     = stmt->a1;
+                    imc->body      = stmt->a4;
+                    imc->lex_scope = (GraceObject *)obj;
+                    imc->lex_self  = (GraceObject *)obj;
+                    user_add_method((GraceObject *)obj, iname, method_inherit_fn, imc);
+                    set_last_method_gc((GraceObject *)obj, method_closure_trace, method_closure_free);
+                    free(iname);
+                }
+            }
+            free(mname);
+        } else if (stmt->kind == NK_DEF_DECL) {
+            char *full = str_fmt("%s(0)", stmt->strval);
+            if (!user_has_method((GraceObject *)obj, full))
+                user_bind_def((GraceObject *)obj, stmt->strval, grace_uninit);
+            free(full);
+        }
+    }
+
+    ObjDoneCont *oc = CONT_ALLOC(ObjDoneCont);
+    oc->base.apply  = objdone_apply;
+    oc->base.gc_trace = objdone_trace;
+    oc->base.cleanup = objdone_cleanup;
+    oc->obj = (GraceObject *)obj;
+    oc->k   = cont_retain(k);
+
+    PendingStep *r = eval_stmts(node->a1, inner, (Cont *)oc);
+    env_release(inner);
+    return r;
+}
+
+/*
+ * Use support: UseSourceCont - copy methods from source to target
+ */
+typedef struct {
+    Cont  base;
+    Env  *env;
+    Cont *k;
+} UseSourceCont;
+
+static PendingStep *use_source_apply(Cont *c, GraceObject *source) {
+    UseSourceCont *usc = (UseSourceCont *)c;
+    Env *env = env_retain(usc->env);
+    Cont *k = cont_retain(usc->k);
+    cont_consumed(c);
+
+    GraceObject *target = env->scope;
+
+    if (!source || source->vt != &grace_user_vtable) {
+        PendingStep *r = grace_raise(env, "UseError", "use: source must be an object");
+        env_release(env);
+        cont_release(k);
+        return r;
+    }
+
+    GraceUserObject *src = (GraceUserObject *)source;
+
+    /* Reject objects with mutable state (vars have :=(1) setters) */
+    for (MethodEntry *m = src->methods; m; m = m->next) {
+        if (strstr(m->name, ":=(")) {
+            PendingStep *r = grace_raise(env, "UseError",
+                "use: source object contains mutable state (var '%s')", m->name);
+            env_release(env);
+            cont_release(k);
+            return r;
+        }
+    }
+
+    /* Copy methods from source to target */
+    for (MethodEntry *m = src->methods; m; m = m->next) {
+        if (strcmp(m->name, "self(0)") == 0) continue;
+        if (user_has_method(target, m->name)) continue;
+
+        if (m->fn == method_fn || m->fn == method_inherit_fn) {
+            /* Re-scope method closure to target */
+            MethodClosure *mc = (MethodClosure *)m->data;
+            MethodClosure *new_mc = malloc(sizeof(MethodClosure));
+            new_mc->parts     = mc->parts;
+            new_mc->body      = mc->body;
+            new_mc->lex_scope = target;
+            new_mc->lex_self  = target;
+            user_add_method(target, m->name, m->fn, new_mc);
+            set_last_method_gc(target, method_closure_trace, method_closure_free);
+        } else {
+            /* For def_fn etc.: copy as-is (data is GC-managed) */
+            user_add_method(target, m->name, m->fn, m->data);
+            GraceUserObject *tuo = (GraceUserObject *)target;
+            MethodEntry *last = tuo->methods;
+            while (last->next) last = last->next;
+            last->trace_data = m->trace_data;
+            /* free_data = NULL: don't double-free shared data */
+        }
+    }
+
+    PendingStep *r = cont_apply(k, grace_done);
+    env_release(env);
+    cont_release(k);
+    return r;
+}
+static void use_source_trace(Cont *c) {
+    UseSourceCont *usc = (UseSourceCont *)c;
+    gc_trace_env(usc->env);
+    gc_trace_cont(usc->k);
+}
+static void use_source_cleanup(Cont *c) {
+    UseSourceCont *usc = (UseSourceCont *)c;
+    env_release(usc->env);
+    cont_release_abandon(usc->k);
+}
+
+/*
  * NK_DEF_DECL continuation: after eval value, bind it
  */
 typedef struct {
@@ -814,21 +1107,39 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
          * can refer to `self` and get this object, not an outer scope's self. */
         user_bind_def((GraceObject *)obj, "self", (GraceObject *)obj);
         /* Pre-pass: hoist all method declarations so they are visible
-         * to var/def initializers in the same body (Grace semantics). */
+         * to var/def initializers in the same body (Grace semantics).
+         * Also hoist def declarations as placeholders (so `use` won't
+         * override locally-defined names), and register inherit variants
+         * for methods whose body ends with an object constructor. */
         for (ASTNode *n = node->a1; n; ) {
             ASTNode *stmt;
             if (n->kind == NK_CONS) { stmt = n->a1; n = n->a2; }
             else                    { stmt = n;     n = NULL;  }
-            if (!stmt || stmt->kind != NK_METH_DECL) continue;
-            char *mname = parts_to_name(stmt->a1);
-            MethodClosure *mc = malloc(sizeof(MethodClosure));
-            mc->parts     = stmt->a1;
-            mc->body      = stmt->a4;
-            mc->lex_scope = (GraceObject *)obj;
-            mc->lex_self  = (GraceObject *)obj;
-            user_add_method((GraceObject *)obj, mname, method_fn, mc);
-            set_last_method_gc((GraceObject *)obj, method_closure_trace, method_closure_free);
-            free(mname);
+            if (!stmt) continue;
+            if (stmt->kind == NK_METH_DECL) {
+                char *mname = parts_to_name(stmt->a1);
+                MethodClosure *mc = malloc(sizeof(MethodClosure));
+                mc->parts     = stmt->a1;
+                mc->body      = stmt->a4;
+                mc->lex_scope = (GraceObject *)obj;
+                mc->lex_self  = (GraceObject *)obj;
+                user_add_method((GraceObject *)obj, mname, method_fn, mc);
+                set_last_method_gc((GraceObject *)obj, method_closure_trace, method_closure_free);
+                if (body_tail_is_objcons(stmt->a4)) {
+                    char *iname = str_fmt("%sinherit(1)", mname);
+                    MethodClosure *imc = malloc(sizeof(MethodClosure));
+                    imc->parts     = stmt->a1;
+                    imc->body      = stmt->a4;
+                    imc->lex_scope = (GraceObject *)obj;
+                    imc->lex_self  = (GraceObject *)obj;
+                    user_add_method((GraceObject *)obj, iname, method_inherit_fn, imc);
+                    set_last_method_gc((GraceObject *)obj, method_closure_trace, method_closure_free);
+                    free(iname);
+                }
+                free(mname);
+            } else if (stmt->kind == NK_DEF_DECL) {
+                user_bind_def((GraceObject *)obj, stmt->strval, grace_uninit);
+            }
         }
         ObjDoneCont *oc = CONT_ALLOC(ObjDoneCont);
         oc->base.apply  = objdone_apply;
@@ -891,6 +1202,17 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
         mc->lex_self  = env->receiver;
         user_add_method(env->scope, mname, method_fn, mc);  /* bind on scope */
         set_last_method_gc(env->scope, method_closure_trace, method_closure_free);
+        if (body_tail_is_objcons(node->a4)) {
+            char *iname = str_fmt("%sinherit(1)", mname);
+            MethodClosure *imc = malloc(sizeof(MethodClosure));
+            imc->parts     = node->a1;
+            imc->body      = node->a4;
+            imc->lex_scope = env->scope;
+            imc->lex_self  = env->receiver;
+            user_add_method(env->scope, iname, method_inherit_fn, imc);
+            set_last_method_gc(env->scope, method_closure_trace, method_closure_free);
+            free(iname);
+        }
         free(mname);
         return cont_apply(k, grace_done);
     }
@@ -1014,6 +1336,41 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
         user_bind_def(env->receiver, bname, mod);
         user_bind_def(env->scope,    bname, mod);
         return cont_apply(k, grace_done);
+    }
+
+    /*  inherit statement  */
+    case NK_INHERIT: {
+        ASTNode *parent_expr = node->a1;
+        if (!parent_expr || parent_expr->kind != NK_LEXREQ)
+            return grace_raise(env, "InheritError",
+                "inherit expression must be a simple request");
+        const char *orig_name = parent_expr->strval;
+        char *inherit_name = str_fmt("%sinherit(1)", orig_name);
+        GraceObject *recv = scope_find_receiver(env->scope, inherit_name);
+        if (!recv) recv = scope_find_receiver(env->receiver, inherit_name);
+        if (!recv) {
+            free(inherit_name);
+            return grace_raise(env, "InheritError",
+                "Cannot inherit from '%s': not a fresh object constructor",
+                orig_name);
+        }
+        GraceObject *inheriting = env->receiver;
+        GraceObject *iargs[1] = { inheriting };
+        PendingStep *r = grace_request(recv, env, inherit_name, iargs, 1, k);
+        free(inherit_name);
+        return r;
+    }
+
+    /*  use statement  */
+    case NK_USE: {
+        ASTNode *source_expr = node->a1;
+        UseSourceCont *usc = CONT_ALLOC(UseSourceCont);
+        usc->base.apply    = use_source_apply;
+        usc->base.gc_trace = use_source_trace;
+        usc->base.cleanup  = use_source_cleanup;
+        usc->env = env_retain(env);
+        usc->k   = cont_retain(k);
+        return eval_node(source_expr, env, (Cont *)usc);
     }
 
     /*  ignored/trivial nodes  */

@@ -24,6 +24,8 @@
  *   m0S(parts, ret)              methSig
  *   t0D(name, gen, val)          typeDecl
  *   s4F(a, b, c)                 string concat of three strings (returns const char*)
+ *   i0H(expr, extra)             inheritStmt
+ *   u0S(expr, extra)             useStmt
  *   c0N(head, tail)              cons list node  (head may be ASTNode* or const char*)
  *   c2N(a, b)                    cons(a, cons(b, nil))
  *   o1N(x)                       cons(x, nil)    (x may be ASTNode* or const char*)
@@ -56,6 +58,8 @@
 #define NK_METH_SIG    20
 #define NK_CONS        21
 #define NK_LINEUP      22
+#define NK_INHERIT     23
+#define NK_USE         24
 /* NK_NIL is represented by the NULL pointer */
 
 /*  ASTNode  */
@@ -180,5 +184,11 @@ ASTNode *t0D(const char *name, ASTNode *gen, ASTNode *val);
 
 /* l0N  lineup(elements) - a1 = cons list of element expressions */
 ASTNode *l0N(ASTNode *elements);
+
+/* i0H  inheritStmt(parentExpr, extra) */
+ASTNode *i0H(ASTNode *expr, ASTNode *extra);
+
+/* u0S  useStmt(parentExpr, extra) */
+ASTNode *u0S(ASTNode *expr, ASTNode *extra);
 
 #endif /* AST_H */

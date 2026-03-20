@@ -205,6 +205,14 @@ ASTNode *l0N(ASTNode *elements) {
     ASTNode *n = ast_alloc(NK_LINEUP);
     n->a1 = elements; return n;
 }
+ASTNode *i0H(ASTNode *expr, ASTNode *extra) {
+    ASTNode *n = ast_alloc(NK_INHERIT);
+    n->a1 = expr; n->a2 = extra; return n;
+}
+ASTNode *u0S(ASTNode *expr, ASTNode *extra) {
+    ASTNode *n = ast_alloc(NK_USE);
+    n->a1 = expr; n->a2 = extra; return n;
+}
 
 /*
  * Trampoline thunk for cont_apply - breaks C recursion by deferring

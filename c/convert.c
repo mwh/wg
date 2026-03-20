@@ -367,6 +367,20 @@ ASTNode *grace_ast_to_astnode(GraceObject *obj, Env *env) {
         return l0N(elems);
     }
 
+    /*  Inherit statement  */
+    if (strcmp(kind, "inheritStmt") == 0) {
+        GraceObject *parent_obj = get_field(obj, env, "parent");
+        ASTNode *parent = grace_ast_to_astnode(parent_obj, env);
+        return i0H(parent, NULL);
+    }
+
+    /*  Use statement  */
+    if (strcmp(kind, "useStmt") == 0) {
+        GraceObject *parent_obj = get_field(obj, env, "parent");
+        ASTNode *parent = grace_ast_to_astnode(parent_obj, env);
+        return u0S(parent, NULL);
+    }
+
     /* Unknown kind - warn and return NULL */
     fprintf(stderr, "grace_ast_to_astnode: unknown kind '%s'\n", kind);
     return NULL;

@@ -1319,6 +1319,14 @@ void user_add_method(GraceObject *obj, const char *name, MethodFn fn, void *data
     }
 }
 
+int user_has_method(GraceObject *obj, const char *name) {
+    if (!obj || obj->vt != &grace_user_vtable) return 0;
+    GraceUserObject *uo = (GraceUserObject *)obj;
+    for (MethodEntry *m = uo->methods; m; m = m->next)
+        if (strcmp(m->name, name) == 0) return 1;
+    return 0;
+}
+
 static PendingStep *def_fn(GraceObject *self, Env *env, GraceObject **args,
                             int nargs, Cont *k, void *data) {
     (void)self;(void)env;(void)args;(void)nargs;
