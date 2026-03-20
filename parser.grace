@@ -828,6 +828,20 @@ method parseDialect(lxr) {
     ast.dialectStmt(src)
 }
 
+method parseInherit(lxr) {
+    lxr.expectKeyword("inherit")
+    lxr.advance
+    def expr = parseExpression(lxr)
+    ast.inheritStmt(expr, ast.nil)
+}
+
+method parseUse(lxr) {
+    lxr.expectKeyword("use")
+    lxr.advance
+    def expr = parseExpression(lxr)
+    ast.useStmt(expr, ast.nil)
+}
+
 method parseObjectBody(lxr) {
     var body := ast.nil
     
@@ -874,6 +888,12 @@ method parseObjectBody(lxr) {
                     } else {
                         parseError(lxr.current.line, lexer.indentColumn, "dialect declaration can only appear as first statement")
                     }
+                } elseif { token.value == "inherit" } then {
+                    def inh = parseInherit(lxr)
+                    body := ast.cons(inh, body)
+                } elseif { token.value == "use" } then {
+                    def useSt = parseUse(lxr)
+                    body := ast.cons(useSt, body)
                 } else {
                     def stmt = parseStatement(lxr)
                     body := ast.cons(stmt, body)

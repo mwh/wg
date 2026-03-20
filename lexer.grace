@@ -377,7 +377,7 @@ method lexer(code) {
                         c := source.at(index)
                     }
                 }
-                if ((value == "var") || (value == "def") || (value == "method") || (value == "object") || (value == "is") || (value == "return") || (value == "class") || (value == "type") || (value == "import") || (value == "self") || (value == "dialect") || (value == "interface")) then {
+                if ((value == "var") || (value == "def") || (value == "method") || (value == "object") || (value == "is") || (value == "return") || (value == "class") || (value == "type") || (value == "import") || (value == "self") || (value == "dialect") || (value == "interface") || (value == "inherit") || (value == "use")) then {
                     return KeywordToken(line, column, value)
                 }
                 return IdentifierToken(line, column, value)
@@ -409,7 +409,7 @@ method lexer(code) {
                 if (op == ":") then {
                     return SymbolToken(line, column, "COLON")
                 }
-                if (op == "//") then {
+                if ((op.size >= 2) && (op.substringFrom 1 to 2 == "//")) then {
                     var cp := c.firstCodepoint
                     var text := ""
                     index := index + 1

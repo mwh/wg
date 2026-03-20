@@ -142,6 +142,36 @@ method lineup(elems) {
     }
 }
 
+method inheritStmt(expr, extra) {
+    object {
+        def parent is public = expr
+        def kind is public = "inheritStmt"
+
+        method asString {
+            "inheritStmt(" ++ parent.asString ++ ", " ++ extra.asString ++ ")"
+        }
+
+        method concise {
+            "i0H(" ++ parent.concise ++ ", " ++ extra.concise ++ ")"
+        }
+    }
+}
+
+method useStmt(expr, extra) {
+    object {
+        def parent is public = expr
+        def kind is public = "useStmt"
+
+        method asString {
+            "useStmt(" ++ parent.asString ++ ", " ++ extra.asString ++ ")"
+        }
+
+        method concise {
+            "u0S(" ++ parent.concise ++ ", " ++ extra.concise ++ ")"
+        }
+    }
+}
+
 method block(params, stmts) {
     object {
         def parameters is public = params

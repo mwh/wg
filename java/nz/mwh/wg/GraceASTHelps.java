@@ -150,6 +150,12 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
             return importStmt(((GraceString) request.getParts().get(0).getArgs().get(0)).getValue(),
                     (IdentifierDeclaration) request.getParts().get(0).getArgs().get(1));
         });
+        lexicalParent.addMethod("inheritStmt(2)", request -> {
+            return inheritStmt((ASTNode) request.getParts().get(0).getArgs().get(0), (Cons<ASTNode>) request.getParts().get(0).getArgs().get(1));
+        });
+        lexicalParent.addMethod("useStmt(2)", request -> {
+            return useStmt((ASTNode) request.getParts().get(0).getArgs().get(0), (Cons<ASTNode>) request.getParts().get(0).getArgs().get(1));
+        });
 
         return lexicalParent;
 

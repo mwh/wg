@@ -1,6 +1,7 @@
 package nz.mwh.wg.ast;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import nz.mwh.wg.Visitor;
 
@@ -10,12 +11,18 @@ public class MethodDecl extends ASTNode {
     ASTNode type;
     List<String> annotations;
     List<? extends ASTNode> body;
+    private String name;
 
     public MethodDecl(Cons<? extends Part> parts, ASTNode type, Cons<String> annotations, Cons<? extends ASTNode> body) {
         this.parts = parts.toList();
         this.type = type;
         this.annotations = annotations.toList();
         this.body = body.toList();
+        name = this.parts.stream().map(x -> x.getName() + "(" + x.getParameters().size() + ")").collect(Collectors.joining(""));
+    }
+
+    public String getName() {
+        return name;
     }
 
     public <T> T accept(T context, Visitor<T> visitor) {

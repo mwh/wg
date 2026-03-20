@@ -10,6 +10,7 @@ import nz.mwh.wg.ast.DialectStmt;
 import nz.mwh.wg.ast.ExplicitRequest;
 import nz.mwh.wg.ast.IdentifierDeclaration;
 import nz.mwh.wg.ast.ImportStmt;
+import nz.mwh.wg.ast.InheritStmt;
 import nz.mwh.wg.ast.InterfaceConstructor;
 import nz.mwh.wg.ast.InterpString;
 import nz.mwh.wg.ast.LexicalRequest;
@@ -22,6 +23,7 @@ import nz.mwh.wg.ast.Part;
 import nz.mwh.wg.ast.ReturnStmt;
 import nz.mwh.wg.ast.StringNode;
 import nz.mwh.wg.ast.TypeDecl;
+import nz.mwh.wg.ast.UseStmt;
 import nz.mwh.wg.ast.VarDecl;
 
 public class ASTConstructors {
@@ -185,6 +187,14 @@ public class ASTConstructors {
 
     protected static Lineup lineup(Cons<ASTNode> elements) {
         return new Lineup(elements);
+    }
+
+    protected static InheritStmt inheritStmt(ASTNode parent, Cons<ASTNode> extra) {
+        return new InheritStmt(parent, extra);
+    }
+
+    protected static UseStmt useStmt(ASTNode parent, Cons<ASTNode> extra) {
+        return new UseStmt(parent, extra);
     }
 
     protected static final String charDollar = "$";

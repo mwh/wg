@@ -1,6 +1,7 @@
 package nz.mwh.wg.ast;
 
 import java.util.List;
+import java.util.ArrayList;
 
 import nz.mwh.wg.Visitor;
 
@@ -18,6 +19,12 @@ public class LexicalRequest extends ASTNode {
 
     public String toString() {
         return "lexReq(" + Cons.stringFromList(parts) + ")";
+    }
+
+    public LexicalRequest inheriting() {
+        List<Part> parts = new ArrayList<>(this.parts);
+        parts.add(new Part("inherit", Cons.fromValue(new LexicalRequest(location, Cons.fromValue(new Part("inherit object", null))))));
+        return new LexicalRequest(location, Cons.fromList(parts));
     }
 
     public List<? extends Part> getParts() {

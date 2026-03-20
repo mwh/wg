@@ -99,5 +99,13 @@ public class Cons<T> {
         return new Cons<T>(value, new Cons<T>());
     }
 
+    public static <T> Cons<T> fromList(List<T> list) {
+        Cons<T> cons = new Cons<T>();
+        for (int i = list.size() - 1; i >= 0; i--) {
+            cons = new Cons<T>(list.get(i), cons);
+        }
+        return cons;
+    }
+
 }
 

@@ -28,27 +28,42 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
 
     @Override
     public GraceObject visit(GraceObject context, ObjectConstructor node) {
-        BaseObject object = new BaseObject(context, false, true);
+        return visitObject(context, node, null);
+    }
+
+    private GraceObject visitObject(GraceObject context, ObjectConstructor node, BaseObject inheritingAs) {
+        BaseObject object = inheritingAs == null ? new BaseObject(context, false, true) : inheritingAs;
         List<ASTNode> body = node.getBody();
+        InheritStmt inheritStmt = null;
         for (ASTNode part : body) {
             if (part instanceof TypeDecl type) {
                 object.addField(type.getName());
                 object.setField(type.getName(), new GraceTypeReference(type.getName(), null));
+            } else if (part instanceof InheritStmt ih) {
+                inheritStmt = ih;
             }
         }
         for (ASTNode part : body) {
             if (part instanceof DefDecl) {
                 DefDecl def = (DefDecl) part;
-                object.addField(def.getName());
+                if (!object.hasMethod(def.getName() + "(0)")) {
+                    object.addField(def.getName());
+                }
             } else if (part instanceof VarDecl) {
                 VarDecl var = (VarDecl) part;
-                object.addField(var.getName());
-                object.addFieldWriter(var.getName());
+                if (!object.hasMethod(var.getName() + "(0)")) {
+                    object.addField(var.getName());
+                }
+                if (!object.hasMethod(var.getName() + ":=(1)")) {
+                    object.addFieldWriter(var.getName());
+                }
             } else if (part instanceof ImportStmt) {
                 ImportStmt imp = (ImportStmt) part;
                 object.addField(imp.getName());
-            } else if (part instanceof MethodDecl) {
-                visit(object, part);
+            } else if (part instanceof MethodDecl md) {
+                if (!object.hasMethod(md.getName()) || inheritingAs == null) {
+                    visit(object, part);
+                }
             } else if (part instanceof TypeDecl type) {
                 GraceObject actual = type.getType().accept(object, this);
                 GraceObject ref = object.getField(type.getName());
@@ -59,8 +74,34 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
                 }
             }
         }
+        if (inheritStmt != null) {
+            if (inheritStmt.getExpression() instanceof LexicalRequest lr) {
+                List<RequestPartR> parts = new ArrayList<>();
+                for (Part part : lr.getParts()) {
+                    List<GraceObject> args = part.getArgs().stream().map(x -> visit(object, x)).collect(Collectors.toList());
+                    parts.add(new RequestPartR(part.getName(), args));
+                }
+                parts.add(new RequestPartR("inherit", List.of(object)));
+                Request request = new Request(this, parts, lr.getLocation());
+                int top = callStack.size();
+                callStack.push(request.getName() + " at " + request.getLocation());
+                GraceObject receiver = context.findReceiver(request.getName());
+                if (receiver == null) {
+                    throw new GraceException(this, "No such method or variable in scope: " + request.getName());
+                }
+                GraceObject ret = receiver.request(request);
+                while (callStack.size() > top) {
+                    callStack.pop();
+                }
+            } else if (inheritStmt.getExpression() instanceof ExplicitRequest er) {
+            } else {
+                throw new GraceException(this, "Invalid inherit statement: parent must be a request");
+            }
+        }
         for (ASTNode part : body) {
-            visit(object, part);
+            if (!(part instanceof MethodDecl) && !(part instanceof TypeDecl)) {
+                visit(object, part);
+            }
         }
         return object;
     }
@@ -188,6 +229,56 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
                     }
                 }
             });
+            if (!node.getBody().isEmpty() && node.getBody().getLast() instanceof ObjectConstructor oc) {
+                // Generate inheritable method as well for fresh object return.
+                List<Part> parts2 = new ArrayList<>(node.getParts());
+                parts2.add(new Part("inherit", Cons.fromValue(new IdentifierDeclaration("inherit object", null))));
+                String name2 = parts2.stream().map(x -> x.getName() + "(" + x.getParameters().size() + ")").collect(Collectors.joining(""));
+                object.addMethod(name2, request -> {
+                    BaseObject methodContext = new BaseObject(context, true);
+                    List<RequestPartR> requestParts = request.getParts();
+                    for (int j = 0; j < requestParts.size(); j++) {
+                        Part part = parts2.get(j);
+                        RequestPartR rpart = requestParts.get(j);
+                        List<? extends ASTNode> parameters = part.getParameters();
+                        for (int i = 0; i < parameters.size(); i++) {
+                            IdentifierDeclaration parameter = (IdentifierDeclaration) parameters.get(i);
+                            methodContext.addField(parameter.getName());
+                            methodContext.setField(parameter.getName(), rpart.getArgs().get(i));
+                        }
+                    }
+                    BaseObject inheritObject = (BaseObject) requestParts.getLast().getArgs().get(0);
+                    for (ASTNode part : body) {
+                        if (part instanceof DefDecl) {
+                            DefDecl def = (DefDecl) part;
+                            methodContext.addField(def.getName());
+                        } else if (part instanceof VarDecl) {
+                            VarDecl var = (VarDecl) part;
+                            methodContext.addField(var.getName());
+                            methodContext.addFieldWriter(var.getName());
+                        }
+                    }
+                    int top = callStack.size();
+                    try {
+                        GraceObject last = null;
+                        for (ASTNode part : body.subList(0, body.size() - 1)) {
+                            last = visit(methodContext, part);
+                        }
+                        // evaluate oc as part of inheritObject
+                        last = visitObject(methodContext, oc, inheritObject);
+                        return last;
+                    } catch(ReturnException re) {
+                        while (callStack.size() > top) {
+                            callStack.pop();
+                        }
+                        if (re.context == methodContext) {
+                            return re.getValue();
+                        } else {
+                            throw re;
+                        }
+                    }
+                });
+            }
             return done;
         }
         throw new GraceException(this, "method can only be defined in object context");
@@ -314,6 +405,16 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             }
         }
         throw new GraceException(this, "dialect statements can only appear inside in-code context");
+    }
+
+    @Override
+    public GraceObject visit(GraceObject context, InheritStmt node) {
+        return done;
+    }
+
+    @Override
+    public GraceObject visit(GraceObject context, UseStmt node) {
+        return done;
     }
 
     @Override

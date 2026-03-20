@@ -122,6 +122,14 @@ public class ASTConstructors {
         return new Lineup(elements);
     }
 
+    protected static InheritStmt inheritStmt(ASTNode parent, Cons<ASTNode> extra) {
+        return new InheritStmt(parent, extra);
+    }
+
+    protected static UseStmt useStmt(ASTNode parent, Cons<ASTNode> extra) {
+        return new UseStmt(parent, extra);
+    }
+
     protected static final String charDollar = "$";
     protected static final String charBacklash = "\\";
     protected static final String charLF = "\n";
