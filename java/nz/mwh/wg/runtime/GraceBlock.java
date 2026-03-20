@@ -9,11 +9,13 @@ public class GraceBlock implements GraceObject {
     private List<ASTNode> parameters;
     private List<ASTNode> body;
     private boolean matchingBlock = false;
+    private BaseObject self;
 
-    public GraceBlock(GraceObject lexicalParent, List<ASTNode> parameters, List<ASTNode> body) {
+    public GraceBlock(GraceObject lexicalParent, List<ASTNode> parameters, List<ASTNode> body, BaseObject self) {
         this.lexicalParent = lexicalParent;
         this.parameters = parameters;
         this.body = body;
+        this.self = self;
         if (parameters.size() == 1) {
             matchingBlock = true;
         }
@@ -49,6 +51,9 @@ public class GraceBlock implements GraceObject {
 
     private GraceObject apply(Request request, RequestPartR part) {
         BaseObject blockContext = new BaseObject(lexicalParent);
+        if (self != null) {
+            blockContext.setField("self", self);
+        }
         for (int i = 0; i < parameters.size(); i++) {
             ASTNode parameter = parameters.get(i);
             String name;
@@ -64,6 +69,8 @@ public class GraceBlock implements GraceObject {
             blockContext.addField(name);
             blockContext.setField(name, part.getArgs().get(i));
         }
+        BaseObject oldSelf = request.getVisitor().getSelf();
+        request.getVisitor().setSelf(self);
         for (ASTNode stmt : body) {
             if (stmt instanceof DefDecl) {
                 DefDecl def = (DefDecl) stmt;
@@ -78,6 +85,7 @@ public class GraceBlock implements GraceObject {
         for (ASTNode node : body) {
             last = node.accept(blockContext, request.getVisitor());
         }
+        request.getVisitor().setSelf(oldSelf);
         return last;
     }
 

@@ -26,7 +26,18 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
 
     private Deque<String> callStack = new ArrayDeque<>();
 
+    private BaseObject self;
+
     @Override
+    public void setSelf(BaseObject self) {
+        this.self = self;
+    }
+
+    @Override
+    public BaseObject getSelf() {
+        return self;
+    }
+
     public GraceObject visit(GraceObject context, ObjectConstructor node) {
         return visitObject(context, node, null);
     }
@@ -35,18 +46,30 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
         BaseObject object = inheritingAs == null ? new BaseObject(context, false, true) : inheritingAs;
         List<ASTNode> body = node.getBody();
         InheritStmt inheritStmt = null;
+        BaseObject oldSelf = self;
         for (ASTNode part : body) {
             if (part instanceof TypeDecl type) {
                 object.addField(type.getName());
                 object.setField(type.getName(), new GraceTypeReference(type.getName(), null));
             } else if (part instanceof InheritStmt ih) {
                 inheritStmt = ih;
+            } else if (part instanceof UseStmt us) {
+                GraceObject mixin = visit(context, us.getExpression());
+                if (mixin instanceof BaseObject mixinObj) {
+                    if (!mixinObj.isStateless()) {
+                        throw new GraceException(this, "Can only use stateless objects as mixins");
+                    }
+                    object.useObject(mixinObj);
+                } else {
+                    throw new GraceException(this, "Can only use objects as mixins");
+                }
             }
         }
+        self = object;
         for (ASTNode part : body) {
             if (part instanceof DefDecl) {
                 DefDecl def = (DefDecl) part;
-                if (!object.hasMethod(def.getName() + "(0)")) {
+                if (!object.hasMethod(def.getName() + "(0)") || inheritingAs == null) {
                     object.addField(def.getName());
                 }
             } else if (part instanceof VarDecl) {
@@ -103,6 +126,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
                 visit(object, part);
             }
         }
+        self = oldSelf;
         return object;
     }
 
@@ -113,12 +137,29 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             List<GraceObject> args = part.getArgs().stream().map(x -> visit(context, x)).collect(Collectors.toList());
             parts.add(new RequestPartR(part.getName(), args));
         }
+        if (parts.size() == 1 && parts.get(0).getName().equals("self") && parts.get(0).getArgs().isEmpty()) {
+            return self;
+        }
         Request request = new Request(this, parts, node.getLocation());
         int top = callStack.size();
         callStack.push(request.getName() + " at " + request.getLocation());
-        GraceObject receiver = context.findReceiver(request.getName());
+        GraceObject receiver;
+        GraceObject nearestSelf = null;
+        if (self != null && context instanceof BaseObject bo) {
+            nearestSelf = bo.findNearestSelf();
+        }
+        receiver = context.findReceiver(request.getName());
+        if (request.getName().equals("changedVal(0)") && false) {
+            System.out.println("looking for changedVal(0) in " + context);
+            System.out.println("nearest self is " + nearestSelf);
+            System.out.println("receiver is " + receiver);
+            System.out.println("self is " + self);
+            System.out.println("nearest self is receiver: " + (nearestSelf == receiver));
+        }
         if (receiver == null) {
             throw new GraceException(this, "No such method or variable in scope: " + request.getName());
+        } else if (receiver == nearestSelf) {
+            receiver = self;
         }
         GraceObject ret = receiver.request(request);
         while (callStack.size() > top) {
@@ -144,13 +185,13 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
         ASTNode next = node.getNext();
         StringBuilder sb = new StringBuilder();
         sb.append(value);
-        sb.append(expression.accept(context, this).toString());
+        sb.append(stringify(expression.accept(context, this)));
         while (next instanceof InterpString) {
             InterpString nextString = (InterpString) next;
             sb.append(nextString.getValue());
             expression = nextString.getExpression();
             next = nextString.getNext();
-            sb.append(expression.accept(context, this).toString());
+            sb.append(stringify(expression.accept(context, this)));
         }
         // next must now be a StringNode
         if (!(next instanceof StringNode)) {
@@ -160,6 +201,17 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
         sb.append(sn.getValue());
 
         return new GraceString(sb.toString());
+    }
+
+    private String stringify(GraceObject obj) {
+        if (obj instanceof GraceString gs) {
+            return "\"" + gs.getValue() + "\"";
+        }
+        GraceObject asString = obj.request(Request.nullary(this, "asString"));
+        if (asString instanceof GraceString asStr) {
+            return asStr.getValue();
+        }
+        return "<<unable to stringify: " + asString.toString() + ">>";
     }
 
     @Override
@@ -334,7 +386,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
         List<ASTNode> parameters = node.getParameters();
         List<ASTNode> body = node.getBody();
 
-        return new GraceBlock(context, parameters, body);
+        return new GraceBlock(context, parameters, body, self);
     }
 
     @Override
@@ -452,7 +504,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
     static BaseObject basePrelude() {
         BaseObject lexicalParent = new BaseObject(null);
         lexicalParent.addMethod("print(1)", request -> {
-            System.out.println(request.getParts().get(0).getArgs().get(0).toString());
+            System.out.println(request.getParts().get(0).getArgs().get(0));
             return done;
         });
         lexicalParent.addMethod("true(0)", _ -> new GraceBoolean(true));

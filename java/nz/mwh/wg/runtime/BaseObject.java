@@ -17,6 +17,8 @@ public class BaseObject implements GraceObject {
     protected static GraceUninitialised uninitialised = GraceUninitialised.uninitialised;
 
     private boolean returns = false;
+    private boolean hasSelf = false;
+    private boolean stateless = true;
 
     public BaseObject(GraceObject lexicalParent) {
         this(lexicalParent, false);
@@ -29,25 +31,35 @@ public class BaseObject implements GraceObject {
     public BaseObject(GraceObject lexicalParent, boolean returns, boolean bindSelf) {
         this.lexicalParent = lexicalParent;
         this.returns = returns;
-        addMethod("==(1)", request -> {
-            GraceObject other = request.getParts().get(0).getArgs().get(0);
-            return new GraceBoolean(this == other);
-        });
-        addMethod("!=(1)", request -> {
-            GraceObject other = request.getParts().get(0).getArgs().get(0);
-            return new GraceBoolean(this != other);
-        });
-        addMethod("asString(0)", _ -> new GraceString("object {" + String.join("; ", methods.keySet()) + "}"));
-        addMethod("asDebugString(0)", _ -> new GraceString("object {" + String.join("; ", methods.keySet()) + "}"));
-        addMethod("hash(0)", _ -> new GraceNumber(Integer.toUnsignedLong(System.identityHashCode(this))));
-        addMethod("::(1)", request -> new GraceBinding(this, request.getParts().get(0).getArgs().get(0)));
         if (bindSelf) {
-            addMethod("self(0)", _ -> this);
+            addMethod("==(1)", request -> {
+                GraceObject other = request.getParts().get(0).getArgs().get(0);
+                return new GraceBoolean(this == other);
+            });
+            addMethod("!=(1)", request -> {
+                GraceObject other = request.getParts().get(0).getArgs().get(0);
+                return new GraceBoolean(this != other);
+            });
+            addMethod("asString(0)", _ -> new GraceString("object {" + String.join("; ", methods.keySet()) + "}"));
+            addMethod("asDebugString(0)", _ -> new GraceString("object {" + String.join("; ", methods.keySet()) + "}"));
+            addMethod("hash(0)", _ -> new GraceNumber(Integer.toUnsignedLong(System.identityHashCode(this))));
+            addMethod("::(1)", request -> new GraceBinding(this, request.getParts().get(0).getArgs().get(0)));
+            hasSelf = true;
+            //addMethod("self(0)", _ -> this);
         }
     }
 
+    public boolean hasSelf() {
+        return hasSelf;
+    }
+
     public String toString() {
-        Request request = new Request(new Evaluator(), Collections.singletonList(new RequestPartR("asString", Collections.emptyList())));
+        if (!hasSelf) {
+            return "scope {" + String.join("; ", methods.keySet()) + "}" + " within " + lexicalParent;
+        }
+        var eval = new Evaluator();
+        eval.setSelf(this);
+        Request request = new Request(eval, Collections.singletonList(new RequestPartR("asString", Collections.emptyList())));
         return request(request).toString();
     }
 
@@ -59,7 +71,11 @@ public class BaseObject implements GraceObject {
     public GraceObject request(Request request) {
         Function<Request, GraceObject> method = methods.get(request.getName());
         if (method != null) {
-            return method.apply(request);
+            var oldSelf = request.getVisitor().getSelf();
+            request.getVisitor().setSelf(this);
+            GraceObject result = method.apply(request);
+            request.getVisitor().setSelf(oldSelf);
+            return result;
         }
         if (fields.containsKey(request.getName())) {
             return fields.get(request.getName());
@@ -101,6 +117,7 @@ public class BaseObject implements GraceObject {
             fields.put(name, request.getParts().get(0).getArgs().get(0));
             return done;
         });
+        stateless = false;
     }
 
     public void setField(String name, GraceObject value) {
@@ -121,6 +138,35 @@ public class BaseObject implements GraceObject {
         }
         throw new RuntimeException("No return context found");
     }
+
+    public GraceObject findNearestSelf() {
+        if (hasSelf) {
+            return this;
+        }
+        if (lexicalParent != null) {
+            return ((BaseObject) lexicalParent).findNearestSelf();
+        }
+        return null;
+    }
+
+    public void useObject(BaseObject mixin) {
+        for (Map.Entry<String, Function<Request, GraceObject>> method : mixin.methods.entrySet()) {
+            switch(method.getKey()) {
+                case "==(1)", "!=(1)", "asString(0)", "asDebugString(0)", "hash(0)", "::(1)", "self(0)" -> {
+                    // skip these methods
+                }
+                default -> methods.put(method.getKey(), method.getValue());
+            }
+        }
+        for (Map.Entry<String, GraceObject> field : mixin.fields.entrySet()) {
+            fields.put(field.getKey(), field.getValue());
+        }
+    }
+
+    public boolean isStateless() {
+        return stateless;
+    }
+
 
     @Override
     public boolean hasMethod(String name) {

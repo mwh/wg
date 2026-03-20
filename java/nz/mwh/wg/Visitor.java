@@ -1,6 +1,7 @@
 package nz.mwh.wg;
 
 import nz.mwh.wg.ast.*;
+import nz.mwh.wg.runtime.BaseObject;
 
 public interface Visitor<T> {
     default T visit(T context, ASTNode node) {
@@ -29,6 +30,9 @@ public interface Visitor<T> {
     T visit(T context, Lineup node);
     T visit(T context, InheritStmt node);
     T visit(T context, UseStmt node);
+
+    void setSelf(BaseObject self);
+    BaseObject getSelf();
 
     Iterable<String> getStack();
 }

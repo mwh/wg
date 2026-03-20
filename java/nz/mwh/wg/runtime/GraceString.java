@@ -2,6 +2,8 @@ package nz.mwh.wg.runtime;
 
 import java.util.List;
 
+import nz.mwh.wg.Visitor;
+
 public class GraceString implements GraceObject {
     private String value;
 
@@ -23,7 +25,12 @@ public class GraceString implements GraceObject {
         if (parts.size() == 1) {
             String name = parts.get(0).getName();
             if (name.equals("++")) {
-                return new GraceString(value + parts.get(0).getArgs().get(0).toString());
+                var other = parts.get(0).getArgs().get(0);
+                if (other instanceof GraceString gs) {
+                    return new GraceString(value + gs.value);
+                }
+                GraceObject otherAsString = other.request(Request.nullary(request.getVisitor(), "asString"));
+                return new GraceString(value + otherAsString.toString());
             } else if (name.equals("asString")) {
                 return new GraceString(value);
             } else if (name.equals("asDebugString")) {
@@ -75,6 +82,13 @@ public class GraceString implements GraceObject {
     @Override
     public GraceObject findReceiver(String name) {
         return null;
+    }
+
+    public static String coerce(GraceObject obj, Visitor<GraceObject> visitor) {
+        if (obj instanceof GraceString gs) {
+            return gs.value;
+        }
+        return obj.request(Request.nullary(visitor, "asString")).toString();
     }
 }
 
