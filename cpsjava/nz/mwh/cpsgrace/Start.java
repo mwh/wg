@@ -46,8 +46,8 @@ public class Start {
             if (fileName != null) {
                 GraceObject graceAST = parseToGraceAST(fileName);
                 if (graceAST == null) {
-                    System.err.println("Failed to parse file " + fileName);
-                    return;
+                    System.err.println("Failed to parse file '" + fileName + "'; aborting.");
+                    System.exit(1);
                 }
                 if (mode.equals("print-ast")) {
                     Context ctx = new Context();
@@ -83,7 +83,8 @@ public class Start {
                         for (String moduleName : missingModules) {
                             GraceObject moduleAST = parseToGraceAST(moduleName + ".grace");
                             if (moduleAST == null) {
-                                throw new RuntimeException("Failed to parse module " + moduleName);
+                                System.err.println("Failed to parse module '" + moduleName + "'; aborting.");
+                                System.exit(1);
                             }
                             TheProgram.moduleASTs.put(moduleName, graceASTtoASTNode(moduleAST));
                         }
@@ -133,6 +134,13 @@ public class Start {
         } catch (IOException e) {
             System.err.println("Error reading file " + filename);
             return null;
+        } catch (RuntimeException e) {
+            if (e.getMessage().startsWith("Unhandled exception: ParseError:")) {
+                System.err.println(e.getMessage().substring(33));
+                return null;
+            } else {
+                throw e;
+            }
         }
     }
 
