@@ -42,6 +42,14 @@ public class Cons<T> extends nz.mwh.wg.ast.Cons<T> implements GraceObject {
             return reversed(new Cons<GraceObject>());
         } else if ("map".equals(name)) {
             return map(request);
+        } else if ("size".equals(name)) {
+            int size = 0;
+            Cons<T> current = this;
+            while (!current.isNil) {
+                size++;
+                current = current.tail;
+            }
+            return new GraceNumber(size);
         }
         throw new RuntimeException("No such method in Cons: " + name);
     }

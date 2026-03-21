@@ -113,15 +113,23 @@ method parseparts(lxr, allowBlock) {
 
 method parseexplicitRequestNoBlock(receiver, lxr) {
     lxr.advance
+    def dot = lxr.current
     def pos = lxr.current.location
     def parts = parseparts(lxr, false)
+    if (parts.size == 0) then {
+        parseError(dot.line, dot.column, "Empty method name in dotted request, instead " ++ lxr.current.asString)
+    }
     ast.explicitRequest(pos, receiver, parts)
 }
 
 method parseexplicitRequest(receiver, lxr) {
     lxr.advance
+    def dot = lxr.current
     def pos = lxr.current.location
     def parts = parseparts(lxr, true)
+    if (parts.size == 0) then {
+        parseError(dot.line, dot.column, "Empty method name in dotted request, instead " ++ lxr.current.asString)
+    }
     ast.explicitRequest(pos, receiver, parts)
 }
 
