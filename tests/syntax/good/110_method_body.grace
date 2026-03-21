@@ -1,0 +1,1 @@
+method foo { 1 }
