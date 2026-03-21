@@ -15,7 +15,6 @@ import nz.mwh.cpsgrace.objects.GraceBoolean;
 import nz.mwh.cpsgrace.objects.GraceExceptionKind;
 import nz.mwh.cpsgrace.objects.GraceMatchResult;
 import nz.mwh.cpsgrace.objects.GraceNumber;
-import nz.mwh.cpsgrace.objects.GracePatternOr;
 import nz.mwh.cpsgrace.objects.GracePrimitiveArray;
 import nz.mwh.cpsgrace.objects.GraceString;
 import nz.mwh.cpsgrace.objects.Method;

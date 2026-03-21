@@ -112,11 +112,25 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
                 if (receiver == null) {
                     throw new GraceException(this, "No such method or variable in scope: " + request.getName());
                 }
-                GraceObject ret = receiver.request(request);
+                receiver.request(request);
                 while (callStack.size() > top) {
                     callStack.pop();
                 }
             } else if (inheritStmt.getExpression() instanceof ExplicitRequest er) {
+                List<RequestPartR> parts = new ArrayList<>();
+                for (Part part : er.getParts()) {
+                    List<GraceObject> args = part.getArgs().stream().map(x -> visit(object, x)).collect(Collectors.toList());
+                    parts.add(new RequestPartR(part.getName(), args));
+                }
+                parts.add(new RequestPartR("inherit", List.of(object)));
+                Request request = new Request(this, parts, er.getLocation());
+                GraceObject receiver = er.getReceiver().accept(context, this);
+                int top = callStack.size();
+                callStack.push(request.getName() + " at " + request.getLocation());
+                receiver.request(request);
+                while (callStack.size() > top) {
+                    callStack.pop();
+                }
             } else {
                 throw new GraceException(this, "Invalid inherit statement: parent must be a request");
             }
@@ -149,13 +163,6 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
             nearestSelf = bo.findNearestSelf();
         }
         receiver = context.findReceiver(request.getName());
-        if (request.getName().equals("changedVal(0)") && false) {
-            System.out.println("looking for changedVal(0) in " + context);
-            System.out.println("nearest self is " + nearestSelf);
-            System.out.println("receiver is " + receiver);
-            System.out.println("self is " + self);
-            System.out.println("nearest self is receiver: " + (nearestSelf == receiver));
-        }
         if (receiver == null) {
             throw new GraceException(this, "No such method or variable in scope: " + request.getName());
         } else if (receiver == nearestSelf) {

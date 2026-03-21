@@ -1,7 +1,6 @@
 package nz.mwh.cpsgrace.ast;
 
 import java.util.Collections;
-import java.util.List;
 
 public class ASTEncoding {
     @SuppressWarnings("rawtypes")

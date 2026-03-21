@@ -1,7 +1,6 @@
 package nz.mwh.wg.runtime;
 
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Arrays;
 
 public class GracePrimitiveArray implements GraceObject {

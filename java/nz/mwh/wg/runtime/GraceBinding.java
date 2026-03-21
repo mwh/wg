@@ -1,7 +1,6 @@
 package nz.mwh.wg.runtime;
 
 import java.util.List;
-import java.util.ArrayList;
 
 public class GraceBinding implements GraceObject {
     private GraceObject key;
