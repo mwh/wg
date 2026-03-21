@@ -514,8 +514,21 @@ method lexer(code) {
 
         method expectToken(nature) {
             if (currentToken.nature != nature) then {
+                if ((nature == "IDENTIFIER") && (currentToken.nature == "KEYWORD")) then {
+                    parseError(currentToken.line, currentToken.column, "Expected IDENTIFIER but got KEYWORD (" ++ currentToken.value ++ ")")
+                }
                 print("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
                 parseError(currentToken.line, currentToken.column, "Expected " ++ nature ++ " but got " ++ currentToken.nature)
+            }
+        }
+
+        method expectToken(nature) for(purpose) {
+            if (currentToken.nature != nature) then {
+                if ((nature == "IDENTIFIER") && (currentToken.nature == "KEYWORD")) then {
+                    parseError(currentToken.line, currentToken.column, "Expected IDENTIFIER as " ++ purpose ++ " but got KEYWORD (" ++ currentToken.value ++ ")")
+                }
+                print("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
+                parseError(currentToken.line, currentToken.column, "Expected " ++ nature ++ " as " ++ purpose ++ " but got " ++ currentToken.nature)
             }
         }
 
@@ -590,6 +603,6 @@ method digitToNumber(token, c) {
 
 
 method parseError(line, column, message) {
-    print("Lexical error: " ++ message ++ " at " ++ modulePrefix ++ line ++ ":" ++ column)
-    Exception.refine "LexicalError".raise(modulePrefix ++ line ++ ":" ++ column ++ ": " ++ message)
+    print("Parse error: " ++ message ++ " at " ++ modulePrefix ++ line ++ ":" ++ column)
+    Exception.refine "ParseError".raise(modulePrefix ++ line ++ ":" ++ column ++ ": " ++ message)
 }

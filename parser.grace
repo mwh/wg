@@ -460,7 +460,7 @@ method parseblock(lxr) {
                     if (lxr.current.nature == "NEWLINE") then {
                         lxr.advance
                     } else {
-                        lxr.expectToken "IDENTIFIER"
+                        lxr.expectToken "IDENTIFIER" for "block parameter name"
                         def ident = lxr.current
                         lxr.advance
                         tp := ast.nil
@@ -526,14 +526,14 @@ method parseAnnotations(lxr) {
 method parseTypeDeclaration(lxr) {
     lxr.expectKeyword "type"
     lxr.advance
-    lxr.expectToken "IDENTIFIER"
+    lxr.expectToken "IDENTIFIER" for "type name"
     def ident = lxr.current
     lxr.advance
     var genericParams := ast.nil
     if (lxr.current.nature == "LGENERIC") then {
         lxr.advance
         while { (lxr.current.nature != "RGENERIC") && (lxr.current.nature != "EOF") } do {
-            lxr.expectToken "IDENTIFIER"
+            lxr.expectToken "IDENTIFIER" for "generic parameter name"
             def idToken = lxr.current
             lxr.advance
             genericParams := ast.cons(ast.identifierDeclaration(idToken.value, ast.nil), genericParams)
@@ -556,7 +556,7 @@ method parseTypeDeclaration(lxr) {
 
 method parsedefDeclaration(lxr) {
     lxr.advance
-    lxr.expectToken("IDENTIFIER")
+    lxr.expectToken("IDENTIFIER") for "def name"
     def name = lxr.current.value
     lxr.advance
     var dtype := ast.nil
@@ -580,7 +580,7 @@ method parsedefDeclaration(lxr) {
 
 method parsevarDeclaration(lxr) {
     lxr.advance
-    lxr.expectToken("IDENTIFIER")
+    lxr.expectToken("IDENTIFIER") for "var name"
     def name = lxr.current.value
     lxr.advance
     var dtype := ast.nil
@@ -662,7 +662,7 @@ method parseMethodDeclaration(lxr) {
             if (lxr.current.nature == "LGENERIC") then {
                 lxr.advance
                 while { (lxr.current.nature != "RGENERIC") && (lxr.current.nature != "EOF") } do {
-                    lxr.expectToken "IDENTIFIER"
+                    lxr.expectToken "IDENTIFIER" for "generic parameter name"
                     def idToken = lxr.current
                     lxr.advance
                     genericParams := ast.cons(ast.identifierDeclaration(idToken.value, ast.nil), genericParams)
@@ -680,7 +680,7 @@ method parseMethodDeclaration(lxr) {
                 lxr.advance
                 var args := ast.nil
                 while {(lxr.current.nature != "RPAREN") && (lxr.current.nature != "EOF")} do {
-                    lxr.expectToken "IDENTIFIER"
+                    lxr.expectToken "IDENTIFIER" for "parameter name"
                     def idToken = lxr.current
                     var dtype := ast.nil
                     lxr.advance
@@ -708,7 +708,7 @@ method parseMethodDeclaration(lxr) {
         lxr.expectSymbol "LPAREN"
         lxr.advance
         var args := ast.nil
-        lxr.expectToken "IDENTIFIER"
+        lxr.expectToken "IDENTIFIER" for "parameter name"
         def idToken = lxr.current
         var dtype := ast.nil
         lxr.advance
@@ -751,7 +751,7 @@ method parseClassDeclaration(lxr) {
         if (lxr.current.nature == "LGENERIC") then {
             lxr.advance
             while { (lxr.current.nature != "RGENERIC") && (lxr.current.nature != "EOF") } do {
-                lxr.expectToken "IDENTIFIER"
+                lxr.expectToken "IDENTIFIER" for "generic parameter name"
                 def idToken = lxr.current
                 lxr.advance
                 genericParams := ast.cons(ast.identifierDeclaration(idToken.value, ast.nil), genericParams)
@@ -802,7 +802,7 @@ method parseClassDeclaration(lxr) {
 method parseImport(lxr) {
     lxr.expectKeyword("import")
     lxr.advance
-    lxr.expectToken("STRING")
+    lxr.expectToken("STRING") for "import source"
     def src = lxr.current.value
     lxr.advance
     lxr.expectToken("IDENTIFIER")
@@ -810,7 +810,7 @@ method parseImport(lxr) {
         parseError(lxr.current.line, lxr.current.column, "Expected 'as' in import")
     }
     lxr.advance
-    lxr.expectToken("IDENTIFIER")
+    lxr.expectToken("IDENTIFIER") for "import name"
     def name = lxr.current.value
     lxr.advance
     var ident
