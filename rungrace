@@ -1,0 +1,11 @@
+#!/bin/sh
+
+DIR="$(dirname "$0")/java"
+[ -e "$DIR/nz/mwh/wg/Start.class" ] || {
+    echo Must compile Java implementation first: >&2
+    echo ' '  javac -cp "'$DIR'" "'$DIR'/**/*.java" >&2
+    echo Aborting. >&2
+    exit 1
+}
+
+java -cp "$DIR" nz.mwh.wg.Start "$@"
