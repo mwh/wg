@@ -112,6 +112,14 @@ public class ConciseEncoding {
     protected static Lineup l0N(ConsList<ASTNode> elements) {
         return new Lineup(elements.asList());
     }
+
+    protected static InheritStmt i0H(ASTNode parent, ConsList<ASTNode> extra) {
+        return new InheritStmt(parent);
+    }
+
+    protected static UseStmt u0S(ASTNode parent, ConsList<ASTNode> extra) {
+        return new UseStmt(parent);
+    }
     
     protected static String s4F(String pre, String mid, String post) {
         return pre + mid + post;

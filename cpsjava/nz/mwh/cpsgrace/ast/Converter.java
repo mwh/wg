@@ -171,6 +171,16 @@ public class Converter {
                 List<ASTNode> elems = convertNodeList(elemsObj);
                 return new Lineup(elems);
             }
+            case "inheritStmt" -> {
+                GraceObject parentObj = requestSync(node, "parent", List.of());
+                ASTNode parent = convertNode(parentObj);
+                return new InheritStmt(parent);
+            }
+            case "useStmt" -> {
+                GraceObject parentObj = requestSync(node, "parent", List.of());
+                ASTNode parent = convertNode(parentObj);
+                return new UseStmt(parent);
+            }
             case "nil" -> {
                 // For optional values - lists are converted below
                 return null;

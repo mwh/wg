@@ -12,6 +12,7 @@ public class UserObject implements GraceObject {
 
     private Map<String, Method> methods;
     private UserObject surrounding;
+    private boolean stateless = true;
 
     private String debugLabel;
 
@@ -40,6 +41,7 @@ public class UserObject implements GraceObject {
     }
 
     public void addVar(String name) {
+        stateless = false;
         GraceObject[] value = new GraceObject[1];
         Method getter = Method.java((ctx, cont, _, _) -> {
             return cont.returning(ctx, value[0]);
@@ -87,6 +89,22 @@ public class UserObject implements GraceObject {
 
     public boolean hasMethod(String name) {
         return methods != null && methods.containsKey(name);
+    }
+
+    public boolean isStateless() {
+        return stateless;
+    }
+
+    public void useObject(UserObject mixin) {
+        if (mixin.methods == null) return;
+        for (Map.Entry<String, Method> entry : mixin.methods.entrySet()) {
+            switch (entry.getKey()) {
+                case "==(1)", "!=(1)", "asString(0)", "asDebugString(0)", "hash(0)", "::(1)", "self" -> {
+                    // skip default methods
+                }
+                default -> addMethod(entry.getKey(), entry.getValue());
+            }
+        }
     }
     
     public List<String> getMethodNames() {

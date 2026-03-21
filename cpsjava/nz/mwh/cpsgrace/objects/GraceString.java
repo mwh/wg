@@ -68,7 +68,7 @@ public class GraceString implements GraceObject {
             case "substringFrom(1)to(1)":
                 GraceNumber startNum = GraceNumber.assertNumber(args.get(0));
                 GraceNumber endNum = GraceNumber.assertNumber(args.get(1));
-                String substring = this.value.substring(startNum.intValue() - 1, endNum.intValue());
+                String substring = this.value.substring(startNum.intValue() - 1, Math.min(endNum.intValue(), this.value.length()));
                 return returnCont.returning(ctx, new GraceString(substring));
             case "::(1)":
                 return returnCont.returning(ctx, new GraceBinding(this, args.get(0)));
