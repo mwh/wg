@@ -1,5 +1,4 @@
 *.class
-/tests
 flat-template.java
 flat-template.*
 typechecker-template.grace

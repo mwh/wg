@@ -471,9 +471,13 @@ method lexer(code) {
         method lexString {
             var value := ""
             var escaped := false
+            def start = index - 1
             while {(source.at(index).firstCodepoint != 34) || escaped} do {
                 var escapeNext := false
                 def cp = source.at(index).firstCodepoint
+                if ((cp == 13) || (cp == 10)) then {
+                    parseError(line, column + (index - start), "Unterminated string literal.")
+                }
                 if ((cp == 92) && (escaped == false)) then {
                     escapeNext := true
                 } elseif { escaped && (cp == 110) } then {
@@ -491,6 +495,9 @@ method lexer(code) {
                 }
                 escaped := escapeNext
                 index := index + 1
+                if (index > source.size) then {
+                    parseError(line, column + (index - start), "Unterminated string literal.")
+                }
             }
             index := index + 1
             return StringToken(line, column, value)

@@ -444,6 +444,9 @@ method parseblock(lxr) {
         }
         if (lxr.current.nature != "RBRACE") then {
             def firstTok = lxr.current
+            if (firstTok.column <= indentBefore) then {
+                parseError(firstTok.line, firstTok.column, "Indentation must increase inside block body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ firstTok.line ++ " but got " ++ firstTok.column)
+            }
             lexer.indentColumn := firstTok.column
             def first = parseParamOrStatement(lxr)
             def after = lxr.current
@@ -787,8 +790,10 @@ method parseClassDeclaration(lxr) {
             parts := ast.cons(part, parts)
         }
     }
+    def start = lxr.current.location
     lxr.advance
     def body = parseObjectBody(lxr)
+    lxr.expectSymbol("RBRACE") explaining("Class body starting at " ++ start ++ " did not close properly.")
     lxr.advance
     def obj = ast.objectConstructor(body, ast.nil)
     ast.methodDecl(parts.reversed(ast.nil), ast.nil, ast.nil, ast.cons(obj, ast.nil))
@@ -928,8 +933,10 @@ method parseObject(lxr) {
         lxr.expectKeyword("is")
         anns := parseAnnotations(lxr)
     }
+    def start = lxr.current
     lxr.advance
     def body = parseObjectBody(lxr)
+    lxr.expectSymbol("RBRACE") explaining("Object body starting at " ++ start ++ " did not close properly.")
     lxr.advance
     ast.objectConstructor(body, anns)
 }
