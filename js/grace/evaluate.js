@@ -53,27 +53,42 @@ function evalArgs(argNodes, ctx, cont) {
 // ObjCons pre-populates slots (var, def, type, method) before evaluating
 // the body so that forward references (especially recursive methods) work.
 
-function prescanBody(bodyNodes, obj) {
+function prescanBody(bodyNodes, obj, skipExisting = false) {
     for (const node of bodyNodes) {
         switch (node.kind) {
             case 'varDec':
-                obj.addVar(node.name);
+                if (!skipExisting || !obj.hasMethod(node.name))
+                    obj.addVar(node.name);
                 break;
             case 'defDec':
-                obj.addDef(node.name);
+                if (!skipExisting || !obj.hasMethod(node.name))
+                    obj.addDef(node.name);
                 break;
             case 'typeDec':
-                obj.addTypeDef(node.name);
+                if (!skipExisting || !obj.hasMethod(node.name))
+                    obj.addTypeDef(node.name);
                 break;
             case 'methDec': {
                 const method = buildGraceMethod(node);
                 const mname = methodDeclName(node);
-                obj.addMethod(mname, method);
+                if (!skipExisting || !obj.hasMethod(mname)) {
+                    obj.addMethod(mname, method);
+                    // If the method body ends with an objCons, also register
+                    // an inheritable variant  name + "inherit(1)"
+                    const mbody = consToArray(node.body);
+                    if (mbody.length > 0 && mbody[mbody.length - 1].kind === 'objCons') {
+                        obj.addMethod(mname + 'inherit(1)',
+                            buildInheritableMethod(node));
+                    }
+                }
                 break;
             }
             case 'importStmt':
-                obj.addDef(node.asName);
+                if (!skipExisting || !obj.hasMethod(node.asName))
+                    obj.addDef(node.asName);
                 break;
+            case 'inheritStmt':
+            case 'useStmt':
             case 'comment':
             case 'dialectStmt':
                 break;
@@ -247,6 +262,11 @@ export function evalNode(node, ctx, cont) {
         case 'importStmt':
             return evalImport(node, ctx, cont);
 
+        case 'inheritStmt':
+        case 'useStmt':
+            // Handled during objCons construction; in body evaluation they are no-ops
+            return pending(ctx, cont, GRACE_DONE);
+
         default:
             throw new GraceError(`Unknown AST node kind: "${node.kind}"`);
     }
@@ -315,19 +335,92 @@ function evalDotReq(node, ctx, cont) {
     });
 }
 
-function evalObjCons(node, ctx, cont) {
-    const obj = new UserObject();
-    obj._debugLabel = 'object';
-    // New object's surrounding is the current scope
-    obj._surrounding = ctx.scope;
+function evalObjCons(node, ctx, cont, inheritingObj = null) {
+    const obj = inheritingObj || new UserObject();
+    if (!inheritingObj) {
+        obj._debugLabel = 'object';
+        obj._surrounding = ctx.scope;
+    }
     const bodyNodes = consToArray(node.body);
-    // Pre-scan: create slots for all declared names (including methods)
-    prescanBody(bodyNodes, obj);
-    // Now run the body in the context of the new object
-    const innerCtx = ctx.withSelfScope(obj);
-    return evalConsList(node.body, innerCtx, (result) => {
-        return pending(ctx, cont, obj);
+
+    // Separate use and inherit statements
+    const useStmts = bodyNodes.filter(n => n.kind === 'useStmt');
+    const inheritNode = bodyNodes.find(n => n.kind === 'inheritStmt');
+
+    // Step 1: Process use stmts — evaluate expressions in outer ctx, copy methods
+    function processUseStmts(idx, done) {
+        if (idx >= useStmts.length) return done();
+        const useNode = useStmts[idx];
+        return evalNode(useNode.parent, ctx, (mixinObj) => {
+            if (!(mixinObj instanceof UserObject)) {
+                throw new GraceError('Can only use objects as mixins');
+            }
+            // Statelessness check: no var setters
+            for (const name of mixinObj.getMethodNames()) {
+                if (name.includes(':=(1)')) {
+                    throw new GraceError('Can only use stateless objects as mixins');
+                }
+            }
+            // Copy methods (skip identity methods and internal def setters)
+            const skipSet = new Set(['==(1)', '!=(1)', 'asString']);
+            for (const name of mixinObj.getMethodNames()) {
+                if (!skipSet.has(name) && !name.endsWith(' =(1)')) {
+                    obj.addMethod(name, mixinObj._methods[name]);
+                }
+            }
+            return processUseStmts(idx + 1, done);
+        });
+    }
+
+    return processUseStmts(0, () => {
+        // Step 2: Pre-scan body (own slots override use methods)
+        prescanBody(bodyNodes, obj, !!inheritingObj);
+
+        // Step 3: For inherit, temporarily redirect _surrounding so lexical
+        //         lookups during the parent body go through the parent scope.
+        let savedSurrounding = null;
+        if (inheritingObj) {
+            savedSurrounding = obj._surrounding;
+            obj._surrounding = ctx.scope;
+        }
+
+        const innerCtx = ctx.withSelfScope(obj);
+
+        function finish(_result) {
+            if (savedSurrounding !== null) {
+                obj._surrounding = savedSurrounding;
+            }
+            return pending(ctx, cont, obj);
+        }
+
+        if (inheritNode) {
+            return evalInheritStmt(inheritNode, obj, innerCtx, () => {
+                return evalConsList(node.body, innerCtx, finish);
+            });
+        }
+        return evalConsList(node.body, innerCtx, finish);
     });
+}
+
+function evalInheritStmt(node, childObj, ctx, afterCont) {
+    const parent = node.parent;
+    if (parent.kind === 'lexReq') {
+        const name = parent.name;
+        const argNodes = consToArray(parent.args);
+        const inheritName = name + 'inherit(1)';
+        return evalArgs(argNodes, ctx, (args) => {
+            const receiver = ctx.findReceiver(inheritName);
+            if (!receiver) {
+                throw new GraceError(
+                    `Cannot inherit from "${name}" — no inheritable method found`
+                );
+            }
+            return receiver.requestMethod(ctx, (_) => {
+                return afterCont();
+            }, inheritName, [...args, childObj]);
+        });
+    }
+    throw new GraceError('inherit requires a lexical method request');
 }
 
 function evalBlock(node, ctx, cont) {

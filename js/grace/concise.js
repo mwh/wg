@@ -261,6 +261,7 @@ export const conciseBuilders = {
     r3T, c0M, i0M,
     t0D, i0C, m0S,
     s4F, dia, l0N,
+    i0H, u0S,
     c9D, c9B, c9Q, c9N, c9R, c9L, c9S, c9T,
     c9G, c9C, c9A, c9P, c9M, c9H, c9E,
 };
