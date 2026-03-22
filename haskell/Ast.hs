@@ -18,6 +18,9 @@ data ASTNode = ObjectConstructor [ASTNode] [String]
              | DialectStmt String
              | TypeDecl String ASTNode
              | InterfaceConstructor [MethodSignature]
+             | InheritStmt ASTNode
+             | UseStmt ASTNode
+             | Lineup [ASTNode]
         deriving Show
 
 data Part = Part String [ASTNode] [ASTNode]
@@ -49,6 +52,9 @@ block (params, body) = Block params body
 comment = Comment
 importStmt (name, binding) = ImportStmt name binding
 dialectStmt name = DialectStmt name
+inheritStmt (expr, _extra) = InheritStmt expr
+useStmt (expr, _extra) = UseStmt expr
+lineup = Lineup
 
 
 part (name, params, genericParams) = Part name params genericParams
@@ -132,3 +138,7 @@ prettyPrint (ImportStmt name binding) =
         "importStmt(\"" ++ name ++ "\", " ++ prettyPrint binding ++ ")"
 prettyPrint (DialectStmt name) =
         "dialectStmt(\"" ++ name ++ "\")"
+prettyPrint (InheritStmt expr) =
+        "inheritStmt(" ++ prettyPrint expr ++ ", nil)"
+prettyPrint (UseStmt expr) =
+        "useStmt(" ++ prettyPrint expr ++ ", nil)"

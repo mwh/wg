@@ -116,6 +116,9 @@ astModule = BaseObject GraceDone $ fromList [
     , ("typeDecl(2)", \ctx [GraceString name, GraceAstObject value] -> continuation ctx $ GraceAstObject (TypeDecl name value))
     , ("methSig(2)", \ctx [GraceAstList parts, GraceAstList rtype] -> continuation ctx $ GraceMethodSignatureObject (MethodSignature [n | GracePartObject n <- parts] (case rtype of { [] -> Nothing ; [GraceAstObject o] -> Just o } )))
     , ("interfaceCons(1)", \ctx [GraceAstList meths] -> continuation ctx $ GraceAstObject (InterfaceConstructor [m | GraceMethodSignatureObject m <- meths]))
+    , ("inheritStmt(2)", \ctx [GraceAstObject expr, _extra] -> continuation ctx $ GraceAstObject (InheritStmt expr))
+    , ("useStmt(2)", \ctx [GraceAstObject expr, _extra] -> continuation ctx $ GraceAstObject (UseStmt expr))
+    , ("lineup(1)", \ctx [GraceAstList elems] -> continuation ctx $ GraceAstObject (Lineup [astObjectToAstNode e | e <- elems]))
     ]
 
 astObjectToAstNode :: GraceObject -> ASTNode
@@ -137,6 +140,9 @@ astObjectToAstNode (GraceAstObject node@(ImportStmt _ _)) = node
 astObjectToAstNode (GraceAstObject node@(DialectStmt _)) = node
 astObjectToAstNode (GraceAstObject node@(TypeDecl _ _)) = node
 astObjectToAstNode (GraceAstObject node@(InterfaceConstructor _)) = node
+astObjectToAstNode (GraceAstObject node@(InheritStmt _)) = node
+astObjectToAstNode (GraceAstObject node@(UseStmt _)) = node
+astObjectToAstNode (GraceAstObject node@(Lineup _)) = node
 
 
 partsToName :: [Part] -> String
@@ -222,9 +228,9 @@ getMethod n (GraceBool b) =
                 putStrLn $ "Boolean method not found: " ++ n
                 return ()
 
-getMethod n (BaseObject _ meths) =
+getMethod n obj@(BaseObject _ meths) =
     case Data.Map.lookup n meths of
-        Just m -> m
+        Just m -> \ctx args -> m (withSelf ctx obj) args
         Nothing -> \ctx args ->
             do
                 putStrLn $ "Method not found: " ++ n
@@ -382,6 +388,36 @@ makeRange startN endN = BaseObject GraceDone $ fromList
         continuation ctx $ GraceString
             (show (round startN :: Integer) ++ ".." ++ show (round endN :: Integer)))
     ]
+
+makeLineup :: [GraceObject] -> GraceObject
+makeLineup vals =
+    let meths = Data.Map.fromList
+            [ ("do(1)", \ctx [block] ->
+                let doIter [] = continuation ctx GraceDone
+                    doIter (v:vs) =
+                        let apply = getMethod "apply(1)" block
+                        in apply (withCont ctx (\_ -> doIter vs)) [v]
+                in doIter vals
+              )
+            , ("size(0)", \ctx _ -> continuation ctx $ GraceNumber (fromIntegral $ length vals))
+            , ("at(1)", \ctx [GraceNumber i] ->
+                let idx = floor i
+                in if idx >= 1 && idx <= length vals
+                    then continuation ctx $ vals !! (idx - 1)
+                    else do putStrLn $ "Index out of bounds: " ++ show idx
+                            continuation ctx GraceDone
+              )
+            , ("asString(0)", \ctx _ ->
+                continuation ctx $ GraceString ("[" ++ concatWith ", " (map show vals) ++ "]")
+              )
+            ]
+    in BaseObject GraceDone meths
+
+concatWith :: String -> [String] -> String
+concatWith _ [] = ""
+concatWith _ [x] = x
+concatWith sep (x:xs) = x ++ sep ++ concatWith sep xs
+
 
 gracePrelude = BaseObject GraceDone $ fromList [
     ("print(1)", \ctx [arg] ->

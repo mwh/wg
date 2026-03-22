@@ -34,25 +34,7 @@ toFunc (ExplicitRequest receiverNode parts) =
                             )
             )
 toFunc (ObjectConstructor body anns) =
-    \ctx ->
-        do
-            self <- newIORef GraceDone
-            meths <- makeMethods body self
-            let methsSelf = insert "self(0)" (\ctx _ -> do
-                    selfObj <- readIORef self
-                    continuation ctx $ selfObj) meths
-            let obj = BaseObject (localScope ctx) methsSelf
-            writeIORef self obj
-            let selfCtx = withSelf ctx obj
-            let bodyFuncs = map toFunc body
-            let retCont = withCont selfCtx (\_ -> (continuation ctx) obj)
-
-            let folded = Prelude.foldr
-                    (\f acc ctx' -> f (withCont ctx' (\_ -> acc ctx')))
-                    (\ctx' -> (continuation ctx') obj)
-                    bodyFuncs
-            folded selfCtx
-
+    \ctx -> evalObjectConstructor body ctx Nothing
 
 toFunc (VarDecl name _ _ init) =
     \ctx ->
@@ -200,6 +182,19 @@ toFunc (InterpString before expr next) =
 toFunc (InterfaceConstructor meths) =
     \ctx -> continuation ctx $ GraceDone
 
+toFunc (InheritStmt _) =
+    \ctx -> continuation ctx $ GraceDone
+
+toFunc (UseStmt _) =
+    \ctx -> continuation ctx $ GraceDone
+
+toFunc (Lineup elems) =
+    let elemFuncs = map toFunc elems
+    in
+        \ctx ->
+            evalElemList ctx elemFuncs [] $ \vals ->
+                continuation ctx $ Runtime.makeLineup vals
+
 toFunc (TypeDecl name init) =
     \ctx ->
         do
@@ -210,6 +205,134 @@ toFunc (TypeDecl name init) =
                     do
                         setter ctx [val]
                     )
+
+evalObjectConstructor :: [ASTNode] -> Context -> Maybe (IORef GraceObject, Map String (Context -> [GraceObject] -> IO ())) -> IO ()
+evalObjectConstructor body ctx inheritingAs =
+    do
+        -- If inheriting, reuse the self ref and start with existing methods
+        (self, existingMeths) <- case inheritingAs of
+            Just (selfRef, meths) -> return (selfRef, meths)
+            Nothing -> do
+                selfRef <- newIORef GraceDone
+                return (selfRef, Data.Map.empty)
+        newMeths <- makeMethods body self
+        -- Merge: existing methods take precedence (child overrides parent)
+        let mergedMeths = Data.Map.union existingMeths newMeths
+        let methsSelf = case inheritingAs of
+                Nothing -> insert "self(0)" (\ctx' _ -> do
+                        selfObj <- readIORef self
+                        continuation ctx' $ selfObj) mergedMeths
+                Just _ -> mergedMeths  -- self(0) already in existingMeths
+        let obj = BaseObject (localScope ctx) methsSelf
+        writeIORef self obj
+        let selfCtx = withSelf ctx obj
+        -- Filter body: skip MethodDecl (already handled), skip InheritStmt (handled below)
+        let stmtFuncs = [toFunc s | s <- body, not (isMethodDecl s), not (isInheritStmt s), not (isUseStmt s)]
+        -- Find inherit statement if present
+        let inheritStmts = [expr | InheritStmt expr <- body]
+        -- Find use statements
+        let useStmts = [expr | UseStmt expr <- body]
+        -- Process use statements: evaluate the expression, copy methods
+        let processUses ctx' useCont =
+                case useStmts of
+                    [] -> useCont ctx'
+                    _ -> processUseList useStmts self ctx' useCont
+        -- Process inherit: call parent method with inherit(1) passing self
+        let processInherit ctx' afterInherit =
+                case inheritStmts of
+                    [] -> afterInherit ctx'
+                    [expr] -> callInheritMethod expr self ctx' afterInherit
+                    _ -> do putStrLn "Multiple inherit statements not allowed"
+                            return ()
+        -- Evaluation order: use -> add fields/methods -> inherit -> run body statements
+        processUses selfCtx $ \ctx1 -> do
+            -- Re-read self since use may have updated it
+            selfObj <- readIORef self
+            let ctx2 = withSelf ctx1 selfObj
+            processInherit ctx2 $ \ctx3 -> do
+                -- Re-read self since inherit may have updated it
+                selfObj' <- readIORef self
+                let ctx4 = withSelf ctx3 selfObj'
+                let folded = Prelude.foldr
+                        (\f acc c -> f (withCont c (\_ -> acc c)))
+                        (\c -> (continuation ctx) selfObj')
+                        stmtFuncs
+                folded ctx4
+
+isMethodDecl :: ASTNode -> Bool
+isMethodDecl (MethodDecl _ _ _ _) = True
+isMethodDecl _ = False
+
+isInheritStmt :: ASTNode -> Bool
+isInheritStmt (InheritStmt _) = True
+isInheritStmt _ = False
+
+isUseStmt :: ASTNode -> Bool
+isUseStmt (UseStmt _) = True
+isUseStmt _ = False
+
+callInheritMethod :: ASTNode -> IORef GraceObject -> Context -> (Context -> IO ()) -> IO ()
+callInheritMethod expr selfRef ctx afterInherit =
+    case expr of
+        LexicalRequest parts ->
+            let name = partsToName parts
+                inheritName = name ++ "inherit(1)"
+                argSeq = do
+                    Part _ a _ <- parts
+                    argNode <- a
+                    return $ toFunc argNode
+            in do
+                selfObj <- readIORef selfRef
+                let receiver = findReceiver name ctx
+                let method = getMethod inheritName receiver
+                evalArgSeq ctx argSeq $ \args -> do
+                    method (withCont ctx (\resultObj -> do
+                        writeIORef selfRef resultObj
+                        afterInherit ctx)) (args ++ [selfObj])
+        ExplicitRequest receiverNode parts ->
+            let name = partsToName parts
+                inheritName = name ++ "inherit(1)"
+                receiverFunc = toFunc receiverNode
+                argSeq = do
+                    Part _ a _ <- parts
+                    argNode <- a
+                    return $ toFunc argNode
+            in
+                receiverFunc $ withCont ctx $ \receiver -> do
+                    selfObj <- readIORef selfRef
+                    evalArgSeq ctx argSeq $ \args -> do
+                        let method = getMethod inheritName receiver
+                        method (withCont ctx (\resultObj -> do
+                            writeIORef selfRef resultObj
+                            afterInherit ctx)) (args ++ [selfObj])
+        _ -> do
+            putStrLn $ "Invalid inherit expression: " ++ show expr
+            return ()
+
+processUseList :: [ASTNode] -> IORef GraceObject -> Context -> (Context -> IO ()) -> IO ()
+processUseList [] _ ctx cont = cont ctx
+processUseList (expr:rest) selfRef ctx cont =
+    let exprFunc = toFunc expr
+    in exprFunc $ withCont ctx $ \mixinObj -> do
+        case mixinObj of
+            BaseObject _ mixinMeths -> do
+                selfObj <- readIORef selfRef
+                case selfObj of
+                    BaseObject parent existMeths -> do
+                        -- Copy methods from mixin that don't already exist, skip builtins
+                        let skipNames = ["==(1)", "!=(1)", "asString(0)", "asDebugString(0)", "hash(0)", "::(1)", "self(0)"]
+                        let filtered = Data.Map.filterWithKey (\k _ -> k `notElem` skipNames) mixinMeths
+                        let merged = Data.Map.union existMeths filtered
+                        let newObj = BaseObject parent merged
+                        writeIORef selfRef newObj
+                        let ctx' = withSelf ctx newObj
+                        processUseList rest selfRef ctx' cont
+                    _ -> do
+                        putStrLn "Use: self is not a BaseObject"
+                        cont ctx
+            _ -> do
+                putStrLn "Use: mixin is not a BaseObject"
+                cont ctx
 
 varNames :: [ASTNode] -> [String]
 varNames [] = []
@@ -290,11 +413,10 @@ makeMethods (stmt:rest) self =
                 in
                     do
                         restMeths <- makeMethods rest self
-                        fakeSelf <- newIORef GraceDone
                         let method =
                                 \ctx args ->
                                     do
-                                        selfObj <- readIORef self
+                                        let selfObj = Runtime.self ctx
                                         let params = parts >>= (\(Part _ a _) -> a)
                                         let params' = map (\(IdentifierDeclaration name _) -> name) params
                                         scopeMap <- makeScopeMap params' args (varNames body)
@@ -309,5 +431,54 @@ makeMethods (stmt:rest) self =
                                                         bodyFuncs
                                                     else (\ctx' -> (continuation retCont) GraceDone)
                                         folded retCont
-                        return $ insert name method restMeths
+                        -- Check if body ends with ObjectConstructor; if so, generate inherit variant
+                        let withInherit = case lastMay body of
+                                Just (ObjectConstructor ocBody ocAnns) ->
+                                    let inheritName = name ++ "inherit(1)"
+                                        inheritMethod = \ctx args ->
+                                            do
+                                                selfObj <- readIORef self
+                                                let allArgs = args
+                                                    inheritObj = last allArgs
+                                                    normalArgs = init allArgs
+                                                    params = parts >>= (\(Part _ a _) -> a)
+                                                    params' = map (\(IdentifierDeclaration name _) -> name) params
+                                                -- Execute all body statements except the last (OC)
+                                                scopeMap <- makeScopeMap params' normalArgs (varNames body)
+                                                let selfCtx = withSelf ctx selfObj
+                                                    selfScope = LocalScope selfObj scopeMap
+                                                    selfCtx' = withScope selfCtx selfScope
+                                                    retCont = withReturn selfCtx' $ continuation ctx
+                                                    preBodyFuncs = map toFunc (init body)
+                                                case inheritObj of
+                                                    BaseObject _ inheritMeths -> do
+                                                        inheritSelfRef <- newIORef inheritObj
+                                                        let runPreBody ctx'' afterPre =
+                                                                if null preBodyFuncs
+                                                                    then afterPre ctx''
+                                                                    else let folded = Prelude.foldr
+                                                                                (\f acc c -> f (withCont c (\_ -> acc c)))
+                                                                                afterPre
+                                                                                preBodyFuncs
+                                                                         in folded ctx''
+                                                        runPreBody retCont $ \ctx'' -> do
+                                                            -- Evaluate the tail ObjectConstructor with inherit
+                                                            evalObjectConstructor ocBody ctx'' (Just (inheritSelfRef, inheritMeths))
+                                                    _ -> do
+                                                        putStrLn "Inherit: argument is not a BaseObject"
+                                                        return ()
+                                    in insert inheritName inheritMethod
+                                _ -> id
+                        return $ withInherit $ insert name method restMeths
             _ -> makeMethods rest self
+
+lastMay :: [a] -> Maybe a
+lastMay [] = Nothing
+lastMay xs = Just (last xs)
+
+evalElemList :: Context -> [Context -> IO ()] -> [GraceObject] -> ([GraceObject] -> IO ()) -> IO ()
+evalElemList ctx [] acc cont = cont (reverse acc)
+evalElemList ctx (f:fs) acc cont =
+    f $ withCont ctx $ \val ->
+        evalElemList ctx fs (val:acc) cont
+
