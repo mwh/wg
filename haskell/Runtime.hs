@@ -76,7 +76,7 @@ data GraceObject = BaseObject GraceObject (Map String (Context -> [GraceObject] 
                    | GraceAstList [GraceObject]
 
 instance Show GraceObject where
-    show (GraceNumber f) = show f
+    show (GraceNumber f) = if fromInteger (floor f) == f then show (floor f) else show f
     show (GraceString s) = s
     show (GraceBool b) = show b
     show (LocalScope _ m) = "LocalScope(" ++ (show $ Data.Map.keys m) ++ ")"
@@ -194,10 +194,13 @@ getMethod n (GraceString s) =
         "replace(1)with(1)" -> \ctx [GraceString old, GraceString new] ->
             continuation ctx $ GraceString (replace s old new)
         "substringFrom(1)to(1)" -> \ctx [GraceNumber start, GraceNumber end] ->
-            if start > 0 && end >= start && end <= fromIntegral (length s)
-                then continuation ctx $ GraceString (take (floor end - floor start + 1) (drop (floor start - 1) s))
-                else if end < start then continuation ctx $ GraceString ""
-                else continuation ctx $ GraceErrorObject $ "Index out of bounds: " ++ show start ++ " to " ++ show end ++ " in " ++ show s
+            if end < start then continuation ctx $ GraceString ""
+            else if start < 1 then continuation ctx $ GraceErrorObject $ "Index out of bounds: " ++ show start ++ " to " ++ show end ++ " in " ++ show s
+            else
+                let clampedEnd = min end (fromIntegral (length s))
+                    startIdx = floor start - 1
+                    len = max 0 (floor clampedEnd - startIdx)
+                in continuation ctx $ GraceString (take len (drop startIdx s))
         _ -> \ctx _ ->
             do
                 putStrLn $ "String method not found: " ++ n
@@ -274,6 +277,7 @@ getMethod n (GraceAstList items) =
             do
                 let reversed = reverse items
                 continuation ctx $ GraceAstList reversed
+        "size(0)" -> \ctx [] -> continuation ctx $ GraceNumber (fromIntegral $ length items)
         _ -> \ctx _ ->
             do
                 putStrLn $ "AstList method not found: " ++ n
@@ -368,7 +372,7 @@ evalArgSeq ctx (a:as) cont =
 gracePrelude = BaseObject GraceDone $ fromList [
     ("print(1)", \ctx [arg] ->
         do
-            putStrLn $ "Grace print: " ++ (show arg)
+            putStrLn $ (show arg)
             (continuation ctx) GraceDone
     )
     , ("if(1)then(1)", \ctx [cond, thenBlock] ->
