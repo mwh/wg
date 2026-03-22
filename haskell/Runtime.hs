@@ -78,7 +78,8 @@ data GraceObject = BaseObject GraceObject (Map String (Context -> [GraceObject] 
 instance Show GraceObject where
     show (GraceNumber f) = if fromInteger (floor f) == f then show (floor f) else show f
     show (GraceString s) = s
-    show (GraceBool b) = show b
+    show (GraceBool True) = "true"
+    show (GraceBool False) = "false"
     show (LocalScope _ m) = "LocalScope(" ++ (show $ Data.Map.keys m) ++ ")"
     show GraceDone = "Done"
     show (GraceErrorObject s) = "Error: " ++ s
@@ -157,6 +158,7 @@ getMethod n (GraceNumber f) =
         "<(1)" -> \ctx [GraceNumber other] -> continuation ctx $ GraceBool (f < other)
         ">=(1)" -> \ctx [GraceNumber other] -> continuation ctx $ GraceBool (f >= other)
         "<=(1)" -> \ctx [GraceNumber other] -> continuation ctx $ GraceBool (f <= other)
+        "..(1)" -> \ctx [GraceNumber other] -> continuation ctx $ makeRange f other
         "asString(0)" -> \ctx [] ->
             if f == fromInteger (round f)
                 then continuation ctx $ GraceString (show (round f))
@@ -208,7 +210,7 @@ getMethod n (GraceString s) =
 
 getMethod n (GraceBool b) =
     case n of
-        "asString(0)" -> \ctx [] -> continuation ctx $ GraceString (show b)
+        "asString(0)" -> \ctx [] -> continuation ctx $ GraceString (if b then "true" else "false")
         "==(1)" -> \ctx [GraceBool other] -> continuation ctx $ GraceBool (b == other)
         "!=(1)" -> \ctx [GraceBool other] -> continuation ctx $ GraceBool (b /= other)
         "&&(1)" -> \ctx [GraceBool other] -> continuation ctx $ GraceBool (b && other)
@@ -369,11 +371,32 @@ evalArgSeq ctx (a:as) cont =
 
 
 
+makeRange :: Float -> Float -> GraceObject
+makeRange startN endN = BaseObject GraceDone $ fromList
+    [ ("do(1)", \ctx [block] ->
+        let apply1 = getMethod "apply(1)" block
+            loop n | n > endN   = continuation ctx GraceDone
+                   | otherwise  = apply1 (withCont ctx (\_ -> loop (n + 1))) [GraceNumber n]
+        in  loop startN)
+    , ("asString(0)", \ctx [] ->
+        continuation ctx $ GraceString
+            (show (round startN :: Integer) ++ ".." ++ show (round endN :: Integer)))
+    ]
+
 gracePrelude = BaseObject GraceDone $ fromList [
     ("print(1)", \ctx [arg] ->
-        do
-            putStrLn $ (show arg)
-            (continuation ctx) GraceDone
+        case arg of
+            BaseObject _ meths ->
+                case Data.Map.lookup "asString(0)" meths of
+                    Just asString -> asString (withCont ctx (\strObj -> do
+                        putStrLn $ show strObj
+                        continuation ctx GraceDone)) []
+                    Nothing -> do
+                        putStrLn $ show arg
+                        continuation ctx GraceDone
+            _ -> do
+                putStrLn $ show arg
+                continuation ctx GraceDone
     )
     , ("if(1)then(1)", \ctx [cond, thenBlock] ->
         do
@@ -620,6 +643,10 @@ gracePrelude = BaseObject GraceDone $ fromList [
     , ("false(0)", \ctx [] ->
         do
             (continuation ctx) $ GraceBool False
+    )
+    , ("for(1)do(1)", \ctx [collection, block] ->
+        let doMethod = getMethod "do(1)" collection
+        in  doMethod ctx [block]
     )
     ]
 

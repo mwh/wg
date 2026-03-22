@@ -161,7 +161,7 @@ toFunc (Block params body) =
                         else (\ctx' -> (continuation ctx') GraceDone)
             in
                 do
-                    continuation ctx $ GraceBlock [name | (LexicalRequest [Part name _ _]) <- params] folded (varNames body) ctx
+                    continuation ctx $ GraceBlock [name | (IdentifierDeclaration name _) <- params] folded (varNames body) ctx
 
 toFunc (ImportStmt name binding) =
     \ctx ->
