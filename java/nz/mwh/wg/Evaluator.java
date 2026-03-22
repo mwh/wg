@@ -212,7 +212,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
 
     private String stringify(GraceObject obj) {
         if (obj instanceof GraceString gs) {
-            return "\"" + gs.getValue() + "\"";
+            return gs.getValue();
         }
         GraceObject asString = obj.request(Request.nullary(this, "asString"));
         if (asString instanceof GraceString asStr) {
