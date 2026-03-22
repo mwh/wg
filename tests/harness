@@ -25,7 +25,7 @@ for testcase in *.grace
 do
     total=$((total + 1))
     grep -o -E '//: .*' "$testcase" | cut -b 5- > _test_data/test.expected
-    printf '%-30s' "$testcase"
+    printf '%-40s' "$testcase"
     if ! "$@" "$testcase" > _test_data/test.out 2> _test_data/test.err
     then
         echo "exit code $!" > _test_data/"${testcase%.grace}".exit
@@ -50,4 +50,9 @@ done
 rm -f _test_data/test.{out,err,expected}
 
 echo
-echo Passed $passed/$total
+if [ $failed -gt 0 ]
+then
+    echo "Passed $passed/$total; failed $failed/$total"
+else
+    echo Passed $passed/$total
+fi
