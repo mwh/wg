@@ -374,11 +374,11 @@ method part(partName, args) {
         def kind is public = "part"
 
         method asString {
-            "part(\"" ++ name ++ "\", " ++ parameters ++ ")"
+            "part(\"" ++ name ++ "\", " ++ parameters ++ ", nil)"
         }
 
         method concise {
-            "p0T(\"" ++ name ++ "\"," ++ parameters.concise ++ ")"
+            "p0T(\"" ++ name ++ "\"," ++ parameters.concise ++ ",nil)"
         }
     }
 }
