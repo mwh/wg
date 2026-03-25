@@ -7,6 +7,7 @@ import qualified Data.Map as Data.Map
 import Data.IORef
 import Data.Char
 import Data.List (isSuffixOf, isPrefixOf)
+import System.Exit
 
 data Context = Context {
     continuation :: GraceObject -> IO ()
@@ -211,8 +212,7 @@ getMethod n (GraceString s) =
                 in continuation ctx $ GraceString (take len (drop startIdx s))
         _ -> \ctx _ ->
             do
-                putStrLn $ "String method not found: " ++ n
-                return ()
+                die $ "String method not found: " ++ n
 
 getMethod n (GraceBool b) =
     case n of
@@ -225,16 +225,14 @@ getMethod n (GraceBool b) =
         "not(0)" -> \ctx _ -> continuation ctx $ GraceBool (not b)
         _ -> \ctx _ ->
             do
-                putStrLn $ "Boolean method not found: " ++ n
-                return ()
+                die $ "Boolean method not found: " ++ n
 
 getMethod n obj@(BaseObject _ meths) =
     case Data.Map.lookup n meths of
         Just m -> \ctx args -> m (withSelf ctx obj) args
         Nothing -> \ctx args ->
             do
-                putStrLn $ "Method not found: " ++ n
-                return ()
+                die $ "Method not found: " ++ n
 
 getMethod n (LocalScope _ meths) =
     case Data.Map.lookup (stripSuffix "(0)" n) meths of
@@ -256,8 +254,7 @@ getMethod n (LocalScope _ meths) =
                     Nothing ->
                         \ctx args ->
                             do
-                                putStrLn $ "Scope method not found: " ++ n ++ "; have " ++ (show $ Data.Map.keys meths)
-                                return ()
+                                die $ "Scope method not found: " ++ n ++ "; have " ++ (show $ Data.Map.keys meths)
 
 getMethod n (GraceBlock params body vars creationContext) =
     let applyName = "apply(" ++ (show $ length params) ++ ")"
@@ -275,8 +272,7 @@ getMethod n (GraceAstObject node) =
         --"run(0)" -> \ctx [] -> CPS.toFunc node ctx
         _ -> \ctx _ ->
             do
-                putStrLn $ "Ast method not found: " ++ n
-                return ()
+                die $ "Ast method not found: " ++ n
 
 getMethod n (GraceAstList items) =
     case n of
@@ -288,14 +284,12 @@ getMethod n (GraceAstList items) =
         "size(0)" -> \ctx [] -> continuation ctx $ GraceNumber (fromIntegral $ length items)
         _ -> \ctx _ ->
             do
-                putStrLn $ "AstList method not found: " ++ n
-                return ()
+                die $ "AstList method not found: " ++ n
 
 getMethod n o =
     \ctx _ ->
         do
-            putStrLn $ "Method not found: " ++ n
-            putStrLn $ "In object: " ++ (show o)
+            die $ "Method not found: " ++ n ++ "\nIn object: " ++ (show o)
 
 replace :: Eq a => [a] -> [a] -> [a] -> [a]
 replace [] _ _ = []
@@ -477,7 +471,7 @@ gracePrelude = BaseObject GraceDone $ fromList [
                                     (continuation ctx) $ GraceErrorObject $ "Illegal elseif condition: " ++ (show cond)
                         ) ) []
                 _ ->
-                    putStrLn $ "Illegal if condition: " ++ (show cond)
+                    die $ "Illegal if condition: " ++ (show cond)
     )
     , ("if(1)then(1)elseif(1)then(1)else(1)", \ctx [cond, thenBlock, elseifCondBlock, elseifThenBlock, elseBlock] ->
         do
@@ -500,7 +494,7 @@ gracePrelude = BaseObject GraceDone $ fromList [
                                     (continuation ctx) $ GraceErrorObject $ "Illegal elseif condition: " ++ (show cond)
                         ) ) []
                 _ ->
-                    putStrLn $ "Illegal if condition: " ++ (show cond)
+                    die $ "Illegal if condition: " ++ (show cond)
     )
     , ("if(1)then(1)elseif(1)then(1)elseif(1)then(1)", \ctx [cond, thenBlock, elseifCondBlock, elseifThenBlock, elseifCondBlock2, elseifThenBlock2] ->
         do
@@ -533,7 +527,7 @@ gracePrelude = BaseObject GraceDone $ fromList [
                                     (continuation ctx) $ GraceErrorObject $ "Illegal elseif condition: " ++ (show cond)
                         ) ) []
                 _ ->
-                    putStrLn $ "Illegal if condition: " ++ (show cond)
+                    die $ "Illegal if condition: " ++ (show cond)
     )
     , ("if(1)then(1)elseif(1)then(1)elseif(1)then(1)else(1)", \ctx [cond, thenBlock, elseifCondBlock, elseifThenBlock, elseifCondBlock2, elseifThenBlock2, elseBlock] ->
         do
@@ -567,7 +561,7 @@ gracePrelude = BaseObject GraceDone $ fromList [
                                     (continuation ctx) $ GraceErrorObject $ "Illegal elseif condition: " ++ (show cond)
                         ) ) []
                 _ ->
-                    putStrLn $ "Illegal if condition: " ++ (show cond)
+                    die $ "Illegal if condition: " ++ (show cond)
     )
     , ("if(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)", \ctx [cond, thenBlock, elseifCondBlock, elseifThenBlock, elseifCondBlock2, elseifThenBlock2, elseifCondBlock3, elseifThenBlock3] ->
         do
@@ -611,7 +605,7 @@ gracePrelude = BaseObject GraceDone $ fromList [
                                     (continuation ctx) $ GraceErrorObject $ "Illegal elseif condition: " ++ (show cond)
                         ) ) []
                 _ ->
-                    putStrLn $ "Illegal if condition: " ++ (show cond)
+                    die $ "Illegal if condition: " ++ (show cond)
     )
     , ("if(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)else(1)", \ctx [cond, thenBlock, elseifCondBlock, elseifThenBlock, elseifCondBlock2, elseifThenBlock2, elseifCondBlock3, elseifThenBlock3, elseBlock] ->
         do
@@ -656,7 +650,7 @@ gracePrelude = BaseObject GraceDone $ fromList [
                                     (continuation ctx) $ GraceErrorObject $ "Illegal elseif condition: " ++ (show cond)
                         ) ) []
                 _ ->
-                    putStrLn $ "Illegal if condition: " ++ (show cond)
+                    die $ "Illegal if condition: " ++ (show cond)
     )
     , ("while(1)do(1)", \ctx [cond, body] ->
         do
@@ -669,7 +663,7 @@ gracePrelude = BaseObject GraceDone $ fromList [
                         GraceBool False ->
                             (continuation ctx) GraceDone
                         _ ->
-                            putStrLn $ "Illegal while condition: " ++ (show result)
+                            die $ "Illegal while condition: " ++ (show result)
             test (withCont ctx loop) []
     )
     , ("true(0)", \ctx [] ->
