@@ -611,6 +611,150 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
                 return request.getParts().get(8).getArgs().get(0).request(req);
             }
         });
+        lexicalParent.addMethod("if(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)", request -> {
+            GraceBoolean condition = (GraceBoolean) request.getParts().get(0).getArgs().get(0);
+            List<RequestPartR> parts = Collections.singletonList(new RequestPartR("apply", Collections.emptyList()));
+            Request req = new Request(request.getVisitor(), parts);
+            List<RequestPartR> rparts = request.getParts();
+            if (condition.getValue()) {
+                return request.getParts().get(1).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(2).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(3).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(4).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(5).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(6).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(7).getArgs().get(0).request(req);
+            } else {
+                return done;
+            }
+        });
+        lexicalParent.addMethod("if(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)", request -> {
+            GraceBoolean condition = (GraceBoolean) request.getParts().get(0).getArgs().get(0);
+            List<RequestPartR> parts = Collections.singletonList(new RequestPartR("apply", Collections.emptyList()));
+            Request req = new Request(request.getVisitor(), parts);
+            List<RequestPartR> rparts = request.getParts();
+            if (condition.getValue()) {
+                return request.getParts().get(1).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(2).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(3).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(4).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(5).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(6).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(7).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(8).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(9).getArgs().get(0).request(req);
+            } else {
+                return done;
+            }
+        });
+        lexicalParent.addMethod("if(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)else(1)", request -> {
+            GraceBoolean condition = (GraceBoolean) request.getParts().get(0).getArgs().get(0);
+            List<RequestPartR> parts = Collections.singletonList(new RequestPartR("apply", Collections.emptyList()));
+            Request req = new Request(request.getVisitor(), parts);
+            List<RequestPartR> rparts = request.getParts();
+            if (condition.getValue()) {
+                return request.getParts().get(1).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(2).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(3).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(4).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(5).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(6).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(7).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(8).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(9).getArgs().get(0).request(req);
+            } else {
+                return request.getParts().get(10).getArgs().get(0).request(req);
+            }
+        });
+        lexicalParent.addMethod("if(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)", request -> {
+            GraceBoolean condition = (GraceBoolean) request.getParts().get(0).getArgs().get(0);
+            List<RequestPartR> parts = Collections.singletonList(new RequestPartR("apply", Collections.emptyList()));
+            Request req = new Request(request.getVisitor(), parts);
+            List<RequestPartR> rparts = request.getParts();
+            if (condition.getValue()) {
+                return request.getParts().get(1).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(2).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(3).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(4).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(5).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(6).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(7).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(8).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(9).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(10).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(11).getArgs().get(0).request(req);
+            } else {
+                return done;
+            }
+        });
+        lexicalParent.addMethod("if(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)else(1)", request -> {
+            GraceBoolean condition = (GraceBoolean) request.getParts().get(0).getArgs().get(0);
+            List<RequestPartR> parts = Collections.singletonList(new RequestPartR("apply", Collections.emptyList()));
+            Request req = new Request(request.getVisitor(), parts);
+            List<RequestPartR> rparts = request.getParts();
+            if (condition.getValue()) {
+                return request.getParts().get(1).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(2).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(3).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(4).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(5).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(6).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(7).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(8).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(9).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(10).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(11).getArgs().get(0).request(req);
+            } else {
+                return request.getParts().get(12).getArgs().get(0).request(req);
+            }
+        });
+        lexicalParent.addMethod("if(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)", request -> {
+            GraceBoolean condition = (GraceBoolean) request.getParts().get(0).getArgs().get(0);
+            List<RequestPartR> parts = Collections.singletonList(new RequestPartR("apply", Collections.emptyList()));
+            Request req = new Request(request.getVisitor(), parts);
+            List<RequestPartR> rparts = request.getParts();
+            if (condition.getValue()) {
+                return request.getParts().get(1).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(2).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(3).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(4).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(5).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(6).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(7).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(8).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(9).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(10).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(11).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(12).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(13).getArgs().get(0).request(req);
+            } else {
+                return done;
+            }
+        });
+        lexicalParent.addMethod("if(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)elseif(1)then(1)else(1)", request -> {
+            GraceBoolean condition = (GraceBoolean) request.getParts().get(0).getArgs().get(0);
+            List<RequestPartR> parts = Collections.singletonList(new RequestPartR("apply", Collections.emptyList()));
+            Request req = new Request(request.getVisitor(), parts);
+            List<RequestPartR> rparts = request.getParts();
+            if (condition.getValue()) {
+                return request.getParts().get(1).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(2).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(3).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(4).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(5).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(6).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(7).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(8).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(9).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(10).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(11).getArgs().get(0).request(req);
+            } else if (((GraceBoolean)rparts.get(12).getArgs().get(0).request(req)).getValue()) {
+                return rparts.get(13).getArgs().get(0).request(req);
+            } else {
+                return request.getParts().get(14).getArgs().get(0).request(req);
+            }
+        });
+        
         lexicalParent.addMethod("while(1)do(1)", request -> {
             List<RequestPartR> parts = Collections.singletonList(new RequestPartR("apply", Collections.emptyList()));
             Request req = new Request(request.getVisitor(), parts);
