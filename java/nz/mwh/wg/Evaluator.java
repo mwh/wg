@@ -210,11 +210,19 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
         return new GraceString(sb.toString());
     }
 
-    private String stringify(GraceObject obj) {
+    public String stringify(GraceObject obj) {
         if (obj instanceof GraceString gs) {
             return gs.getValue();
         }
-        GraceObject asString = obj.request(Request.nullary(this, "asString"));
+        GraceObject asString;
+        if (obj instanceof BaseObject uo) {
+            BaseObject oldSelf = self;
+            self = uo;
+            asString = obj.request(Request.nullary(this, "asString"));
+            self = oldSelf;
+        } else {
+            asString = obj.request(Request.nullary(this, "asString"));
+        }
         if (asString instanceof GraceString asStr) {
             return asStr.getValue();
         }
@@ -511,7 +519,7 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
     static BaseObject basePrelude() {
         BaseObject lexicalParent = new BaseObject(null);
         lexicalParent.addMethod("print(1)", request -> {
-            System.out.println(request.getParts().get(0).getArgs().get(0));
+            System.out.println(((Evaluator)request.getVisitor()).stringify(request.getParts().get(0).getArgs().get(0)));
             return done;
         });
         lexicalParent.addMethod("true(0)", _ -> new GraceBoolean(true));
