@@ -48,6 +48,18 @@ class list(elems) {
         elements.at(index - 1) put(value)
     }
 
+    method removeAt(index) {
+        if ((index < 1) || (index > itemSize)) then {
+            OutOfRange.raise "List index must be in range 1..{itemSize}, not {index}"
+        }
+        var removed := elements.at(index - 1)
+        for (index..(itemSize - 1)) do { i ->
+            elements.at(i - 1) put(elements.at(i))
+        }
+        itemSize := itemSize - 1
+        removed
+    }
+
     method do(blk) {
         for (0..(itemSize - 1)) do { i ->
             blk.apply(elements.at(i))
@@ -57,7 +69,7 @@ class list(elems) {
     method asString {
         var result := "list ["
         var later := false
-        do { elem ->
+        self.do { elem ->
             if (later) then {
                 result := result ++ ", "
             }
@@ -136,6 +148,32 @@ class list(elems) {
             transformed.do { item ->
                 result.add(item)
             }
+        }
+        result
+    }
+
+    method join(sep) {
+        var result := ""
+        var later := false
+        do { elem ->
+            if (later) then { result := result ++ sep }
+            later := true
+            result := result ++ elem.asString
+        }
+        result
+    }
+
+    method contains(pred) {
+        do { elem ->
+            if (pred.apply(elem)) then { return true }
+        }
+        return false
+    }
+
+    method without(pred) {
+        var result := list []
+        do { elem ->
+            if (!pred.apply(elem)) then { result.add(elem) }
         }
         result
     }
