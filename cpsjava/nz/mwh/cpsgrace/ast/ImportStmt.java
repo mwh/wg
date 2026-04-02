@@ -35,8 +35,13 @@ public class ImportStmt extends ASTNode {
         CPS moduleCPS = moduleNode.toCPS();
         return (ctx, cont) -> {
             GraceObject receiver = ctx.findReceiver(asName.getName() + " =(1)");
+            GraceObject cached = TheProgram.importedModules.get(moduleName);
+            if (cached != null) {
+                return receiver.requestMethod(ctx, cont, asName.getName() + " =(1)", List.of(cached));
+            }
             return moduleCPS.run(ctx.withScope(Start.prelude), (moduleObj) -> {
                 ((UserObject)moduleObj).setDebugLabel("imported module " + moduleName);
+                TheProgram.importedModules.put(moduleName, moduleObj);
                 return receiver.requestMethod(ctx, cont, asName.getName() + " =(1)", List.of(moduleObj));
             });
         };
