@@ -24,7 +24,7 @@ static char *read_file(const char *path) {
     fseek(f, 0, SEEK_SET);
     char *buf = malloc(sz + 1);
     if (!buf) { fprintf(stderr, "grace: out of memory\n"); exit(1); }
-    fread(buf, 1, sz, f);
+    sz = fread(buf, 1, sz, f);
     buf[sz] = '\0';
     fclose(f);
     return buf;
