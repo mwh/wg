@@ -1,0 +1,61 @@
+# This makefile is for building on DOS with DJGPP.
+# It will require a lot of memory to build the interpreter.
+# 256MB should be enough.
+CC      = gcc
+CFLAGS  = -std=gnu11 -Wall -Wextra -g -I.
+LDFLAGS = -lm
+
+INTERP_SRCS = grace.c objects.c eval.c prelude.c convert.c gc.c
+BAKED_SRCS = baked\ast.c baked\lexer.c baked\parser.c
+
+SRCS = $(INTERP_SRCS) $(BAKED_SRCS) main.c
+
+OBJS = $(SRCS:.c=.o)
+INTERP_OBJS = $(INTERP_SRCS:.c=.o)
+
+.PHONY: all clean
+
+all: grace.exe
+
+grace: grace.exe
+	exe2coff grace.exe
+program: program.exe
+	exe2coff program.exe
+
+graceraw.exe: grace
+	copy /B C:\DJGPP\BIN\PMODSTUB.EXE + grace graceraw.exe
+
+prograw.exe: program
+	copy /B C:\DJGPP\BIN\PMODSTUB.EXE + program prograw.exe
+
+coff: $(OBJS)
+	$(CC) $(CFLAGS) -o grace $^ $(LDFLAGS)
+
+grace.exe: $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+program.exe: $(INTERP_OBJS) program.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+grace.o:        grace.c ast.h grace.h gc.h
+objects.o:      objects.c ast.h grace.h gc.h
+eval.o:         eval.c ast.h grace.h gc.h
+prelude.o:      prelude.c ast.h grace.h gc.h
+convert.o:      convert.c ast.h grace.h
+main.o:         main.c ast.h grace.h gc.h
+gc.o:           gc.c gc.h grace.h
+
+program.o:		program.c ast.h grace.h
+
+baked/ast.o:    baked/ast.c ast.h
+baked/lexer.o:  baked/lexer.c ast.h
+baked/parser.o: baked/parser.c ast.h
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+baked/%.o: baked/%.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+clean:
+	del $(OBJS) grace.exe program.exe
