@@ -2,6 +2,16 @@
 
 set -e
 
+if [ $# -eq 0 ]
+then
+    echo Usage:   $0 TESTDIR '[IMPLEMENTATION CMDLINE...]'
+    echo Command for implementation must be usable from test directory.
+    dir=$( cd "$(dirname "$0")"/.. ; cd . ; cd -P -- -)
+    tdir=basic
+    [ "$(dirname "$0")" != "." ] && tdir="$dir/tests/$tdir"
+    echo Example: "$0" "$tdir" java -cp "$dir"/java nz.mwh.wg.Start
+    exit 1
+fi
 testdir=$1
 shift
 
@@ -87,3 +97,5 @@ then
 else
     echo Passed $passed/$total
 fi
+
+# vim:set expandtab sw=4 ts=4:
