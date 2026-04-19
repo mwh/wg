@@ -428,6 +428,9 @@ gracePrelude = BaseObject GraceDone $ fromList [
                 putStrLn $ show arg
                 continuation ctx GraceDone
     )
+    , ("done(0)", \ctx [] ->
+        continuation ctx GraceDone
+    )
     , ("if(1)then(1)", \ctx [cond, thenBlock] ->
         do
             let apply = getMethod "apply(0)" thenBlock
