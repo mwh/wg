@@ -1,17 +1,6 @@
-import * as ast from "./ast.js"
-import * as evaluator from "./evaluator.js"
-import {evaluate as toJSAST} from "./program.js";
 
-import program from "./program.js"
-
-let cont = {
-    go(v) {return null},
-    of(v) {
-        this.result = v;
-        return this;
-    },
-    toString() {return "END"}
-}
+import { GraceInterpreter } from "./grace/grace.js";
+import * as concise from "./grace/concise.js";
 
 let lastConcise = false
 
@@ -48,31 +37,30 @@ document.getElementById('source').addEventListener('keydown', function(e) {
     }
 })
 
+function makeInterpreter() {
+    return new GraceInterpreter({
+        print: s => say(s),
+    });
+}
+
+const parseInterpreter = makeInterpreter();
+parseInterpreter.init();
+
 async function doParse(concise=false) {
     lastConcise = concise;
     let start = performance.now()
     let text = document.getElementById('source').value
-    status("Parsing input...")
-    let cont = {
-        go(v) {return null},
-        of(v) {
-            this.result = v;
-            return this;
-        },
-        toString() {return "END"}
+    
+    let result;
+    if (concise) {
+        result = await parseInterpreter.parseToString(text, 'input');
+    } else {
+        result = await parseInterpreter.parseToLong(text, 'input');
     }
-    let r = parser.request(cont, {name: "parse(1)"}, [text])
-    await evaluate(r)
-    status("Stringifying AST...")
-    let parseTree = cont.result
-    let r2
-    if (concise)
-        r2 = parseTree.request(cont, {name: "concise(0)"}, [])
-    else
-        r2 = parseTree.request(cont, {name: "asString(0)"}, [])
-    await evaluate(r2)
-    document.getElementById('ast').value = cont.result
-    theAST = cont.result
+    theAST = result;
+
+    document.getElementById('ast').value = result;
+    theAST = result;
     let end = performance.now()
     status("Ready. Parse time: " + Math.round(end - start) + "ms")
 }
@@ -86,21 +74,22 @@ document.getElementById('parse_concise').addEventListener('click', async () => {
 })
 
 document.getElementById('run').addEventListener('click', async () => {
-    stepsTaken = 0
     document.getElementById('output').replaceChildren()
-    if (!theAST || lastConcise) {
-        await doParse()
+    if (!theAST || !lastConcise) {
+        await doParse(true)
     }
     let start = performance.now();
-    status("Converting AST to JS...")
-    let jsAST = toJSAST(theAST)
+    let interp = makeInterpreter();
+    await interp.init();
     status("Evaluating program...")
-    let r = evaluator.evaluateModule(
-        cont,
-        jsAST)
-    await evaluate(r)
-    let end = performance.now()
-    status("Ready. Run time: " + Math.round(end - start) + "ms")
+    try {
+        await interp.runConcise(theAST, 'input');
+        let end = performance.now()
+        status("Ready. Run time: " + Math.round(end - start) + "ms")
+    } catch (e) {
+        status("Error occurred while evaluating program: " + e);
+        console.error(e);
+    }
 })
 
 document.getElementById('java').addEventListener('click', async () => {
@@ -240,43 +229,3 @@ evaluate(evaluateModule(cont, program))
     a.textContent = 'Download GraceProgram.js'
     document.getElementById('status').replaceChildren(a)
 })
-
-let steps = document.getElementById('steps')
-let r = evaluator.evaluateModule(
-    cont,
-    program)
-let stepsTaken = 0
-let maxSteps = 10000000
-
-status("Loading parser...")
-console.time("load parser")
-await evaluate(r)
-console.timeEnd("load parser")
-status("Ready.")
-let parser = cont.result
-
-async function evaluate(cont) {
-    return new Promise(resolve => evaluateContinuation(resolve, cont))
-}
-
-function evaluateContinuation(resolve, cont, expSteps=1000) {
-    let r = cont
-    let i
-    for (i = 0; i < expSteps; i++) {
-        stepsTaken++
-        r = r.go(undefined);
-        if (!r)
-            break
-    }
-    if (stepsTaken > maxSteps) {
-        console.log("max steps reached")
-        say("Reached maximum step count")
-        return
-    }
-    if (i < 100 || !r) {
-        resolve()
-    } else {
-        console.log("continuing, expSteps", expSteps)
-        setTimeout(() => evaluateContinuation(resolve, r, expSteps * 2), 0)
-    }
-}
