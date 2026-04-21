@@ -12,6 +12,10 @@ extern ASTNode *ast_ast;
 extern ASTNode *lexer_ast;
 extern ASTNode *parser_ast;
 
+#ifdef __DJGPP__
+extern GraceObject *make_vga(void);
+#endif
+
 /*  Read a whole file into a malloc'd buffer  */
 static char *read_file(const char *path) {
     FILE *f = fopen(path, "r");
@@ -120,6 +124,12 @@ int main(int argc, char *argv[]) {
     gc_collect();
 
     // puts("Conversion done. Evaluating...");
+
+    // Register built-in modules
+    #ifdef __DJGPP__
+    grace_register_module("vga", make_vga());
+    #endif
+
     /*  8. Evaluate the user program  */
     /* The top-level is an object constructor; eval produces a GraceObject.
      * Final result is ignored, but side effects still happen.
