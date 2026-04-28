@@ -359,6 +359,10 @@ method parseExpression(lxr) {
 method parseReturnStatement(lxr) {
     def pos = lxr.current.location
     lxr.advance
+    if (lxr.current.nature == "NEWLINE") then {
+        lxr.advance
+        return ast.returnStmt(pos, ast.lexicalRequest(pos, ast.cons(ast.part("done", ast.nil), ast.nil)))
+    }
     def val = parseExpression(lxr)
     endStatement(lxr)
     ast.returnStmt(pos, val)

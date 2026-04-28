@@ -387,14 +387,14 @@ method lexer(code) {
                 def startIndex = index
                 var op := c
                 if (index <= source.size) then {
-                c := source.at(index)
-                index := index + 1
-                while {isOperatorCharacter(c) && (index <= source.size)} do {
-                    op := op ++ c
                     c := source.at(index)
                     index := index + 1
-                }
-                index := index - 1
+                    while {isOperatorCharacter(c) && (index <= source.size)} do {
+                        op := op ++ c
+                        c := source.at(index)
+                        index := index + 1
+                    }
+                    index := index - 1
                 }
                 if (op == ":=") then {
                     return AssignToken(line, column)
@@ -431,6 +431,10 @@ method lexer(code) {
 
             if (c == ";") then {
                 return SymbolToken(line, column, "SEMICOLON")
+            }
+
+            if (c.firstCodepoint == 9) then {
+                parseError(line, column, "Illegal tab (0+0009) character in source. Use spaces for indentation or \\u0009 inside a string.")
             }
 
             parseError(line, column, "Unknown character: " ++ c.asString ++ " (" ++ c.firstCodepoint.asString ++ ")")
@@ -486,11 +490,24 @@ method lexer(code) {
                     value := value ++ "\n"
                 } elseif { escaped && (cp == 114) } then {
                     value := value ++ "\r"
+                } elseif { escaped && ((cp == 92) || (cp == 123) || (cp == 34)) } then {
+                    value := value ++ source.at(index)
                 } else {
                     if ((cp == 123) && (!escaped)) then {
                         // String interpolation
                         index := index + 1
                         return InterpStringToken(line, column, value)
+                    } elseif { escaped && ((cp == 117) || (cp == 85)) } then {
+                        var hexLen := 4
+                        if (cp == 85) then {
+                            hexLen := 6
+                        }
+                        index := index + 1
+                        def hexVal = lexHex(hexLen)
+                        value := value ++ hexVal.asCodepointString
+                        index := index - 1
+                    } elseif { escaped } then {
+                        parseError(line, column, "Illegal escape sequence in string literal: \\{source.at(index)} not understood.")
                     } else {
                         value := value ++ source.at(index)
                     }
@@ -510,6 +527,35 @@ method lexer(code) {
             currentToken := lexString
         }
 
+        method lexHexDigit {
+            if (index > source.size) then {
+                parseError(line, column, "Unexpected EOF while reading hexadecimal digit")
+            }
+            def c = source.at(index)
+            def cp = c.firstCodepoint
+            index := index + 1
+            column := column + 1
+            if ((cp >= 48) && (cp <= 57)) then {
+                return cp - 48
+            } elseif {(cp >= 97) && (cp <= 102)} then {
+                return cp - 87
+            } else {
+                parseError(line, column, "Invalid hexadecimal digit: character {cp}")
+            }
+        }
+
+        method lexHex(len) {
+            var num := 0
+            var end := index + len
+            if (end > source.size) then {
+                parseError(line, column, "Unexpected EOF while reading hexadecimal digits")
+            }
+            while { index < end } do {
+                num := (num * 16) + lexHexDigit
+            }
+            num
+        }
+
         method windback(pos) {
             index := pos
         }
@@ -519,7 +565,6 @@ method lexer(code) {
                 if ((nature == "IDENTIFIER") && (currentToken.nature == "KEYWORD")) then {
                     parseError(currentToken.line, currentToken.column, "Expected IDENTIFIER but got KEYWORD (" ++ currentToken.value ++ ")")
                 }
-                print("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
                 parseError(currentToken.line, currentToken.column, "Expected " ++ nature ++ " but got " ++ currentToken.nature)
             }
         }
@@ -529,7 +574,6 @@ method lexer(code) {
                 if ((nature == "IDENTIFIER") && (currentToken.nature == "KEYWORD")) then {
                     parseError(currentToken.line, currentToken.column, "Expected IDENTIFIER as " ++ purpose ++ " but got KEYWORD (" ++ currentToken.value ++ ")")
                 }
-                print("Expected " ++ nature ++ " but got " ++ currentToken.nature ++ " at " ++ currentToken.line ++ ":" ++ currentToken.column)
                 parseError(currentToken.line, currentToken.column, "Expected " ++ nature ++ " as " ++ purpose ++ " but got " ++ currentToken.nature)
             }
         }
