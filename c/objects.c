@@ -265,6 +265,32 @@ static PendingStep *number_request(GraceObject *self, Env *env,
         return cont_apply(k, make_match_result(0, grace_done));
     }
     if (strcmp(name,"|(1)")==0) return cont_apply(k, grace_patternor_new(self, args[0]));
+    if (strcmp(name, "asCodepointString(0)") == 0) {
+        if (v < 0 || v > 0x10FFFF || (v >= 0xD800 && v <= 0xDFFF))
+            return grace_raise(env, "ValueError", "Cannot convert %g to codepoint", v);
+        // Convert value to UTF-8 string
+        char buf[5]; int len;
+        if (v <= 0x7F) {
+            buf[0] = (char)v; len = 1;
+        } else if (v <= 0x7FF) {
+            buf[0] = (char)(0xC0 | ((int)v >> 6));
+            buf[1] = (char)(0x80 | ((int)v & 0x3F));
+            len = 2;
+        } else if (v <= 0xFFFF) {
+            buf[0] = (char)(0xE0 | ((int)v >> 12));
+            buf[1] = (char)(0x80 | (((int)v >> 6) & 0x3F));
+            buf[2] = (char)(0x80 | ((int)v & 0x3F));
+            len = 3;
+        } else {
+            buf[0] = (char)(0xF0 | ((int)v >> 18));
+            buf[1] = (char)(0x80 | (((int)v >> 12) & 0x3F));
+            buf[2] = (char)(0x80 | (((int)v >> 6) & 0x3F));
+            buf[3] = (char)(0x80 | ((int)v & 0x3F));
+            len = 4;
+        }
+        buf[len] = 0;
+        return cont_apply(k, grace_string_new(buf));
+    }
     grace_fatal("No method '%s' on Number(%g)", name, v);
 }
 static const char *number_describe(GraceObject *self) {

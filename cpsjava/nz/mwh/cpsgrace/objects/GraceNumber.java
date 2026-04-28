@@ -97,6 +97,10 @@ public class GraceNumber implements GraceObject {
             }
             case "|(1)":
                 return returnCont.returning(ctx, new GracePatternOr(this, args.get(0)));
+            case "asCodepointString":
+                int codepoint = (int) value.doubleValue();
+                String cpstr = new String(Character.toChars(codepoint));
+                return returnCont.returning(ctx, new GraceString(cpstr));
             default:
                 System.out.println("no such method " + methodName + " on Number");
                 return new PendingStep(ctx, returnCont, null);
@@ -147,7 +151,8 @@ public class GraceNumber implements GraceObject {
     private static final Set<String> METHODS = Set.of(
         "asString", "+(1)", "-(1)", "*(1)", "/(1)",
         "==(1)", "!=(1)", "<(1)", ">(1)", ">=(1)", "<=(1)",
-        "..(1)", "%(1)", "prefix-", "match(1)", "|(1)"
+        "..(1)", "%(1)", "prefix-", "match(1)", "|(1)",
+        "hash", "asCodepointString(0)"
     );
 
     @Override

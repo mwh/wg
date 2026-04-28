@@ -313,6 +313,14 @@ export class GraceNumber {
             case 'truncated': return pending(ctx, cont, new GraceNumber(Math.trunc(this.value)));
             case 'rounded':   return pending(ctx, cont, new GraceNumber(Math.round(this.value)));
             case 'abs':       return pending(ctx, cont, new GraceNumber(Math.abs(this.value)));
+            case 'asCodepointString': {
+                const codepoint = this.value;
+                if (!Number.isInteger(codepoint) || codepoint < 0 || codepoint > 0x10FFFF) {
+                    throw new GraceError(`Number ${codepoint} is not a valid Unicode codepoint`);
+                }
+                const cpstr = String.fromCodePoint(codepoint);
+                return pending(ctx, cont, new GraceString(cpstr));
+            }
             default:
                 throw new GraceError(`No such method "${name}" on Number(${this.value})`);
         }
@@ -322,7 +330,7 @@ export class GraceNumber {
         return [
             'asString', '+(1)', '-(1)', '*(1)', '/(1)', '%(1)',
             '==(1)', '!=(1)', '<(1)', '>(1)', '<=(1)', '>=(1)',
-            '..(1)', 'prefix-', 'match(1)', '|(1)', 'truncated', 'rounded', 'abs'
+            '..(1)', 'prefix-', 'match(1)', '|(1)', 'truncated', 'rounded', 'abs', 'asCodepointString'
         ].includes(name);
     }
 

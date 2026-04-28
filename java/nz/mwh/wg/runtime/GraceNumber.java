@@ -73,6 +73,10 @@ public class GraceNumber implements GraceObject {
                 return new GraceMatchResult(false, target);
             } else if (name.equals("asString") || name.equals("asDebugString")) {
                 return new GraceString(toString());
+            } else if (name.equals("asCodepointString")) {
+                int codepoint = (int) value;
+                String cpstr = new String(Character.toChars(codepoint));
+                return new GraceString(cpstr);
             }
         }
         throw new GraceException(request.getVisitor(), "No such method in Number: " + request.getName());

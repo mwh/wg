@@ -170,6 +170,11 @@ getMethod n (GraceNumber f) =
             if f == fromInteger (round f)
                 then continuation ctx $ GraceString (show (round f))
                 else continuation ctx $ GraceString (show f)
+        "asCodepointString(0)" -> \ctx [] ->
+            let codepoint = floor f
+            in if codepoint >= 0 && codepoint <= 0x10FFFF
+                then continuation ctx $ GraceString [chr codepoint]
+                else continuation ctx $ GraceErrorObject $ "Number " ++ show codepoint ++ " is not a valid Unicode codepoint"
 
 getMethod n (GraceString s) =
     case n of
