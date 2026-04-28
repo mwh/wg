@@ -277,8 +277,7 @@ method parseTypeExpressionOrPattern(lxr) {
     if (token.nature == "STRING") then {
         return parseExpression(lxr)
     }
-    print("Unexpected token: " ++ token.asString)
-    parseError(token.line, token.column, "Unexpected token: " ++ token.asString)
+    parseError(token.line, token.column, "Unexpected token " ++ token.asString ++ " where a type expression or pattern was expected")
 }
 
 method parseExpressionNoOpNoDot(lxr) {
@@ -320,7 +319,7 @@ method parseExpressionNoOpNoDot(lxr) {
         def expr = parseExpressionNoOp(lxr)
         return ast.explicitRequest(pos, expr, ast.cons(ast.part("prefix" ++ token.value, ast.nil), ast.nil))
     }
-    parseError(token.line, token.column, "Unexpected token: " ++ token.asString)
+    parseError(token.line, token.column, "Unexpected token " ++ token.asString ++ " in expression")
 }
 
 method parseExpressionNoOp(lxr) {
@@ -358,10 +357,11 @@ method parseExpression(lxr) {
 }
 
 method parseReturnStatement(lxr) {
+    def pos = lxr.current.location
     lxr.advance
     def val = parseExpression(lxr)
     endStatement(lxr)
-    ast.returnStmt(val)
+    ast.returnStmt(pos, val)
 }
 
 method endStatement(lxr) {
@@ -399,9 +399,10 @@ method parseStatement(lxr) {
     }
     var exp := parseExpression(lxr)
     if (lxr.current.nature == "ASSIGN") then {
+        def assignPos = lxr.current.location
         lxr.advance
         def val = parseExpression(lxr)
-        exp := ast.assign(exp, val)
+        exp := ast.assign(assignPos, exp, val)
     }
     endStatement(lxr)
     if (lxr.current.nature == "NEWLINE") then {
@@ -445,7 +446,10 @@ method parseblock(lxr) {
     var params := ast.nil
     var body := ast.nil
     def indentBefore = lexer.indentColumn
+    var startPos := ""
+    var endPos := ""
     if (lxr.current.nature == "LBRACE") then {
+        startPos := lxr.current.location
         lxr.advance
         while { lxr.current.nature == "NEWLINE" } do {
             lxr.advance
@@ -497,7 +501,7 @@ method parseblock(lxr) {
         while { lxr.current.nature == "NEWLINE" } do {
             lxr.advance
         }
-        while {lxr.current.nature != "RBRACE"} do {
+        while {(lxr.current.nature != "RBRACE") && (lxr.current.nature != "EOF")} do {
             lexer.indentColumn := lxr.current.column
             if (lexer.indentColumn <= indentBefore) then {
                 parseError(lxr.current.line, lexer.indentColumn, "Indentation must increase inside block body. Expected at least column " ++ (indentBefore + 1) ++ " on line " ++ lxr.current.line ++ " but got " ++ lexer.indentColumn)
@@ -511,10 +515,14 @@ method parseblock(lxr) {
                 lxr.advance
             }
         }
+        if (lxr.current.nature == "EOF") then {
+            parseError(lxr.current.line, lxr.current.column, "Block starting at " ++ startPos ++ " was never closed - reached end of file")
+        }
         lexer.indentColumn := indentBefore
+        endPos := lxr.current.location
         lxr.advance
     }
-    ast.block(params.reversed(ast.nil), body.reversed(ast.nil))
+    ast.block(startPos, endPos, params.reversed(ast.nil), body.reversed(ast.nil))
 
 }
 
@@ -532,6 +540,7 @@ method parseAnnotations(lxr) {
 }
 
 method parseTypeDeclaration(lxr) {
+    def pos = lxr.current.location
     lxr.expectKeyword "type"
     lxr.advance
     lxr.expectToken "IDENTIFIER" for "type name"
@@ -559,10 +568,11 @@ method parseTypeDeclaration(lxr) {
     lxr.advance
     def typeExpr = parseTypeExpression(lxr)
     endStatement(lxr)
-    ast.typeDecl(ident.value, genericParams, typeExpr)
+    ast.typeDecl(pos, ident.value, genericParams, typeExpr)
 }
 
 method parsedefDeclaration(lxr) {
+    def pos = lxr.current.location
     lxr.advance
     lxr.expectToken("IDENTIFIER") for "def name"
     def name = lxr.current.value
@@ -583,10 +593,11 @@ method parsedefDeclaration(lxr) {
     lxr.advance
     def val = parseExpression(lxr)
     endStatement(lxr)
-    ast.defDecl(name, dtype, anns, val)
+    ast.defDecl(pos, name, dtype, anns, val)
 }
 
 method parsevarDeclaration(lxr) {
+    def pos = lxr.current.location
     lxr.advance
     lxr.expectToken("IDENTIFIER") for "var name"
     def name = lxr.current.value
@@ -607,18 +618,19 @@ method parsevarDeclaration(lxr) {
         lxr.advance
         def val = parseExpression(lxr)
         endStatement(lxr)
-        ast.varDecl(name, dtype, anns, ast.cons(val, ast.nil))
+        ast.varDecl(pos, name, dtype, anns, ast.cons(val, ast.nil))
     } else {
         endStatement(lxr)
-        ast.varDecl(name, dtype, anns, ast.nil)
+        ast.varDecl(pos, name, dtype, anns, ast.nil)
     }
 }
 
 method parseMethodBody(lxr) {
     var body := ast.nil
+    def startPos = lxr.current.location
     lxr.advance
     def indentBefore = lexer.indentColumn
-    while {lxr.current.nature != "RBRACE"} do {
+    while {(lxr.current.nature != "RBRACE") && (lxr.current.nature != "EOF")} do {
         if (lxr.current.nature == "SEMICOLON") then {
             lxr.advance
             lxr.expectToken("NEWLINE")
@@ -645,6 +657,9 @@ method parseMethodBody(lxr) {
             }
         }
     }
+    if (lxr.current.nature == "EOF") then {
+        parseError(lxr.current.line, lxr.current.column, "Method body starting at " ++ startPos ++ " was never closed - reached end of file")
+    }
     lxr.advance
     lexer.indentColumn := indentBefore
     body.reversed(ast.nil)
@@ -652,6 +667,7 @@ method parseMethodBody(lxr) {
 }
 
 method parseMethodDeclaration(lxr) {
+    def pos = lxr.current.location
     lxr.advance
     var parts := ast.nil
     if (lxr.current.nature == "IDENTIFIER") then {
@@ -744,12 +760,12 @@ method parseMethodDeclaration(lxr) {
             anns := parseAnnotations(lxr)
         }
     }
-    //lxr.advance
     def body = parseMethodBody(lxr)
-    ast.methodDecl(parts.reversed(ast.nil), dtype, anns, body)
+    ast.methodDecl(pos, parts.reversed(ast.nil), dtype, anns, body)
 }
 
 method parseClassDeclaration(lxr) {
+    def pos = lxr.current.location
     lxr.advance
     var parts := ast.nil
     while { lxr.current.nature == "IDENTIFIER" } do {
@@ -802,12 +818,14 @@ method parseClassDeclaration(lxr) {
     lxr.advance
     def body = parseObjectBody(lxr)
     lxr.expectSymbol("RBRACE") explaining("Class body starting at " ++ start ++ " did not close properly.")
+    def endPos = lxr.current.location
     lxr.advance
-    def obj = ast.objectConstructor(body, ast.nil)
-    ast.methodDecl(parts.reversed(ast.nil), ast.nil, ast.nil, ast.cons(obj, ast.nil))
+    def obj = ast.objectConstructor(start, endPos, body, ast.nil)
+    ast.methodDecl(pos, parts.reversed(ast.nil), ast.nil, ast.nil, ast.cons(obj, ast.nil))
 }
 
 method parseImport(lxr) {
+    def pos = lxr.current.location
     lxr.expectKeyword("import")
     lxr.advance
     lxr.expectToken("STRING") for "import source"
@@ -829,30 +847,33 @@ method parseImport(lxr) {
     } else {
         ident := ast.identifierDeclaration(name, ast.nil)
     }
-    ast.importStmt(src, ident)
+    ast.importStmt(pos, src, ident)
 }
 
 method parseDialect(lxr) {
+    def pos = lxr.current.location
     lxr.expectKeyword("dialect")
     lxr.advance
     lxr.expectToken("STRING")
     def src = lxr.current.value
     lxr.advance
-    ast.dialectStmt(src)
+    ast.dialectStmt(pos, src)
 }
 
 method parseInherit(lxr) {
+    def pos = lxr.current.location
     lxr.expectKeyword("inherit")
     lxr.advance
     def expr = parseExpression(lxr)
-    ast.inheritStmt(expr, ast.nil)
+    ast.inheritStmt(pos, expr, ast.nil)
 }
 
 method parseUse(lxr) {
+    def pos = lxr.current.location
     lxr.expectKeyword("use")
     lxr.advance
     def expr = parseExpression(lxr)
-    ast.useStmt(expr, ast.nil)
+    ast.useStmt(pos, expr, ast.nil)
 }
 
 method parseObjectBody(lxr) {
@@ -935,6 +956,7 @@ method parseObjectBody(lxr) {
 }
 
 method parseObject(lxr) {
+    def objPos = lxr.current.location
     lxr.advance
     var anns := ast.nil
     if (lxr.current.nature == "KEYWORD") then {
@@ -942,15 +964,16 @@ method parseObject(lxr) {
         anns := parseAnnotations(lxr)
     }
     def start = lxr.current
+    def startPos = lxr.current.location
     lxr.advance
     def body = parseObjectBody(lxr)
     lxr.expectSymbol("RBRACE") explaining("Object body starting at " ++ start ++ " did not close properly.")
+    def endPos = lxr.current.location
     lxr.advance
-    ast.objectConstructor(body, anns)
+    ast.objectConstructor(startPos, endPos, body, anns)
 }
 
 method parseError(line, column, message) {
-    print("Parse error: " ++ message ++ " at " ++ lexer.modulePrefix ++ line ++ ":" ++ column)
     Exception.refine "ParseError".raise(lexer.modulePrefix ++ line ++ ":" ++ column ++ ": " ++ message)
 }
 

@@ -143,8 +143,13 @@ method lineup(elems) {
 }
 
 method inheritStmt(expr, extra) {
+    inheritStmt("", expr, extra)
+}
+
+method inheritStmt(pos, expr, extra) {
     object {
         def parent is public = expr
+        def position is public = pos
         def kind is public = "inheritStmt"
 
         method asString {
@@ -158,8 +163,13 @@ method inheritStmt(expr, extra) {
 }
 
 method useStmt(expr, extra) {
+    useStmt("", expr, extra)
+}
+
+method useStmt(pos, expr, extra) {
     object {
         def parent is public = expr
+        def position is public = pos
         def kind is public = "useStmt"
 
         method asString {
@@ -173,9 +183,15 @@ method useStmt(expr, extra) {
 }
 
 method block(params, stmts) {
+    block("", "", params, stmts)
+}
+
+method block(startPos, endPos, params, stmts) {
     object {
         def parameters is public = params
         def statements is public = stmts
+        def position is public = startPos
+        def endPosition is public = endPos
         def kind is public = "block"
 
         method asString {
@@ -189,11 +205,16 @@ method block(params, stmts) {
 }
 
 method defDecl(id, dtype, anns, val) {
+    defDecl("", id, dtype, anns, val)
+}
+
+method defDecl(pos, id, dtype, anns, val) {
     object {
         def name is public = id
         def decType is public = dtype
         def annotations is public = anns
         def value is public = val
+        def position is public = pos
         def kind is public = "defDec"
 
         method asString {
@@ -208,10 +229,15 @@ method defDecl(id, dtype, anns, val) {
 
 
 method typeDecl(id, genericParams, val) {
+    typeDecl("", id, genericParams, val)
+}
+
+method typeDecl(pos, id, genericParams, val) {
     object {
         def name is public = id
         def genericParameters is public = genericParams
         def value is public = val
+        def position is public = pos
         def kind is public = "typeDec"
 
         method asString {
@@ -256,11 +282,16 @@ method methSig(pts, rType) {
 }
 
 method varDecl(id, dtype, anns, val) {
+    varDecl("", id, dtype, anns, val)
+}
+
+method varDecl(pos, id, dtype, anns, val) {
     object {
         def name is public = id
         def decType is public = dtype
         def annotations is public = anns
         def value is public = val
+        def position is public = pos
         def kind is public = "varDec"
 
         method asString {
@@ -274,33 +305,7 @@ method varDecl(id, dtype, anns, val) {
 }
 
 method lexicalRequest(requestParts) {
-    object {
-        def parts is public = requestParts
-        def kind is public = "lexReq"
-
-        method asString {
-            "lexReq(" ++ parts ++ ")"
-        }
-
-        method concise {
-            var name := ""
-            var args := nil
-            var genericParams := nil
-            parts.map { p -> 
-                name := name ++ p.name
-                name := name ++ "(" ++ p.parameters.size.asString ++ ")"
-                p.parameters.map { a -> 
-                    args := cons(a, args)
-                    true
-                }
-                p.genericParameters.map { gp ->
-                    genericParams := cons(gp, genericParams)
-                    true
-                }
-            }
-            "l0R(\"" ++ name ++ "\"," ++ args.reversed(nil).concise ++ "," ++ genericParams.reversed(nil).concise ++ ")"
-        }
-    }
+    lexicalRequest("", requestParts)
 }
 
 method lexicalRequest(pos, requestParts) {
@@ -401,11 +406,16 @@ method part(partName, args, genericParams) {
 }
 
 method methodDecl(declarationParts, retType, anns, bd) {
+    methodDecl("", declarationParts, retType, anns, bd)
+}
+
+method methodDecl(pos, declarationParts, retType, anns, bd) {
     object {
         def parts is public = declarationParts
         def returnType is public = retType
         def annotations is public = anns
         def body is public = bd
+        def position is public = pos
         def kind is public = "methDec"
 
         method asString {
@@ -419,9 +429,15 @@ method methodDecl(declarationParts, retType, anns, bd) {
 }
 
 method objectConstructor(bd, anns) {
+    objectConstructor("", "", bd, anns)
+}
+
+method objectConstructor(startPos, endPos, bd, anns) {
     object {
         def body is public = bd
         def annotations is public = anns
+        def position is public = startPos
+        def endPosition is public = endPos
         def kind is public = "objCons"
 
         method asString {
@@ -436,9 +452,14 @@ method objectConstructor(bd, anns) {
 }
 
 method assign(lhs, rhs) {
+    assign("", lhs, rhs)
+}
+
+method assign(pos, lhs, rhs) {
     object {
         def left is public = lhs
         def right is public = rhs
+        def position is public = pos
         def kind is public = "assn"
 
         method asString {
@@ -452,8 +473,13 @@ method assign(lhs, rhs) {
 }
 
 method returnStmt(val) {
+    returnStmt("", val)
+}
+
+method returnStmt(pos, val) {
     object {
         def value is public = val
+        def position is public = pos
         def kind is public = "returnStmt"
 
         method asString {
@@ -498,9 +524,14 @@ method comment(text) {
 }
 
 method importStmt(src, nm) {
+    importStmt("", src, nm)
+}
+
+method importStmt(pos, src, nm) {
     object {
         def source is public = src
         def binding is public = nm
+        def position is public = pos
         def kind is public = "importStmt"
 
         method asString {
@@ -514,8 +545,13 @@ method importStmt(src, nm) {
 }
 
 method dialectStmt(src) {
+    dialectStmt("", src)
+}
+
+method dialectStmt(pos, src) {
     object {
         def source is public = src
+        def position is public = pos
         def kind is public = "dialectStmt"
 
         method asString {

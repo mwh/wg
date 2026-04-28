@@ -308,7 +308,7 @@ method lexer(code) {
                 return RSquareToken(line, column)
             }
 
-            if ((c > "z") && (c < "|")) then {
+            if (c.firstCodepoint == 123) then {
                 return LBraceToken(line, column)
             }
 
@@ -386,6 +386,7 @@ method lexer(code) {
             if (isOperatorCharacter(c)) then {
                 def startIndex = index
                 var op := c
+                if (index <= source.size) then {
                 c := source.at(index)
                 index := index + 1
                 while {isOperatorCharacter(c) && (index <= source.size)} do {
@@ -394,6 +395,7 @@ method lexer(code) {
                     index := index + 1
                 }
                 index := index - 1
+                }
                 if (op == ":=") then {
                     return AssignToken(line, column)
                 }
