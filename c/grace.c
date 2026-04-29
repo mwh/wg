@@ -37,6 +37,8 @@ const char *c9H = "#";
  *  */
 ASTNode *nil = NULL;
 
+char *executable_path = NULL;
+
 /* 
  * Utility helpers
  *  */

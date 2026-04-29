@@ -16,6 +16,8 @@ extern ASTNode *parser_ast;
 extern GraceObject *make_vga(void);
 #endif
 
+extern char *executable_path;
+
 /*  Read a whole file into a malloc'd buffer  */
 static char *read_file(const char *path) {
     FILE *f = fopen(path, "r");
@@ -73,6 +75,8 @@ int main(int argc, char *argv[]) {
         #endif
         return 0;
     }
+
+    executable_path = argv[0];
     
     const char *user_file = argv[file_index];
     char *source = read_file(user_file);

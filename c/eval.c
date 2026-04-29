@@ -3,9 +3,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include "ast.h"
 #include "grace.h"
 #include "gc.h"
+
+
+extern char *executable_path;
+char *try_load_from_self(const char *fn);
 
 /*
  * parts_to_name: build method name like "at(1)put(1)" from NK_PART list
@@ -1294,19 +1299,35 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
             gc_push_root(&env->receiver);
             gc_push_root(&env->scope);
             gc_push_cont_root(&k);
-            /* Load src.grace from disk, parse, eval, and register */
+            char *msrc;
             char path[512];
-            snprintf(path, sizeof(path), "%s.grace", src);
-            FILE *mf = fopen(path, "r");
-            if (!mf)
-                grace_fatal("Cannot find module '%s': no such file '%s'", src, path);
-            fseek(mf, 0, SEEK_END);
-            long msz = ftell(mf);
-            fseek(mf, 0, SEEK_SET);
-            char *msrc = malloc(msz + 1);
-            fread(msrc, 1, msz, mf);
-            msrc[msz] = '\0';
-            fclose(mf);
+            if (strncmp(src, "grace:", 6) == 0) {
+                /* Source code in-executable (ZIP format) */
+                const char *fn = src + 6;
+                char need_name[512];
+                snprintf(need_name, sizeof(need_name), "%s.grace", fn);
+                msrc = try_load_from_self(need_name);
+                if (!msrc) {
+                    grace_fatal("Cannot find packed-in module '%s': not found in executable", src);
+                }
+            } else {
+                /* Load src.grace from disk, parse, eval, and register */
+                snprintf(path, sizeof(path), "%s.grace", src);
+                FILE *mf = fopen(path, "r");
+                if (!mf) {
+                    msrc = try_load_from_self(path);
+                    if (!msrc)
+                        grace_fatal("Cannot find module '%s': no such file '%s'", src, path);
+                } else {
+                    fseek(mf, 0, SEEK_END);
+                    long msz = ftell(mf);
+                    fseek(mf, 0, SEEK_SET);
+                    msrc = malloc(msz + 1);
+                    fread(msrc, 1, msz, mf);
+                    msrc[msz] = '\0';
+                    fclose(mf);
+                }
+            }
             GraceObject *parser_obj = grace_find_module("//parser");
             if (!parser_obj)
                 grace_fatal("Parser not available for loading module '%s'", src);
@@ -1388,4 +1409,79 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
         grace_fatal("eval_node: unknown node kind %d", node->kind);
     }
     return NULL; /* unreachable */
+}
+
+char *try_load_from_self(const char *fn) {
+    char *msrc = NULL;
+    /* Source code in-executable (ZIP format) */
+    const char *need_name = fn;
+    FILE *zf = fopen(executable_path, "rb");
+    if (zf) {
+        uint32_t magic;
+        // Find EOCD record
+        fseek(zf, -22, SEEK_END);
+        fread(&magic, 1, 4, zf);
+        if (magic == 0x06054b50) {
+            // EOCD record found, search as a zip file
+            uint16_t num_entries;
+            uint32_t throwaway, cd_size, cd_offset;
+            fread(&throwaway, 1, 2, zf);  // disk number
+            fread(&throwaway, 1, 2, zf);  // disk with central directory
+            fread(&throwaway, 1, 2, zf);  // total entries on this disk
+            fread(&num_entries, 1, 2, zf);
+            fread(&cd_size, 1, 4, zf);
+            fread(&cd_offset, 1, 4, zf);
+            // Read central directory
+            fseek(zf, cd_offset, SEEK_SET);
+            for (int i = 0; i < num_entries; i++) {
+                uint32_t sig;
+                fread(&sig, 1, 4, zf);
+                if (sig != 0x02014b50) {
+                    return 0;
+                    //grace_fatal("Invalid ZIP file: bad central directory signature %08x", sig);
+                }
+                fseek(zf, 6, SEEK_CUR); // skip to compression method
+                uint16_t comp_method, filename_len, extra_len, comment_len;
+                uint32_t uncomp_size;
+                fread(&comp_method, 1, 2, zf);
+                fread(&throwaway, 1, 4, zf);  // skip mod time/date
+                fread(&throwaway, 1, 4, zf);  // skip CRC
+                fread(&throwaway, 1, 4, zf);  // skip compressed size
+                fread(&uncomp_size, 1, 4, zf);// uncompressed size
+                fread(&filename_len, 1, 2, zf); // filename length
+                fread(&extra_len, 1, 2, zf);    // "extra" field size
+                fread(&comment_len, 1, 2, zf);  // comment length
+                fseek(zf, 8, SEEK_CUR); // skip to local header offset
+                uint32_t local_header_offset;
+                fread(&local_header_offset, 1, 4, zf);
+                char fname[256];
+                fread(fname, 1, filename_len, zf);
+                fname[filename_len] = '\0';
+                fseek(zf, extra_len + comment_len, SEEK_CUR); // skip extra and comment
+                if (strcmp(fname, need_name) == 0) {
+                    if (comp_method != 0) {
+                        grace_fatal("Cannot import packed-in '%s': compression method %d not supported (use zip -0 or -n .grace)",
+                            fn, comp_method);
+                    }
+                    fseek(zf, local_header_offset, SEEK_SET);
+                    uint32_t local_sig;
+                    fread(&local_sig, 1, 4, zf);
+                    if (local_sig != 0x04034b50) {
+                        grace_fatal("Invalid ZIP file: bad local header signature %08x", local_sig);
+                    }
+                    fseek(zf, 22, SEEK_CUR); // skip to filename length
+                    uint16_t local_filename_len, local_extra_len;
+                    fread(&local_filename_len, 1, 2, zf);
+                    fread(&local_extra_len, 1, 2, zf);
+                    fseek(zf, local_filename_len + local_extra_len, SEEK_CUR); // skip filename and extra
+                    msrc = malloc(uncomp_size + 1);
+                    fread(msrc, 1, uncomp_size, zf);
+                    msrc[uncomp_size] = '\0';
+                    fclose(zf);
+                    break;
+                }
+            }
+        }
+    }
+    return msrc;
 }

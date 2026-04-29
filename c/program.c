@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+extern char *executable_path;
+
 static GraceObject *evaluate_module(char *name, ASTNode *ast, Env *env) {
     CaptureCont cc;
     cc.base.apply = capture_apply;
@@ -34,6 +36,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Usage: %s [--notices]\n", argv[0]);
         return 1;
     }
+    executable_path = argv[0];
     GraceObject *prelude = make_prelude();
     gc_push_root(&prelude);
     Env *env = env_new(prelude);
