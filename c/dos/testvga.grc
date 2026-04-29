@@ -1,0 +1,84 @@
+import "vga" as vga
+
+vga.mode := 19 // 320x200x256
+
+
+for (196..199) do { y ->
+    def offset = y * 320
+    for (1..255) do { x ->
+        // Direct VGA memory access as array
+        vga.at(offset + x)put(x)
+    }
+}
+
+for (1..255) do { x ->
+    for (192..195) do { y ->
+        // Set pixels directly
+        vga.setColour(x)atX(x)Y(y)
+    }
+}
+
+// Fill rectangles
+vga.rectFrom(10, 20)to(200, 60)colour(4)
+
+method drawSwatchesFrom(xs, ys) to(xe, ye) {
+    for (ys..ye) do { y ->
+        def y1 = y * 12
+        def y2 = y1 + 12
+        for (xs..xe) do { x ->
+            def x1 = x * 20
+            def c = (y * 16) + x
+            vga.rectFrom(x * 20, y1) to(x1 + 20, y2) colour(c)
+        }
+    }
+}
+
+method drawSwatches {
+    drawSwatchesFrom(0, 0) to (15,15)
+}
+
+drawSwatchesFrom(0, 0) to (15,15)
+
+vga.mouseEnabled := true
+
+var lastBoxX := 8
+var lastBoxY := 8
+
+
+while { !vga.kbHit } do {
+    def x = vga.mouseX
+    def y = vga.mouseY
+    def xCell = (x - (x % 40)) / 40
+    def yCell = (y / 12).asInteger
+    def colour = (yCell * 16) + xCell
+    vga.rectFrom(256, 192) to(320, 200) colour(colour)
+    if (vga.mouseButton == 1) then {
+        def baseY1 = yCell * 12
+        def baseX1 = xCell * 20
+        def baseY2 = baseY1 + 12
+        def baseX2 = baseX1 + 20
+        vga.mouseVisible := false
+        drawSwatchesFrom(lastBoxX - 1, lastBoxY - 2)to(lastBoxX + 1, lastBoxY + 2)
+        for (1..20) do { i ->
+            vga.rectFrom(baseX1 - i, baseY1 - i) to(baseX2 + i, baseY2 + i) colour(colour)
+            vga.delay 10
+        }
+        lastBoxX := xCell
+        lastBoxY := yCell
+        vga.mouseVisible := true
+
+    } elseif { vga.mouseButton == 2 } then {
+        vga.mouseVisible := false
+        drawSwatchesFrom(0, 0) to(15, 15)
+        vga.mouseVisible := true
+    }
+}
+
+vga.getch
+
+
+vga.mouseEnabled := false
+
+vga.mode := 3
+
+// vim: set expandtab sw=4 ts=4:

@@ -1,0 +1,23 @@
+Compile using DJGPP <https://www.delorie.com/djgpp/>. You will need a large
+amount of RAM to compile the interpreter (256 MB is good), and much less to
+compile a fixed program. You will want the maximum cycles available.
+
+The run-time memory usage is not so big and the interpreter or executable can
+run under realistic configurations (standard DOSBox settings are adequate); it
+is only running the C compiler on the parser that is highly memory-intensive.
+
+Compile with
+    make grace.exe
+for the full interpreter. Re-run make if linking fails the first time. Use
+    make graceraw.exe
+for a freestanding version that includes a DPMI stub. You will need
+PMODSTUB.EXE from pmode13b.zip to be in C:\DJGPP\BIN for this.
+
+You can then run a Grace program with
+    grace FILE.GRC
+For a fixed program baked into program.c, compile with
+    make program.exe prograw.exe
+You can produce the baked AST serialisation with
+    grace -P FILE.GRC
+It will be better to do this outside the DOS machine. A program compiled this
+way will start up much faster, but be equivalent after that.
