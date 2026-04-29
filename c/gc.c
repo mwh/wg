@@ -38,6 +38,7 @@ static size_t gc_alloc_counter = 0;
 static int gc_suppress_count = 0;
 
 int gc_phase_start_live;
+size_t gc_last_total_continuations;
 
 /* Adaptive threshold: after each collection, set to 2x surviving objects.
  * GC_MIN_THRESHOLD is the floor for the adaptive logic and is intentionally
@@ -297,7 +298,6 @@ static void gc_print_heap_summary(void) {
     size_t primarrays = 0;
     size_t other = 0;
     size_t conts_live = 0;
-    size_t conts_total = 0;
 
     for (GraceObject *obj = gc_heap_head; obj; obj = obj->gc_next) {
         if (obj->vt == &grace_number_vtable) {
@@ -331,7 +331,6 @@ static void gc_print_heap_summary(void) {
     /* Count live continuations */
     size_t conts_consumed = 0;
     for (Cont *c = gc_cont_sentinel.gc_cont_next; c != &gc_cont_sentinel; c = c->gc_cont_next) {
-        conts_total++;
         if (c->gc_epoch == gc_trace_epoch) {
             conts_live++;
             if (c->consumed) conts_consumed++;
@@ -343,7 +342,7 @@ static void gc_print_heap_summary(void) {
             gc_statistics.collections,
             gc_phase_start_live - gc_statistics.heap_size,
             gc_statistics.heap_size,
-            conts_live, conts_total,
+            conts_live, gc_last_total_continuations,
             conts_consumed,
             gc_root_sp, gc_cont_root_sp, gc_tramp_depth,
             users,
@@ -384,6 +383,7 @@ void gc_cont_unlink(Cont *k) {
  * Phase 2: call all cleanup functions (may touch other swept conts).
  * Phase 3: free all detached conts. */
 void gc_sweep_conts(void) {
+    gc_last_total_continuations = 0;
     Cont *to_free = NULL;
     Cont *c = gc_cont_sentinel.gc_cont_next;
     while (c != &gc_cont_sentinel) {
@@ -398,6 +398,7 @@ void gc_sweep_conts(void) {
             c->refcount = CONT_REFCOUNT_STATIC;  /* prevent cascading frees */
             to_free = c;
         }
+        gc_last_total_continuations++;
         c = next;
     }
     /* Phase 2: run all cleanup functions while memory is still valid. */
