@@ -1333,7 +1333,7 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
                 grace_fatal("Parser not available for loading module '%s'", src);
             GraceObject *pargs[2] = {
                 grace_string_new(path),
-                grace_string_new(msrc)   /* msrc ownership transferred */
+                grace_string_take(msrc)
             };
             GraceObject *ast_obj = grace_request_sync(parser_obj, env,
                                                        "parseModule(2)", pargs, 2);

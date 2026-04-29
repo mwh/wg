@@ -299,9 +299,26 @@ static const char *number_describe(GraceObject *self) {
     return buf;
 }
 const GraceVTable grace_number_vtable = { number_request, number_describe, NULL, NULL };
+const int small_ints_size = 128;
+GraceNumber *small_ints[128];
+static int gc_ints_root_tracer_registered = 0;
+
+static void grace_number_intern_tracer(void) {
+    for (int i = 0; i < small_ints_size; i++)
+        if (small_ints[i]) gc_mark_grey((GraceObject *)small_ints[i]);
+}
+
 GraceObject *grace_number_new(double v) {
+    int candidate = (int)v == v && v >= 0 && v < small_ints_size;
+    if (candidate && small_ints[(int)v])
+        return (GraceObject *)small_ints[(int)v];
     GraceNumber *n = (GraceNumber *)gc_alloc(sizeof(GraceNumber));
     n->base.vt = &grace_number_vtable; n->value = v;
+    if (candidate) {
+        small_ints[(int)v] = n;
+        if (!gc_ints_root_tracer_registered)
+            gc_register_root_tracer(&grace_number_intern_tracer);
+    }
     return (GraceObject *)n;
 }
 double grace_number_val(GraceObject *o) {
@@ -498,11 +515,29 @@ static void string_sweep_free(GraceObject *self) {
     GraceString *gs = (GraceString *)self;
     if (gs->value) free((void *)gs->value);
 }
+const int small_strings_size = 128;
+GraceString *small_strings[128];
+static int gc_strings_root_tracer_registered = 0;
+
+static void grace_strings_intern_tracer(void) {
+    for (int i = 0; i < small_strings_size; i++)
+        if (small_strings[i]) gc_mark_grey((GraceObject *)small_strings[i]);
+}
+
 const GraceVTable grace_string_vtable = { string_request, string_describe, NULL, string_sweep_free };
 GraceObject *grace_string_new(const char *s) {
+    int candidate = s[0] != 0 && s[1] == 0 && (unsigned char)s[0] < small_strings_size;
+    int c = (unsigned char)s[0];
+    if (candidate && small_strings[c])
+        return (GraceObject *)small_strings[c];
     GraceString *gs = (GraceString *)gc_alloc(sizeof(GraceString));
     gs->base.vt = &grace_string_vtable;
     gs->value = str_dup(s ? s : "");
+    if (candidate) {
+        small_strings[c] = gs;
+        if (!gc_strings_root_tracer_registered)
+            gc_register_root_tracer(&grace_strings_intern_tracer);
+    }
     return (GraceObject *)gs;
 }
 /* Like grace_string_new, but takes ownership of the malloc'd string `s`
