@@ -34,6 +34,9 @@ static int gc_tramp_depth = 0;
 /* Allocation counter since last collection */
 static size_t gc_alloc_counter = 0;
 
+/* Suppression counter: when > 0, gc_maybe_collect() is a no-op. */
+static int gc_suppress_count = 0;
+
 int gc_phase_start_live;
 
 /* Adaptive threshold: after each collection, set to 2x surviving objects.
@@ -95,6 +98,9 @@ void gc_pop_roots(int n) {
     gc_root_sp -= n;
     if (gc_root_sp < 0) gc_root_sp = 0;
 }
+
+void gc_suppress(void) { gc_suppress_count++; }
+void gc_unsuppress(void) { if (gc_suppress_count > 0) gc_suppress_count--; }
 
 void gc_push_cont_root(Cont **root) {
     if (gc_cont_root_sp >= GC_MAX_CONT_ROOTS) {
@@ -532,6 +538,7 @@ void gc_collect(void) {
 }
 
 void gc_maybe_collect(void) {
+    if (gc_suppress_count > 0) return;
     if (gc_phase == GC_PHASE_IDLE) {
         if (gc_alloc_counter >= gc_next_threshold)
             gc_start_cycle();

@@ -116,7 +116,9 @@ int main(int argc, char *argv[]) {
     gc_pop_roots(2);
     // puts("Parsing done. Converting...");
     /*  7. Convert Grace AST object -> ASTNode* tree  */
+    gc_suppress();
     ASTNode *program = grace_ast_to_astnode(grace_ast_obj, env);
+    gc_unsuppress();
     if (!program) {
         fprintf(stderr, "grace: parser returned nothing for '%s'\n", user_file);
         return 1;

@@ -46,6 +46,12 @@ void gc_push_root(GraceObject **root);
 void gc_pop_root(void);
 void gc_pop_roots(int n);
 
+/* Temporarily suppress incremental GC collection.  Nest-safe (counter-based).
+ * Use around phases that hold GraceObject* in C locals across GC-triggering
+ * calls and cannot conveniently push/pop roots (e.g. AST conversion). */
+void gc_suppress(void);
+void gc_unsuppress(void);
+
 /* Cont root stack: protect Cont* held on the C stack during nested
  * trampolines from being freed by gc_sweep_conts. */
 struct Cont;

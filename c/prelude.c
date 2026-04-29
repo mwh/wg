@@ -38,7 +38,7 @@ static void while_cleanup(Cont *c) {
     WhileState *ws = wc->ws;
     if (!ws) return;
     env_release(ws->env);
-    cont_release_abandon(ws->exit_k);
+    cont_release(ws->exit_k);
     free(ws);
 }
 
@@ -93,7 +93,7 @@ static void print_asstr_trace(Cont *c) {
 static void print_asstr_cleanup(Cont *c) {
     PrintAsStrCont *pc = (PrintAsStrCont *)c;
     env_release(pc->env);
-    cont_release_abandon(pc->k);
+    cont_release(pc->k);
 }
 static PendingStep *print_asstr_apply(Cont *c, GraceObject *str_val) {
     PrintAsStrCont *pc = (PrintAsStrCont *)c;
@@ -151,8 +151,8 @@ static void try_catch_cleanup(Cont *c) {
     TryCatchData *td = (TryCatchData *)c;
     free(td->catch_blks);
     env_release(td->env);
-    cont_release_abandon(td->k);
-    if (td->outer_except_k) cont_release_abandon(td->outer_except_k);
+    cont_release(td->k);
+    if (td->outer_except_k) cont_release(td->outer_except_k);
 }
 
 /* match loop for trying catch blocks in order */
@@ -169,8 +169,8 @@ static void tc_match_state_free(TCMatchState *ms) {
     if (!ms) return;
     free(ms->catch_blks);
     env_release(ms->env);
-    cont_release_abandon(ms->k);
-    if (ms->outer_except_k) cont_release_abandon(ms->outer_except_k);
+    cont_release(ms->k);
+    if (ms->outer_except_k) cont_release(ms->outer_except_k);
     free(ms);
 }
 
@@ -355,7 +355,7 @@ static void match_state_free(MatchState *ms) {
     if (!ms) return;
     free(ms->cases);
     env_release(ms->env);
-    cont_release_abandon(ms->k);
+    cont_release(ms->k);
     free(ms);
 }
 
@@ -554,7 +554,7 @@ static void elseif_trace(Cont *c) {
 static void elseif_cleanup(Cont *c) {
     ElseifCont *ec = (ElseifCont *)c;
     env_release(ec->env);
-    cont_release_abandon(ec->outer_k);
+    cont_release(ec->outer_k);
 }
 
 static PendingStep *elseif_cont_fn(Cont *ck, GraceObject *cond_result) {
@@ -577,8 +577,16 @@ static PendingStep *elseif_cont_fn(Cont *ck, GraceObject *cond_result) {
     if (next + 1 < pairs_end) {
         /* Another elseif condition to evaluate - apply it */
         ElseifCont *nc = CONT_ALLOC(ElseifCont);
+        /* Save GC linkage that CONT_ALLOC established before the struct copy */
+        Cont *gc_next = nc->base.gc_cont_next;
+        Cont *gc_prev = nc->base.gc_cont_prev;
+        unsigned int gc_ep = nc->base.gc_epoch;
         *nc = *ec;
-        nc->base.refcount = 1;  /* reset after struct copy */
+        /* Restore fields overwritten by struct copy */
+        nc->base.gc_cont_next = gc_next;
+        nc->base.gc_cont_prev = gc_prev;
+        nc->base.gc_epoch     = gc_ep;
+        nc->base.refcount = 1;
         nc->base.consumed = 0;
         nc->cur_idx = next;
         nc->env = env_retain(ec->env);  /* nc gets its own ref */
@@ -592,8 +600,14 @@ static PendingStep *elseif_cont_fn(Cont *ck, GraceObject *cond_result) {
     }
     if (next < pairs_end) {
         ElseifCont *nc = CONT_ALLOC(ElseifCont);
+        Cont *gc_next = nc->base.gc_cont_next;
+        Cont *gc_prev = nc->base.gc_cont_prev;
+        unsigned int gc_ep = nc->base.gc_epoch;
         *nc = *ec;
-        nc->base.refcount = 1;  /* reset after struct copy */
+        nc->base.gc_cont_next = gc_next;
+        nc->base.gc_cont_prev = gc_prev;
+        nc->base.gc_epoch     = gc_ep;
+        nc->base.refcount = 1;
         nc->base.consumed = 0;
         nc->cur_idx = next;
         nc->env = env_retain(ec->env);
@@ -754,7 +768,7 @@ static PromptBox *promptbox_retain(PromptBox *pb) {
 }
 static void promptbox_release(PromptBox *pb) {
     if (pb && --pb->refcount <= 0) {
-        cont_release_abandon(pb->outer_k);
+        cont_release(pb->outer_k);
         free(pb);
     }
 }
@@ -826,7 +840,7 @@ static void reified_cont_trace_data(void *data) {
 }
 static void reified_cont_free_data(void *data) {
     ReifiedContData *rd = (ReifiedContData *)data;
-    cont_release_abandon(rd->captured_k);
+    cont_release(rd->captured_k);
     promptbox_release(rd->box);
     free(rd);
 }

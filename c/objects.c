@@ -68,7 +68,7 @@ static void range_iter_cleanup(Cont *c) {
     RangeIterState *st = rc->st;
     if (!st) return;
     env_release(st->env);
-    cont_release_abandon(st->k);
+    cont_release(st->k);
     free(st);
 }
 static PendingStep *range_iter_next(Cont *c, GraceObject *v) {
@@ -130,7 +130,7 @@ static void rev_iter_cleanup(Cont *c) {
     RevIterState *st = rc->st;
     if (!st) return;
     env_release(st->env);
-    cont_release_abandon(st->k);
+    cont_release(st->k);
     free(st);
 }
 static PendingStep *rev_iter_next(Cont *c, GraceObject *v) {
@@ -325,7 +325,7 @@ static void concat_asstr_trace(Cont *c) {
 }
 static void concat_asstr_cleanup(Cont *c) {
     ConcatAsStrCont *cc = (ConcatAsStrCont *)c;
-    cont_release_abandon(cc->k);
+    cont_release(cc->k);
 }
 static PendingStep *concat_asstr_apply(Cont *c, GraceObject *v) {
     ConcatAsStrCont *cc = (ConcatAsStrCont *)c;
@@ -608,7 +608,7 @@ static void por_left_trace(Cont *c) {
 static void por_left_cleanup(Cont *c) {
     PatternOrLeftCont *pc = (PatternOrLeftCont *)c;
     env_release(pc->env);
-    cont_release_abandon(pc->k);
+    cont_release(pc->k);
 }
 static PendingStep *por_left_apply(Cont *c, GraceObject *result) {
     PatternOrLeftCont *pc = (PatternOrLeftCont *)c;
@@ -694,6 +694,7 @@ static PendingStep *block_body_go(PendingStep *self) {
     Env *inner = s->inner_env;
     Cont *k = s->k;
     free(self);
+    cont_retain(k);
     PendingStep *r = eval_stmts(body, inner, k);
     cont_release(k);
     env_release(inner);
@@ -708,7 +709,7 @@ static PendingStep *block_request(GraceObject *self, Env *env, const char *name,
 /* Wrap body result in MatchResult(true, result) */
 typedef struct { Cont base; Cont *k; } BlockMatchWrapCont;
 static void bmw_trace(Cont *c)   { gc_trace_cont(((BlockMatchWrapCont *)c)->k); }
-static void bmw_cleanup(Cont *c) { cont_release_abandon(((BlockMatchWrapCont *)c)->k); }
+static void bmw_cleanup(Cont *c) { cont_release(((BlockMatchWrapCont *)c)->k); }
 static PendingStep *bmw_apply(Cont *c, GraceObject *body_result) {
     BlockMatchWrapCont *bc = (BlockMatchWrapCont *)c;
     Cont *k = bc->k; bc->k = NULL;
@@ -736,7 +737,7 @@ static void bmc_trace(Cont *c) {
 static void bmc_cleanup(Cont *c) {
     BlockMatchCheckCont *bc = (BlockMatchCheckCont *)c;
     env_release(bc->env);
-    cont_release_abandon(bc->k);
+    cont_release(bc->k);
 }
 static PendingStep *bmc_apply(Cont *c, GraceObject *match_result) {
     BlockMatchCheckCont *bc = (BlockMatchCheckCont *)c;
@@ -789,7 +790,7 @@ static void bmp_trace(Cont *c) {
 static void bmp_cleanup(Cont *c) {
     BlockMatchPatternCont *bc = (BlockMatchPatternCont *)c;
     env_release(bc->env);
-    cont_release_abandon(bc->k);
+    cont_release(bc->k);
 }
 static PendingStep *bmp_apply(Cont *c, GraceObject *pattern) {
     BlockMatchPatternCont *bc = (BlockMatchPatternCont *)c;
@@ -940,7 +941,7 @@ static void lineup_iter_cleanup(Cont *c) {
     LineupIterState *st = lc->st;
     if (!st) return;
     env_release(st->env);
-    cont_release_abandon(st->k);
+    cont_release(st->k);
     free(st);
 }
 
@@ -996,7 +997,7 @@ static void lineup_asstr_cleanup(Cont *c) {
     LineupAsStrState *st = lc->st;
     if (!st) return;
     env_release(st->env);
-    cont_release_abandon(st->k);
+    cont_release(st->k);
     free(st->so_far);
     free(st);
 }
@@ -1157,7 +1158,7 @@ static void primarray_iter_cleanup(Cont *c) {
     PrimArrayIterState *st = pc->st;
     if (!st) return;
     env_release(st->env);
-    cont_release_abandon(st->k);
+    cont_release(st->k);
     free(st);
 }
 static PendingStep *primarray_iter_next(Cont *c, GraceObject *v) {

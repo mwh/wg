@@ -89,7 +89,7 @@ static void eac_trace(Cont *c) {
 static void eac_cleanup(Cont *c) {
     EvalArgsCont *ea = (EvalArgsCont *)c;
     env_release(ea->env);
-    cont_release_abandon(ea->final_k);
+    cont_release(ea->final_k);
     free(ea->arr);
     free((char *)ea->name);
 }
@@ -138,7 +138,7 @@ static void lineup_build_trace(Cont *c) {
 static void lineup_build_cleanup(Cont *c) {
     LineupBuildCont *lb = (LineupBuildCont *)c;
     env_release(lb->env);
-    cont_release_abandon(lb->k);
+    cont_release(lb->k);
     free(lb->arr);
 }
 
@@ -287,7 +287,7 @@ static void stmts_cont_trace(Cont *c) {
 static void stmts_cont_cleanup(Cont *c) {
     StmtsCont *sc = (StmtsCont *)c;
     env_release(sc->env);
-    cont_release_abandon(sc->k);
+    cont_release(sc->k);
 }
 
 PendingStep *eval_stmts(ASTNode *stmts, Env *env, Cont *k) {
@@ -383,7 +383,7 @@ static void dot_recv_cont_trace(Cont *c) {
 static void dot_recv_cont_cleanup(Cont *c) {
     DotRecvCont *dc = (DotRecvCont *)c;
     env_release(dc->env);
-    cont_release_abandon(dc->k);
+    cont_release(dc->k);
     free(dc->name);
 }
 
@@ -449,7 +449,7 @@ static void interp_expr_cont_trace(Cont *c) {
 }
 static void interp_expr_cont_cleanup(Cont *c) {
     InterpExprCont *ie = (InterpExprCont *)c;
-    cont_release_abandon((Cont *)ie->nc);
+    cont_release((Cont *)ie->nc);
 }
 
 static PendingStep *interp_asstr_cont_apply(Cont *c, GraceObject *str_val) {
@@ -509,7 +509,7 @@ static void interp_asstr_cont_cleanup(Cont *c) {
     InterpAsStrCont *ic = (InterpAsStrCont *)c;
     free((char *)ic->accum);
     env_release(ic->env);
-    cont_release_abandon(ic->outer_k);
+    cont_release(ic->outer_k);
 }
 
 /*
@@ -538,7 +538,7 @@ static void objdone_trace(Cont *c) {
 }
 static void objdone_cleanup(Cont *c) {
     ObjDoneCont *oc = (ObjDoneCont *)c;
-    cont_release_abandon(oc->k);
+    cont_release(oc->k);
 }
 
 /*
@@ -577,7 +577,7 @@ static void inherit_tail_trace(Cont *c) {
 static void inherit_tail_cleanup(Cont *c) {
     InheritTailCont *itc = (InheritTailCont *)c;
     env_release(itc->env);
-    cont_release_abandon(itc->k);
+    cont_release(itc->k);
 }
 
 /* Inherit-variant method: like method_fn but the last argument is the
@@ -788,7 +788,7 @@ static void use_source_trace(Cont *c) {
 static void use_source_cleanup(Cont *c) {
     UseSourceCont *usc = (UseSourceCont *)c;
     env_release(usc->env);
-    cont_release_abandon(usc->k);
+    cont_release(usc->k);
 }
 
 /*
@@ -819,7 +819,7 @@ static void defbind_trace(Cont *c) {
 }
 static void defbind_cleanup(Cont *c) {
     DefBindCont *dc = (DefBindCont *)c;
-    cont_release_abandon(dc->k);
+    cont_release(dc->k);
 }
 
 /*
@@ -849,7 +849,7 @@ static void varinit_trace(Cont *c) {
 }
 static void varinit_cleanup(Cont *c) {
     VarInitCont *vc = (VarInitCont *)c;
-    cont_release_abandon(vc->k);
+    cont_release(vc->k);
 }
 
 /*
@@ -887,7 +887,7 @@ static void assign_rhs_trace(Cont *c) {
 static void assign_rhs_cont_cleanup(Cont *c) {
     AssignRHSCont *ac = (AssignRHSCont *)c;
     env_release(ac->env);
-    cont_release_abandon(ac->k);
+    cont_release(ac->k);
     free(ac->setter_name);
 }
 
@@ -933,7 +933,7 @@ static void ret_trace(Cont *c) {
 }
 static void ret_cont_cleanup(Cont *c) {
     RetCont *rc = (RetCont *)c;
-    cont_release_abandon(rc->ret);
+    cont_release(rc->ret);
 }
 
 /* File-scope continuation for dot-assignment LHS receiver */
@@ -973,7 +973,7 @@ static void da_recv_trace(Cont *c) {
 static void da_recv_cont_cleanup(Cont *c) {
     DotAssignRecvCont *d = (DotAssignRecvCont *)c;
     env_release(d->env);
-    cont_release_abandon(d->k);
+    cont_release(d->k);
     free(d->setter);
 }
 
