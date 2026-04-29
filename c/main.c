@@ -51,7 +51,7 @@ static GraceObject *eval_baked(ASTNode *ast, Env *env) {
 /*  main  */
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "Usage: grace [-p|-P] <file.grace>\n");
+        fprintf(stderr, "Usage: grace [-p|-P|-v] <file.grace>\n");
         return 1;
     }
     int file_index = 1;
@@ -62,6 +62,16 @@ int main(int argc, char *argv[]) {
     } else if (strcmp(argv[file_index], "-P") == 0) {
         print_ast = 2;
         file_index++;
+    } else if (strcmp(argv[file_index], "-v") == 0) {
+        fprintf(stderr, "Grace interpreter version " GRACE_INTERP_VERSION " <http://gracelang.org/> (C) 2026\n");
+        fprintf(stderr, "By Michael Homer <https://michael.homer.nz>.\n");
+        fprintf(stderr, "Implementation model, AST format, and citation:\n");
+        fprintf(stderr, "  Fast & Easy ASTs for Flexible Embedded Programming.\n  Michael Homer and James Noble.\n  ACM SIGPLAN International Conference on Managed Programming Languages and\n  Runtimes (MPLR), 2025.\n  <https://doi.org/10.1145/3759426.3760977>\n");
+        #ifdef __DJGPP__
+        fprintf(stderr, "Compiled with DJGPP %d.%d\n", __DJGPP__, __DJGPP_MINOR__);
+        fprintf(stderr, "PMODE/DJ by Thomas Pytel, Charles Sandmann, Matthias Grimrath, and DJ Delorie.");
+        #endif
+        return 0;
     }
     
     const char *user_file = argv[file_index];

@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 static GraceObject *evaluate_module(char *name, ASTNode *ast, Env *env) {
     CaptureCont cc;
@@ -18,7 +19,21 @@ static GraceObject *evaluate_module(char *name, ASTNode *ast, Env *env) {
     return cc.result;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    if (argc == 2 && strcmp(argv[1], "--notices") == 0) {
+        fprintf(stderr, "Underlying Grace interpreter version " GRACE_INTERP_VERSION " <http://gracelang.org/> (C) 2026\n");
+        fprintf(stderr, "  By Michael Homer <https://michael.homer.nz>.\n");
+        fprintf(stderr, "  Implementation model, AST format, and citation:\n");
+        fprintf(stderr, "    Fast & Easy ASTs for Flexible Embedded Programming.\n    Michael Homer and James Noble.\n    ACM SIGPLAN International Conference on Managed Programming Languages and\n    Runtimes (MPLR), 2025.\n    <https://doi.org/10.1145/3759426.3760977>\n");
+        #ifdef __DJGPP__
+        fprintf(stderr, "Compiled with DJGPP %d.%d\n", __DJGPP__, __DJGPP_MINOR__);
+        fprintf(stderr, "PMODE/DJ by Thomas Pytel, Charles Sandmann, Matthias Grimrath, and DJ Delorie.");
+        #endif
+        return 0;
+    } else if (argc == 2) {
+        fprintf(stderr, "Usage: %s [--notices]\n", argv[0]);
+        return 1;
+    }
     GraceObject *prelude = make_prelude();
     gc_push_root(&prelude);
     Env *env = env_new(prelude);

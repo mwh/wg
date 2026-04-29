@@ -9,6 +9,7 @@
 
 #ifndef GRACE_C
 extern int log_requests;
+#define GRACE_INTERP_VERSION "0.1"
 #endif
 /* 
  * Trampoline / pending step
