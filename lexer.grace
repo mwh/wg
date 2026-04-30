@@ -265,7 +265,8 @@ method lexer(code) {
         }
 
         method nextToken {
-            if (index > source.size) then {
+            def sourceSize = source.size
+            if (index > sourceSize) then {
                 return EOFToken(line, column)
             }
 
@@ -278,6 +279,26 @@ method lexer(code) {
                 return nextToken
             }
 
+            if (isIdentifierStart(c)) then {
+                def startIndex = index - 1
+                var value := c
+                if (index > sourceSize) then {
+                    return IdentifierToken(line, column, value)
+                }
+                c := source.at(index)
+                while {(isIdentifierStart(c) || isDigit(c) || (c == "'")) && (index <= sourceSize)} do {
+                    value := value ++ c
+                    index := index + 1
+                    if (index <= sourceSize) then {
+                        c := source.at(index)
+                    }
+                }
+                if ((value == "var") || (value == "def") || (value == "method") || (value == "object") || (value == "is") || (value == "return") || (value == "class") || (value == "type") || (value == "import") || (value == "self") || (value == "dialect") || (value == "interface") || (value == "inherit") || (value == "use")) then {
+                    return KeywordToken(line, column, value)
+                }
+                return IdentifierToken(line, column, value)
+            }
+
             if (c == "(") then {
                 return LParenToken(line, column)
             }
@@ -286,29 +307,23 @@ method lexer(code) {
                 return RParenToken(line, column)
             }
 
-            if (c == "[") then {
-                if (index <= source.size) then {
-                    def nextChar = source.at(index)
-                    if (nextChar == "[") then {
-                        index := index + 1
-                        return LGenericToken(line, column)
-                    }
-                }
-                return LSquareToken(line, column)
+            if (c == ",") then {
+                return CommaToken(line, column)
             }
 
-            if (c == "]") then {
-                if (index <= source.size) then {
-                    def nextChar = source.at(index)
-                    if (nextChar == "]") then {
-                        index := index + 1
-                        return RGenericToken(line, column)
-                    }
-                }
-                return RSquareToken(line, column)
+            def cp = c.firstCodepoint
+
+            if (cp == 13) then {
+                c := source.at(index)
+                index := index + 1
+            }
+            if (cp == 10) then {
+                line := line + 1
+                lineStart := index - 1
+                return NewlineToken(line, column)
             }
 
-            if (c.firstCodepoint == 123) then {
+            if (cp == 123) then {
                 return LBraceToken(line, column)
             }
 
@@ -316,31 +331,17 @@ method lexer(code) {
                 return RBraceToken(line, column, index)
             }
 
-            if (c == ",") then {
-                return CommaToken(line, column)
-            }
-
-            if (c.firstCodepoint == 13) then {
-                c := source.at(index)
-                index := index + 1
-            }
-            if ((c.firstCodepoint == 10) || (c.firstCodepoint == 8232)) then {
-                line := line + 1
-                lineStart := index - 1
-                return NewlineToken(line, column)
-            }
-
-            if (c.firstCodepoint == 34) then {
+            if (cp == 34) then {
                 return lexString
             }
 
             if (isDigit(c)) then {
                 def startIndex = index - 1
-                if (index >= source.size) then {
+                if (index >= sourceSize) then {
                     return NumberToken(line, column, c)
                 }
                 var value := ""
-                while {isDigit(c) && (index <= source.size)} do {
+                while {isDigit(c) && (index <= sourceSize)} do {
                     value := value ++ c
                     c := source.at(index)
                     index := index + 1
@@ -350,7 +351,7 @@ method lexer(code) {
                         value := value ++ c
                         c := source.at(index)
                         index := index + 1
-                        while {isDigit(c) && (index <= source.size)} do {
+                        while {isDigit(c) && (index <= sourceSize)} do {
                             value := value ++ c
                             c := source.at(index)
                             index := index + 1
@@ -363,33 +364,13 @@ method lexer(code) {
                 return NumberToken(line, column, value)
             }
 
-            if (isIdentifierStart(c)) then {
-                def startIndex = index - 1
-                var value := c
-                if (index > source.size) then {
-                    return IdentifierToken(line, column, value)
-                }
-                c := source.at(index)
-                while {(isIdentifierStart(c) || isDigit(c) || (c == "'")) && (index <= source.size)} do {
-                    value := value ++ c
-                    index := index + 1
-                    if (index <= source.size) then {
-                        c := source.at(index)
-                    }
-                }
-                if ((value == "var") || (value == "def") || (value == "method") || (value == "object") || (value == "is") || (value == "return") || (value == "class") || (value == "type") || (value == "import") || (value == "self") || (value == "dialect") || (value == "interface") || (value == "inherit") || (value == "use")) then {
-                    return KeywordToken(line, column, value)
-                }
-                return IdentifierToken(line, column, value)
-            }
-
             if (isOperatorCharacter(c)) then {
                 def startIndex = index
                 var op := c
-                if (index <= source.size) then {
+                if (index <= sourceSize) then {
                     c := source.at(index)
                     index := index + 1
-                    while {isOperatorCharacter(c) && (index <= source.size)} do {
+                    while {isOperatorCharacter(c) && (index <= sourceSize)} do {
                         op := op ++ c
                         c := source.at(index)
                         index := index + 1
@@ -412,16 +393,17 @@ method lexer(code) {
                     return SymbolToken(line, column, "COLON")
                 }
                 if ((op.size >= 2) && (op.substringFrom 1 to 2 == "//")) then {
-                    var cp := c.firstCodepoint
+                    index := startIndex + 2
+                    c := source.at(index - 1)
+                    var cp2 := c.firstCodepoint
                     var text := ""
-                    index := index + 1
-                    while { (cp != 10) && (cp != 13) && (index <= source.size) } do {
+                    while { (cp2 != 10) && (cp2 != 13) && (index <= sourceSize) } do {
                         text := text ++ c
                         c := source.at(index)
-                        cp := c.firstCodepoint
+                        cp2 := c.firstCodepoint
                         index := index + 1
                     }
-                    if ((cp == 10) || (cp == 13)) then {
+                    if ((cp2 == 10) || (cp2 == 13)) then {
                         index := index - 1
                     }
                     return CommentToken(line, column, text)
@@ -429,15 +411,37 @@ method lexer(code) {
                 return OperatorToken(line, column, op)
             }
 
+            if (c == "[") then {
+                if (index <= sourceSize) then {
+                    def nextChar = source.at(index)
+                    if (nextChar == "[") then {
+                        index := index + 1
+                        return LGenericToken(line, column)
+                    }
+                }
+                return LSquareToken(line, column)
+            }
+
+            if (c == "]") then {
+                if (index <= sourceSize) then {
+                    def nextChar = source.at(index)
+                    if (nextChar == "]") then {
+                        index := index + 1
+                        return RGenericToken(line, column)
+                    }
+                }
+                return RSquareToken(line, column)
+            }
+
             if (c == ";") then {
                 return SymbolToken(line, column, "SEMICOLON")
             }
 
-            if (c.firstCodepoint == 9) then {
+            if (cp == 9) then {
                 parseError(line, column, "Illegal tab (0+0009) character in source. Use spaces for indentation or \\u0009 inside a string.")
             }
 
-            parseError(line, column, "Unknown character: " ++ c.asString ++ " (" ++ c.firstCodepoint.asString ++ ")")
+            parseError(line, column, "Unknown character: " ++ c.asString ++ " (" ++ cp.asString ++ ")")
         
         }
 
@@ -480,24 +484,19 @@ method lexer(code) {
             def start = index - 1
             while {(source.at(index).firstCodepoint != 34) || escaped} do {
                 var escapeNext := false
-                def cp = source.at(index).firstCodepoint
+                def ch = source.at(index)
+                def cp = ch.firstCodepoint
                 if ((cp == 13) || (cp == 10)) then {
                     parseError(line, column + (index - start), "Unterminated string literal.")
                 }
-                if ((cp == 92) && (escaped == false)) then {
-                    escapeNext := true
-                } elseif { escaped && (cp == 110) } then {
-                    value := value ++ "\n"
-                } elseif { escaped && (cp == 114) } then {
-                    value := value ++ "\r"
-                } elseif { escaped && ((cp == 92) || (cp == 123) || (cp == 34)) } then {
-                    value := value ++ source.at(index)
-                } else {
-                    if ((cp == 123) && (!escaped)) then {
-                        // String interpolation
-                        index := index + 1
-                        return InterpStringToken(line, column, value)
-                    } elseif { escaped && ((cp == 117) || (cp == 85)) } then {
+                if (escaped) then {
+                    if (cp == 110) then {
+                        value := value ++ "\n"
+                    } elseif {cp == 114} then {
+                        value := value ++ "\r"
+                    } elseif {(cp == 92) || (cp == 123) || (cp == 34)} then {
+                        value := value ++ ch
+                    } elseif { (cp == 117) || (cp == 85) } then {
                         var hexLen := 4
                         if (cp == 85) then {
                             hexLen := 6
@@ -506,10 +505,17 @@ method lexer(code) {
                         def hexVal = lexHex(hexLen)
                         value := value ++ hexVal.asCodepointString
                         index := index - 1
-                    } elseif { escaped } then {
-                        parseError(line, column, "Illegal escape sequence in string literal: \\{source.at(index)} not understood.")
                     } else {
-                        value := value ++ source.at(index)
+                        parseError(line, column + (index - start), "Illegal escape sequence in string literal: \\" ++ ch ++ " not understood.")
+                    }
+                } else {
+                    escapeNext := (cp == 92)
+                    if (cp == 123) then {
+                        // String interpolation
+                        index := index + 1
+                        return InterpStringToken(line, column, value)
+                    } else {
+                        value := value ++ ch
                     }
                 }
                 escaped := escapeNext
@@ -540,7 +546,7 @@ method lexer(code) {
             } elseif {(cp >= 97) && (cp <= 102)} then {
                 return cp - 87
             } else {
-                parseError(line, column, "Invalid hexadecimal digit: character {cp}")
+                parseError(line, column, "Invalid hexadecimal digit: character " ++ cp.asString)
             }
         }
 
