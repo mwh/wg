@@ -10,7 +10,7 @@ SRCS = $(INTERP_SRCS) $(BAKED_SRCS) main.c
 OBJS = $(SRCS:.c=.o)
 INTERP_OBJS = $(INTERP_SRCS:.c=.o)
 
-.PHONY: all clean
+.PHONY: all clean baked
 
 all: grace
 
@@ -33,6 +33,10 @@ program.o:		program.c ast.h grace.h
 baked/ast.o:    baked/ast.c ast.h
 baked/lexer.o:  baked/lexer.c ast.h
 baked/parser.o: baked/parser.c ast.h
+
+baked:
+	make -C baked
+
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
