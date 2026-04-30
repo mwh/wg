@@ -1,2 +1,8 @@
 *.o
 grace
+*.grace
+dos/*.EXE
+dos/*.O
+dos/GRACE
+dos/PROGRAM
+*.zip
