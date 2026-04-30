@@ -1,0 +1,62 @@
+# Makefile for rebaking all the embedded ASTs in the implementations
+# Usage: make -f rebake js
+# Supported targets: c, cpsjava, js, java
+
+IMPL = java -cp cpsjava nz.mwh.cpsgrace.Start -P
+IMPL_LONG = java -cp cpsjava nz.mwh.cpsgrace.Start -p
+
+all:
+
+.PHONY: c cpsjava js java
+
+
+ast/%.concise: %.grace
+	$(IMPL) $< > $@
+
+ast/%.long: %.grace
+	$(IMPL_LONG) $< > $@
+
+js/modules.js: ast/lexer.concise ast/parser.concise ast/ast.concise
+	sed -ne '/export const/q;p' $@ > $@.tmp
+	printf "export const lexer_ast = " >> $@.tmp
+	cat ast/lexer.concise >> $@.tmp
+	printf "\n\nexport const parser_ast = " >> $@.tmp
+	cat ast/parser.concise >> $@.tmp
+	printf "\n\nexport const ast_ast = " >> $@.tmp
+	cat ast/ast.concise >> $@.tmp
+	mv $@.tmp $@
+
+c/baked/%.c: ast/%.concise
+	sed -ne '/_ast =/q;p' $@ > $@.tmp
+	printf '    %s_ast = ' $(notdir $*) >> $@.tmp
+	cat $^ >> $@.tmp
+	echo ';' >> $@.tmp
+	sed -ne '1,/_ast =/d;p' $@ >> $@.tmp
+	mv $@.tmp $@
+
+cpsjava/nz/mwh/cpsgrace/baked/LexerData.java: ast/lexer.concise
+cpsjava/nz/mwh/cpsgrace/baked/ParserData.java: ast/parser.concise
+cpsjava/nz/mwh/cpsgrace/baked/ASTData.java: ast/ast.concise
+cpsjava/nz/mwh/cpsgrace/baked/ASTData.java cpsjava/nz/mwh/cpsgrace/baked/ParserData.java cpsjava/nz/mwh/cpsgrace/baked/LexerData.java:
+	sed -ne '/var program =/q;p' $@ > $@.tmp
+	printf '        var program = ' >> $@.tmp
+	cat $^ >> $@.tmp
+	echo ';' >> $@.tmp
+	sed -ne '1,/var program =/d;p' $@ >> $@.tmp
+	mv $@.tmp $@
+
+java/nz/mwh/wg/ParserData.java: ast/parser.long
+java/nz/mwh/wg/LexerData.java: ast/lexer.long
+java/nz/mwh/wg/ParserData.java java/nz/mwh/wg/LexerData.java:
+	sed -ne '/ASTNode program =/q;p' $@ > $@.tmp
+	printf '    public static final ASTNode program = ' >> $@.tmp
+	cat $^ >> $@.tmp
+	echo ';' >> $@.tmp
+	sed -ne '1,/ASTNode program =/d;p' $@ >> $@.tmp
+	mv $@.tmp $@
+
+
+c: c/baked/lexer.c c/baked/parser.c c/baked/ast.c
+cpsjava: cpsjava/nz/mwh/cpsgrace/baked/LexerData.java cpsjava/nz/mwh/cpsgrace/baked/ParserData.java cpsjava/nz/mwh/cpsgrace/baked/ASTData.java
+js: js/modules.js
+java: java/nz/mwh/wg/LexerData.java java/nz/mwh/wg/ParserData.java
