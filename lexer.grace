@@ -281,18 +281,17 @@ method lexer(code) {
 
             if (isIdentifierStart(c)) then {
                 def startIndex = index - 1
-                var value := c
                 if (index > sourceSize) then {
-                    return IdentifierToken(line, column, value)
+                    return IdentifierToken(line, column, c)
                 }
                 c := source.at(index)
                 while {(isIdentifierStart(c) || isDigit(c) || (c == "'")) && (index <= sourceSize)} do {
-                    value := value ++ c
                     index := index + 1
                     if (index <= sourceSize) then {
                         c := source.at(index)
                     }
                 }
+                def value = source.substringFrom(startIndex) to(index - 1)
                 if ((value == "var") || (value == "def") || (value == "method") || (value == "object") || (value == "is") || (value == "return") || (value == "class") || (value == "type") || (value == "import") || (value == "self") || (value == "dialect") || (value == "interface") || (value == "inherit") || (value == "use")) then {
                     return KeywordToken(line, column, value)
                 }
@@ -482,6 +481,7 @@ method lexer(code) {
             var value := ""
             var escaped := false
             def start = index - 1
+            var segmentStartIndex := index
             while {(source.at(index).firstCodepoint != 34) || escaped} do {
                 var escapeNext := false
                 def ch = source.at(index)
@@ -490,6 +490,7 @@ method lexer(code) {
                     parseError(line, column + (index - start), "Unterminated string literal.")
                 }
                 if (escaped) then {
+                    value := value ++ source.substringFrom(segmentStartIndex) to(index - 2)
                     if (cp == 110) then {
                         value := value ++ "\n"
                     } elseif {cp == 114} then {
@@ -508,14 +509,14 @@ method lexer(code) {
                     } else {
                         parseError(line, column + (index - start), "Illegal escape sequence in string literal: \\" ++ ch ++ " not understood.")
                     }
+                    segmentStartIndex := index + 1
                 } else {
                     escapeNext := (cp == 92)
                     if (cp == 123) then {
                         // String interpolation
+                        value := value ++ source.substringFrom(segmentStartIndex)to(index - 1)
                         index := index + 1
                         return InterpStringToken(line, column, value)
-                    } else {
-                        value := value ++ ch
                     }
                 }
                 escaped := escapeNext
@@ -524,6 +525,7 @@ method lexer(code) {
                     parseError(line, column + (index - start), "Unterminated string literal.")
                 }
             }
+            value := value ++ source.substringFrom(segmentStartIndex)to(index - 1)
             index := index + 1
             return StringToken(line, column, value)
         }
