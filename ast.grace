@@ -48,7 +48,7 @@ method cons(hd, tl) {
     }
 }
 
-method nil {
+def nil =
     object {
         def end is public = true
         def kind is public = "nil"
@@ -78,7 +78,6 @@ method nil {
         }
     }
 
-}
 
 method numberNode(val) {
     object {
