@@ -31,7 +31,7 @@ c/baked/%.c: ast/%.concise
 	printf '    %s_ast = ' $(notdir $*) >> $@.tmp
 	cat $^ >> $@.tmp
 	echo ';' >> $@.tmp
-	sed -ne '1,/_ast =/d;p' $@ >> $@.tmp
+	sed -ne '1,/_ast =/d;/^ *;/d;p' $@ >> $@.tmp
 	mv $@.tmp $@
 
 cpsjava/nz/mwh/cpsgrace/baked/LexerData.java: ast/lexer.concise
@@ -42,7 +42,7 @@ cpsjava/nz/mwh/cpsgrace/baked/ASTData.java cpsjava/nz/mwh/cpsgrace/baked/ParserD
 	printf '        var program = ' >> $@.tmp
 	cat $^ >> $@.tmp
 	echo ';' >> $@.tmp
-	sed -ne '1,/var program =/d;p' $@ >> $@.tmp
+	sed -ne '1,/var program =/d;/^ *;/d;p' $@ >> $@.tmp
 	mv $@.tmp $@
 
 java/nz/mwh/wg/ParserData.java: ast/parser.long
@@ -52,7 +52,7 @@ java/nz/mwh/wg/ParserData.java java/nz/mwh/wg/LexerData.java:
 	printf '    public static final ASTNode program = ' >> $@.tmp
 	cat $^ >> $@.tmp
 	echo ';' >> $@.tmp
-	sed -ne '1,/ASTNode program =/d;p' $@ >> $@.tmp
+	sed -ne '1,/ASTNode program =/d;/^ *;/d;p' $@ >> $@.tmp
 	mv $@.tmp $@
 
 
