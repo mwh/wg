@@ -338,7 +338,7 @@ static void gc_print_heap_summary(void) {
     }
 
     fprintf(stderr,
-            "GC %zu heap summary: freed %zu living %zu conts=%zu/%zu consumed=%zu roots=%d cont_roots=%d tramp=%d; user=%zu userLex=%zu userReturn=%zu userNoMethods=%zu number=%zu string=%zu block=%zu lineup=%zu primarray=%zu bool=%zu exception=%zu other=%zu\n",
+            "GC %zu heap summary: freed %zu living %zu conts=%zu/%zu consumed=%zu roots=%d cont_roots=%d tramp=%d; user=%zu userLex=%zu userReturn=%zu userNoMethods=%zu number=%zu string=%zu block=%zu lineup=%zu primarray=%zu bool=%zu exception=%zu other=%zu ever=%zu\n",
             gc_statistics.collections,
             gc_phase_start_live - gc_statistics.heap_size,
             gc_statistics.heap_size,
@@ -356,7 +356,9 @@ static void gc_print_heap_summary(void) {
             primarrays,
             bools,
             exceptions,
-            other);
+            other,
+            gc_statistics.total_allocs
+        );
 }
 
 /*
