@@ -272,6 +272,7 @@ method lexer(code) {
 
             var c := source.at(index)
             column := index - lineStart
+            def indexPrev = index
             index := index + 1
             
 
@@ -280,18 +281,20 @@ method lexer(code) {
             }
 
             if (isIdentifierStart(c)) then {
-                def startIndex = index - 1
+                def startIndex = indexPrev
                 if (index > sourceSize) then {
                     return IdentifierToken(line, column, c)
                 }
+                var prevIndex := startIndex
                 c := source.at(index)
                 while {(isIdentifierStart(c) || isDigit(c) || (c == "'")) && (index <= sourceSize)} do {
+                    prevIndex := index
                     index := index + 1
                     if (index <= sourceSize) then {
                         c := source.at(index)
                     }
                 }
-                def value = source.substringFrom(startIndex) to(index - 1)
+                def value = source.substringFrom(startIndex) to(prevIndex)
                 if ((value == "var") || (value == "def") || (value == "method") || (value == "object") || (value == "is") || (value == "return") || (value == "class") || (value == "type") || (value == "import") || (value == "self") || (value == "dialect") || (value == "interface") || (value == "inherit") || (value == "use")) then {
                     return KeywordToken(line, column, value)
                 }
@@ -318,7 +321,7 @@ method lexer(code) {
             }
             if (cp == 10) then {
                 line := line + 1
-                lineStart := index - 1
+                lineStart := indexPrev
                 return NewlineToken(line, column)
             }
 
@@ -335,7 +338,7 @@ method lexer(code) {
             }
 
             if (isDigit(c)) then {
-                def startIndex = index - 1
+                def startIndex = indexPrev
                 if (index >= sourceSize) then {
                     return NumberToken(line, column, c)
                 }
@@ -368,13 +371,15 @@ method lexer(code) {
                 var op := c
                 if (index <= sourceSize) then {
                     c := source.at(index)
+                    var prev := index
                     index := index + 1
                     while {isOperatorCharacter(c) && (index <= sourceSize)} do {
                         op := op ++ c
                         c := source.at(index)
+                        prev := index
                         index := index + 1
                     }
-                    index := index - 1
+                    index := prev
                 }
                 if (op == ":=") then {
                     return AssignToken(line, column)
@@ -393,11 +398,11 @@ method lexer(code) {
                 }
                 if ((op.size >= 2) && (op.substringFrom 1 to 2 == "//")) then {
                     index := startIndex + 2
-                    c := source.at(index - 1)
+                    def comStart = index - 1
+                    c := source.at(comStart)
                     var cp2 := c.firstCodepoint
                     var text := ""
                     while { (cp2 != 10) && (cp2 != 13) && (index <= sourceSize) } do {
-                        text := text ++ c
                         c := source.at(index)
                         cp2 := c.firstCodepoint
                         index := index + 1
@@ -405,6 +410,7 @@ method lexer(code) {
                     if ((cp2 == 10) || (cp2 == 13)) then {
                         index := index - 1
                     }
+                    text := source.substringFrom(comStart)to(index - 1)
                     return CommentToken(line, column, text)
                 }
                 return OperatorToken(line, column, op)
