@@ -28,6 +28,9 @@ graceraw.exe: grace
 prograw.exe: program
 	copy /B C:\DJGPP\BIN\PMODSTUB.EXE + program prograw.exe
 
+libgrace.a: $(INTERP_OBJS)
+	ar cr libgrace.a $^
+
 coff: $(OBJS)
 	$(CC) $(CFLAGS) -o grace $^ $(LDFLAGS)
 
@@ -62,3 +65,4 @@ clean:
 	for %f in ($(INTERP_SRCS:.c=.o) main.o) do del %f
 	for %f in ($(BAKED_SRCS:.c=.o)) do del %f
 	for %f in (grace.exe graceraw.exe grace program.exe prograw.exe) do del %f
+	del libgrace.a

@@ -3,6 +3,7 @@ grace
 *.grace
 dos/*.EXE
 dos/*.O
+dos/LIBGRACE.A
 dos/GRACE
 dos/PROGRAM
 *.zip
