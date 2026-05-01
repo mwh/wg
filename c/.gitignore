@@ -6,4 +6,5 @@ dos/*.O
 dos/LIBGRACE.A
 dos/GRACE
 dos/PROGRAM
+dos/MINDIR
 *.zip

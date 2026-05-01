@@ -61,6 +61,43 @@ baked/parser.o: baked/parser.c ast.h
 baked/%.o: baked/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+mindir: ast.h grace.h gc.h libgrace.a minbuild.bat
+	mkdir mindir
+	mkdir mindir\sys
+	copy C:\djgpp\bin\as.exe mindir
+	copy C:\djgpp\libexec\gcc\djgpp\9\cc1.exe mindir
+	copy C:\djgpp\bin\cwsdpmi.exe mindir
+	copy C:\djgpp\bin\exe2coff.exe mindir
+	copy C:\djgpp\bin\ld.exe mindir
+	copy C:\djgpp\bin\pmodstub.exe mindir
+	copy C:\djgpp\bin\stubify.exe mindir
+	copy ast.h mindir
+	copy grace.h mindir
+	copy gc.h mindir
+	copy C:\djgpp\include\ast.h mindir
+	copy C:\djgpp\include\conio.h mindir
+	copy C:\djgpp\include\dos.h mindir
+	copy C:\djgpp\include\dpmi.h mindir
+	copy C:\djgpp\include\go32.h mindir
+	copy C:\djgpp\include\math.h mindir
+	copy C:\djgpp\include\stdarg.h mindir
+	copy C:\djgpp\include\stddef.h mindir
+	copy C:\djgpp\include\stdint.h mindir
+	copy C:\djgpp\include\stdio.h mindir
+	copy C:\djgpp\include\stdlib.h mindir
+	copy C:\djgpp\include\string.h mindir
+	copy C:\djgpp\include\sys\djtypes.h mindir\sys
+	copy C:\djgpp\include\sys\movedata.h mindir\sys
+	copy C:\djgpp\include\sys\version.h mindir\sys
+	copy C:\djgpp\lib\libc.a mindir
+	copy C:\djgpp\lib\libgcc.a mindir
+	copy C:\djgpp\lib\libm.a mindir
+	copy C:\djgpp\lib\crt0.o mindir
+	copy C:\djgpp\lib\crt0.o mindir
+	copy C:\djgpp\lib\gcc\djgpp\9\libgcc.a mindir
+	copy libgrace.a mindir
+	copy minbuild.bat mindir\build.bat
+
 clean:
 	for %f in ($(INTERP_SRCS:.c=.o) main.o) do del %f
 	for %f in ($(BAKED_SRCS:.c=.o)) do del %f
