@@ -851,12 +851,17 @@ static PendingStep *block_request(GraceObject *self, Env *env, const char *name,
                                    GraceObject **args, int nargs, Cont *k) {
     GraceBlock *blk = (GraceBlock *)self;
     if (strncmp(name, "apply(", 6) == 0) {
-        GraceObject *scope = grace_user_new(blk->lex_scope);
-        int pi = 0;
-        for (ASTNode *p = blk->params; p != NULL && p->kind == NK_CONS; p = p->a2) {
-            ASTNode *decl = p->a1; if (!decl) break;
-            user_bind_def(scope, decl->strval, (pi < nargs) ? args[pi] : grace_done);
-            pi++;
+        GraceObject *scope;
+        if (blk->suppress_scope) {
+            scope = blk->lex_scope;
+        } else {
+            scope = grace_user_new(blk->lex_scope);
+            int pi = 0;
+            for (ASTNode *p = blk->params; p != NULL && p->kind == NK_CONS; p = p->a2) {
+                ASTNode *decl = p->a1; if (!decl) break;
+                user_bind_def(scope, decl->strval, (pi < nargs) ? args[pi] : grace_done);
+                pi++;
+            }
         }
         Env *inner = malloc(sizeof(Env));
         inner->refcount = 1;
@@ -937,7 +942,7 @@ static void block_sweep_free(GraceObject *self) {
      * gc_sweep_conts handles all dead continuation cleanup safely. */
 }
 const GraceVTable grace_block_vtable = { block_request, block_describe, block_trace, block_sweep_free };
-GraceObject *grace_block_new(ASTNode *params, ASTNode *body, GraceObject *scope,
+GraceObject *grace_block_new(ASTNode *params, ASTNode *body, void *suppress_scope, GraceObject *scope,
                               GraceObject *self_obj, Cont *return_k, Cont *except_k) {
     GraceBlock *blk = (GraceBlock *)gc_alloc(sizeof(GraceBlock));
     blk->base.vt  = &grace_block_vtable;
@@ -947,6 +952,7 @@ GraceObject *grace_block_new(ASTNode *params, ASTNode *body, GraceObject *scope,
     blk->lex_self  = self_obj;
     blk->return_k  = cont_retain(return_k);
     blk->except_k  = cont_retain(except_k);
+    blk->suppress_scope = (int)(intptr_t)suppress_scope;
     return (GraceObject *)blk;
 }
 

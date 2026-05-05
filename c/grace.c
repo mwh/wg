@@ -135,7 +135,24 @@ ASTNode *s0L(const char *val) {
 }
 ASTNode *b1K(ASTNode *params, ASTNode *stmts) {
     ASTNode *n = ast_alloc(NK_BLOCK);
-    n->a1 = params; n->a2 = stmts; return n;
+    n->a1 = params; n->a2 = stmts;
+    ASTNode *prm = n->a1, *st = n->a2;
+    if (prm != NULL) {
+        return n;
+    } else {
+        // If there are any var or def declarations in the body, we need a scope even if there are no params
+        for (ASTNode *s = st; s != NULL; ) {
+            ASTNode *stmt;
+            if (s->kind == NK_CONS) { stmt = s->a1; s = s->a2; }
+            else                    { stmt = s;     s = NULL;  }
+            if (!stmt) continue;
+            if (stmt->kind == NK_VAR_DECL || stmt->kind == NK_DEF_DECL) {
+                return n;
+            }
+        }
+    }
+    n->a3 = (ASTNode *)1;
+    return n;
 }
 ASTNode *d3F(const char *name, ASTNode *dtype, ASTNode *anns, ASTNode *val) {
     ASTNode *n = ast_alloc(NK_DEF_DECL);

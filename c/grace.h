@@ -279,10 +279,11 @@ typedef struct {
     GraceObject *lex_self;   /* captured self at block-creation time */
     Cont        *return_k;   /* enclosing method's return continuation */
     Cont        *except_k;   /* enclosing exception handler */
+    char         suppress_scope; /* flag to suppress scope creation */
 } GraceBlock;
 extern const GraceVTable grace_block_vtable;
 GraceObject *grace_block_new(ASTNode *params, ASTNode *body,
-                              GraceObject *scope, GraceObject *self_obj,
+                              void *suppress_scope, GraceObject *scope, GraceObject *self_obj,
                               Cont *return_k, Cont *except_k);
 
 /*

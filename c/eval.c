@@ -1034,6 +1034,7 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
         GraceObject *blk = grace_block_new(
             node->a1,  /* params */
             node->a2,  /* body */
+            node->a3,  /* flag for suppressing scope */
             env->scope,
             env->receiver,
             env->return_k,
