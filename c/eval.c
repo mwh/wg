@@ -995,8 +995,14 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
     case NK_NUMLIT:
         return cont_apply(k, grace_number_new(node->numval));
 
+    /* String literal: cache one string object in a2 to use repeatedly */
     case NK_STRLIT:
-        return cont_apply(k, grace_string_new(node->strval ? node->strval : ""));
+        if (!node->a2) {
+            GraceObject *g = grace_string_new(node->strval ? node->strval : "");
+            g->gc_color = GC_STATIC;
+            node->a2 = (ASTNode *)g;
+        }
+        return cont_apply(k, (GraceObject *)node->a2);
 
     /*  Interp string: strval=prefix, a1=expr, a2=next_interp  */
     case NK_INTERP_STR: {
