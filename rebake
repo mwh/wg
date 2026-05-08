@@ -10,19 +10,19 @@ all:
 .PHONY: c cpsjava js java
 
 
-ast/%.concise: %.grace
+ast/%.concise: %.grace rebake
 	$(IMPL) $< > $@
 
-ast/%.long: %.grace
+ast/%.long: %.grace rebake
 	$(IMPL_LONG) $< > $@
 
 js/modules.js: ast/lexer.concise ast/parser.concise ast/ast.concise
 	sed -ne '/export const/q;p' $@ > $@.tmp
-	printf "export const lexer_ast = " >> $@.tmp
+	printf "export const lexer = " >> $@.tmp
 	cat ast/lexer.concise >> $@.tmp
-	printf "\n\nexport const parser_ast = " >> $@.tmp
+	printf "\n\nexport const parser = " >> $@.tmp
 	cat ast/parser.concise >> $@.tmp
-	printf "\n\nexport const ast_ast = " >> $@.tmp
+	printf "\n\nexport const ast = " >> $@.tmp
 	cat ast/ast.concise >> $@.tmp
 	mv $@.tmp $@
 
