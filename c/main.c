@@ -18,6 +18,10 @@ extern GraceObject *make_vga(void);
 
 extern char *executable_path;
 
+#ifndef BAKED_LEXER
+GraceObject *make_lexer_module(void);
+#endif
+
 /*  Read a whole file into a malloc'd buffer  */
 static char *read_file(const char *path) {
     FILE *f = fopen(path, "r");
@@ -95,8 +99,12 @@ int main(int argc, char *argv[]) {
     /* Also expose in prelude scope */
     user_bind_def(prelude, "ast", ast_obj);
 
+    #ifdef BAKED_LEXER
     /*  4. Evaluate baked/lexer.c  */
     GraceObject *lexer_obj = eval_baked(lexer_ast, env);
+    #else
+    GraceObject *lexer_obj = make_lexer_module(); //eval_baked(lexer_ast, env);
+    #endif
     grace_register_module("lexer", lexer_obj);
     user_bind_def(prelude, "lexer", lexer_obj);
 

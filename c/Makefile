@@ -3,9 +3,9 @@ CFLAGS  = -std=gnu11 -Wall -Wextra -g -I.
 LDFLAGS = -lm
 
 INTERP_SRCS = grace.c objects.c eval.c prelude.c convert.c gc.c
-BAKED_SRCS = baked/ast.c baked/lexer.c baked/parser.c
+BAKED_SRCS = baked/ast.c baked/parser.c
 
-SRCS = $(INTERP_SRCS) $(BAKED_SRCS) main.c
+SRCS = $(INTERP_SRCS) $(BAKED_SRCS) main.c lexer.c
 
 OBJS = $(SRCS:.c=.o)
 INTERP_OBJS = $(INTERP_SRCS:.c=.o)
@@ -27,6 +27,7 @@ prelude.o:      prelude.c ast.h grace.h gc.h
 convert.o:      convert.c ast.h grace.h
 main.o:         main.c ast.h grace.h gc.h
 gc.o:           gc.c gc.h grace.h
+lexer.o:        lexer.c grace.h gc.h
 
 program.o:		program.c ast.h grace.h
 
