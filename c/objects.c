@@ -349,8 +349,9 @@ static PendingStep *concat_asstr_apply(Cont *c, GraceObject *v) {
     const char *rhs = (v && v->vt == &grace_string_vtable)
                     ? grace_string_val(v) : "";
     Cont *k = cont_retain(cc->k);
+    const char *prefix = cc->prefix ? cc->prefix : "";
     cont_consumed(c);
-    PendingStep *r = cont_apply(k, grace_string_take(str_cat(cc->prefix, rhs)));
+    PendingStep *r = cont_apply(k, grace_string_take(str_cat(prefix, rhs)));
     cont_release(k);
     return r;
 }
