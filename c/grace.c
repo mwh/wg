@@ -50,6 +50,13 @@ char *str_dup(const char *s) {
     return d;
 }
 
+char *str_ndup(const char *s, size_t n) {
+    char *d = malloc(n + 1);
+    memcpy(d, s, n);
+    d[n] = 0;
+    return d;
+}
+
 char *str_cat(const char *a, const char *b) {
     if (!a) a = "";
     if (!b) b = "";

@@ -444,8 +444,8 @@ ASTNode *grace_ast_to_astnode(GraceObject *node, Env *env);
 char *str_fmt(const char *fmt, ...);
 /* Concatenate two strings into a new heap-allocated string. */
 char *str_cat(const char *a, const char *b);
-/* strdup wrapper */
 char *str_dup(const char *s);
+char *str_ndup(const char *s, size_t n);
 
 /* Count elements in a NK_CONS list. */
 int list_length(ASTNode *list);
