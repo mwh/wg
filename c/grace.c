@@ -487,6 +487,35 @@ static void trace_module_registry(void) {
     /* grace_true, grace_false have no GraceObject* children */
 }
 
+GraceModuleSearchPath *grace_module_search_paths = NULL;
+
+static void add_module_search_path(const char *path) {
+    GraceModuleSearchPath *p = malloc(sizeof(GraceModuleSearchPath));
+    p->path = path;
+    p->next = grace_module_search_paths;
+    grace_module_search_paths = p;
+}
+
+GraceModuleSearchPath *grace_get_module_search_paths(void) {
+    if (!grace_module_search_paths) {
+        /* Default search path: packed into executable (NULL path),
+         * next to executable, current directory. */
+        add_module_search_path(".");
+        if (executable_path) {
+            char *exe_dir = str_dup(executable_path);
+            char *slash = strrchr(exe_dir, '/');
+            if (slash) {
+                *slash = 0;
+                add_module_search_path(exe_dir);
+            } else {
+                free(exe_dir);
+            }
+        }
+        add_module_search_path(NULL);
+    }
+    return grace_module_search_paths;
+}
+
 /* 
  * Synchronous request helper - runs trampoline internally
  *  */

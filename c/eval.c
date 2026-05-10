@@ -1004,20 +1004,46 @@ static GraceObject *load_module(Env *env, const char *src) {
             }
         } else {
             /* Load src.grace from disk, parse, eval, and register */
-            snprintf(path, sizeof(path), "%s.grace", src);
-            FILE *mf = fopen(path, "r");
-            if (!mf) {
-                msrc = try_load_from_self(path);
-                if (!msrc)
-                    grace_fatal("Cannot find module '%s': no such file '%s'", src, path);
-            } else {
-                fseek(mf, 0, SEEK_END);
-                long msz = ftell(mf);
-                fseek(mf, 0, SEEK_SET);
-                msrc = malloc(msz + 1);
-                fread(msrc, 1, msz, mf);
-                msrc[msz] = '\0';
-                fclose(mf);
+            GraceModuleSearchPath *sp = grace_get_module_search_paths();
+            int found = 0;
+            while (sp) {
+                if (sp->path == NULL) {
+                    snprintf(path, sizeof(path), "%s.grace", src);
+                    msrc = try_load_from_self(path);
+                    if (msrc) {
+                        found = 1;
+                        break;
+                    }
+                    sp = sp->next;
+                    continue;
+                }
+                snprintf(path, sizeof(path), "%s/%s.grace", sp->path, src);
+                FILE *mf = fopen(path, "r");
+                if (mf) {
+                    fseek(mf, 0, SEEK_END);
+                    long msz = ftell(mf);
+                    fseek(mf, 0, SEEK_SET);
+                    msrc = malloc(msz + 1);
+                    fread(msrc, 1, msz, mf);
+                    msrc[msz] = '\0';
+                    fclose(mf);
+                    found = 1;
+                    break;
+                }
+                sp = sp->next;
+            }
+            if (!found) {
+                char *search_paths = "";
+                for (sp = grace_module_search_paths; sp; sp = sp->next) {
+                    if (sp->path) {
+                        char buf[512];
+                        snprintf(buf, sizeof(buf), "\n  %s", sp->path);
+                        search_paths = str_cat(search_paths, buf);
+                    } else {
+                        search_paths = str_cat(search_paths, "\n  (packed in executable)");
+                    }
+                }
+                grace_fatal("Cannot find module '%s': no such file in search paths:%s", src, search_paths);
             }
         }
         GraceObject *parser_obj = grace_find_module("//parser");

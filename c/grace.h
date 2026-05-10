@@ -450,4 +450,11 @@ char *str_ndup(const char *s, size_t n);
 /* Count elements in a NK_CONS list. */
 int list_length(ASTNode *list);
 
+typedef struct GraceModuleSearchPath {
+    const char *path;
+    struct GraceModuleSearchPath *next;
+} GraceModuleSearchPath;
+extern GraceModuleSearchPath *grace_module_search_paths;
+GraceModuleSearchPath *grace_get_module_search_paths(void);
+
 #endif /* GRACE_H */
