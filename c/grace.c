@@ -489,7 +489,7 @@ static void trace_module_registry(void) {
 
 GraceModuleSearchPath *grace_module_search_paths = NULL;
 
-static void add_module_search_path(const char *path) {
+void grace_add_module_search_path(const char *path) {
     GraceModuleSearchPath *p = malloc(sizeof(GraceModuleSearchPath));
     p->path = path;
     p->next = grace_module_search_paths;
@@ -500,18 +500,18 @@ GraceModuleSearchPath *grace_get_module_search_paths(void) {
     if (!grace_module_search_paths) {
         /* Default search path: packed into executable (NULL path),
          * next to executable, current directory. */
-        add_module_search_path(".");
+        grace_add_module_search_path(".");
         if (executable_path) {
             char *exe_dir = str_dup(executable_path);
             char *slash = strrchr(exe_dir, '/');
             if (slash) {
                 *slash = 0;
-                add_module_search_path(exe_dir);
+                grace_add_module_search_path(exe_dir);
             } else {
                 free(exe_dir);
             }
         }
-        add_module_search_path(NULL);
+        grace_add_module_search_path(NULL);
     }
     return grace_module_search_paths;
 }

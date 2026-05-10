@@ -157,6 +157,34 @@ int main(int argc, char *argv[]) {
     grace_register_module("vga", make_vga());
     #endif
 
+    char file_dir[512];
+    const char *last_sep = strrchr(user_file, '/');
+    if (!last_sep) last_sep = strrchr(user_file, '\\'); // DOS/Windows path separator
+    if (last_sep) {
+        size_t dir_len = last_sep - user_file;
+        if (dir_len >= sizeof(file_dir)) {
+            fprintf(stderr, "grace: file path too long\n");
+            return 1;
+        }
+        strncpy(file_dir, user_file, dir_len);
+        file_dir[dir_len] = '\0';
+    } else {
+        file_dir[0] = '.';
+        file_dir[1] = '\0';
+    }
+    // Search paths, in reverse order
+    grace_add_module_search_path(NULL); // Packed into executable
+    char *exe_dir = str_dup(executable_path);
+    char *slash = strrchr(exe_dir, '/');
+    if (!slash) slash = strrchr(exe_dir, '\\'); // DOS/Windows path separator
+    if (slash) {
+        *slash = 0;
+        grace_add_module_search_path(exe_dir);
+    } else {
+        free(exe_dir);
+    }
+    grace_add_module_search_path(file_dir);
+
     /*  8. Evaluate the user program  */
     /* The top-level is an object constructor; eval produces a GraceObject.
      * Final result is ignored, but side effects still happen.

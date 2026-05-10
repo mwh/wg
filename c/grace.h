@@ -456,5 +456,6 @@ typedef struct GraceModuleSearchPath {
 } GraceModuleSearchPath;
 extern GraceModuleSearchPath *grace_module_search_paths;
 GraceModuleSearchPath *grace_get_module_search_paths(void);
+void grace_add_module_search_path(const char *path);
 
 #endif /* GRACE_H */
