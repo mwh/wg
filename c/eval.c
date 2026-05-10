@@ -991,6 +991,7 @@ static GraceObject *load_module(Env *env, const char *src) {
             * Also protect the outer continuation k from gc_sweep_conts. */
         gc_push_root(&env->receiver);
         gc_push_root(&env->scope);
+        size_t src_len = strlen(src);
         char *msrc;
         char path[512];
         if (strncmp(src, "grace:", 6) == 0) {
@@ -1002,6 +1003,49 @@ static GraceObject *load_module(Env *env, const char *src) {
             if (!msrc) {
                 grace_fatal("Cannot find packed-in module '%s': not found in executable", src);
             }
+        } else if (strcmp(src + src_len - 4, ".txt") == 0) {
+            /* Load from disk with .txt suffix (for testing) */
+            GraceModuleSearchPath *sp = grace_get_module_search_paths();
+            while (sp) {
+                if (sp->path == NULL) {
+                    msrc = try_load_from_self(src);
+                    if (msrc) {
+                        break;
+                    }
+                    sp = sp->next;
+                    continue;
+                }
+                snprintf(path, sizeof(path), "%s/%s", sp->path, src);
+                FILE *mf = fopen(path, "r");
+                if (mf) {
+                    fseek(mf, 0, SEEK_END);
+                    long msz = ftell(mf);
+                    fseek(mf, 0, SEEK_SET);
+                    msrc = malloc(msz + 1);
+                    fread(msrc, 1, msz, mf);
+                    msrc[msz] = '\0';
+                    fclose(mf);
+                    break;
+                }
+                sp = sp->next;
+            }
+            if (!msrc) {
+                char *search_paths = "";
+                for (sp = grace_module_search_paths; sp; sp = sp->next) {
+                    if (sp->path) {
+                        char buf[512];
+                        snprintf(buf, sizeof(buf), "\n  %s", sp->path);
+                        search_paths = str_cat(search_paths, buf);
+                    } else {
+                        search_paths = str_cat(search_paths, "\n  (packed in executable)");
+                    }
+                }
+                grace_fatal("Cannot find resource '%s': no such file in search paths:%s", src, search_paths);
+            }
+            GraceObject *resource_str = grace_string_take(msrc);
+            grace_register_module(str_dup(src), resource_str);
+            gc_pop_roots(2);
+            return resource_str;
         } else {
             /* Load src.grace from disk, parse, eval, and register */
             GraceModuleSearchPath *sp = grace_get_module_search_paths();
