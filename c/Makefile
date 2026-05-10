@@ -67,5 +67,8 @@ onefile-program.c: $(INTERP_SRCS) program.c
 onefile-program: onefile-program.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
+zgrace: trailer.zip grace
+	./ziptrail $^ $@
+
 clean:
 	rm -f $(OBJS) grace program

@@ -1,0 +1,19 @@
+#!/bin/sh
+
+trailer=$1
+executable=$2
+output=$3
+if [ -z "$trailer" ]; then
+    echo "Usage: $0 <trailer.zip> [base-executable-name] [output-executable-name]"
+    exit 1
+fi
+if [ -z "$executable" ]; then
+    executable="grace"
+fi
+if [ -z "$output" ]; then
+    output="z$executable"
+fi
+
+cat "$executable" "$trailer" > "$output"
+zip -A "$output"
+chmod +x "$output"

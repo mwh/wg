@@ -1,5 +1,6 @@
 *.o
 grace
+zgrace
 *.grace
 dos/*.EXE
 dos/*.O
