@@ -982,6 +982,71 @@ static void da_recv_cont_cleanup(Cont *c) {
     free(d->setter);
 }
 
+static GraceObject *load_module(Env *env, const char *src) {
+    GraceObject *mod = grace_find_module(src);
+    if (!mod) {
+        /* Import loading runs nested synchronous trampolines. Keep the
+            * current object/scope rooted so the enclosing evaluation context
+            * cannot be swept while the module is being parsed and evaluated.
+            * Also protect the outer continuation k from gc_sweep_conts. */
+        gc_push_root(&env->receiver);
+        gc_push_root(&env->scope);
+        char *msrc;
+        char path[512];
+        if (strncmp(src, "grace:", 6) == 0) {
+            /* Source code in-executable (ZIP format) */
+            const char *fn = src + 6;
+            char need_name[512];
+            snprintf(need_name, sizeof(need_name), "%s.grace", fn);
+            msrc = try_load_from_self(need_name);
+            if (!msrc) {
+                grace_fatal("Cannot find packed-in module '%s': not found in executable", src);
+            }
+        } else {
+            /* Load src.grace from disk, parse, eval, and register */
+            snprintf(path, sizeof(path), "%s.grace", src);
+            FILE *mf = fopen(path, "r");
+            if (!mf) {
+                msrc = try_load_from_self(path);
+                if (!msrc)
+                    grace_fatal("Cannot find module '%s': no such file '%s'", src, path);
+            } else {
+                fseek(mf, 0, SEEK_END);
+                long msz = ftell(mf);
+                fseek(mf, 0, SEEK_SET);
+                msrc = malloc(msz + 1);
+                fread(msrc, 1, msz, mf);
+                msrc[msz] = '\0';
+                fclose(mf);
+            }
+        }
+        GraceObject *parser_obj = grace_find_module("//parser");
+        if (!parser_obj)
+            grace_fatal("Parser not available for loading module '%s'", src);
+        GraceObject *pargs[2] = {
+            grace_string_new(path),
+            grace_string_take(msrc)
+        };
+        GraceObject *ast_obj = grace_request_sync(parser_obj, env,
+                                                    "parseModule(2)", pargs, 2);
+        ASTNode *prog = grace_ast_to_astnode(ast_obj, env);
+        if (!prog)
+            grace_fatal("Parser returned nothing for module '%s'", src);
+        CaptureCont *mcc = CONT_ALLOC(CaptureCont);
+        mcc->base.apply = capture_apply;
+        mcc->base.gc_trace = capture_cont_trace;
+        mcc->base.cleanup = NULL;
+        mcc->result = grace_done;
+        cont_retain((Cont *)mcc);
+        trampoline(eval_node(prog, env, (Cont *)mcc));
+        mod = mcc->result;
+        cont_release((Cont *)mcc);
+        grace_register_module(str_dup(src), mod);
+        gc_pop_roots(2);
+    }
+    return mod;
+}
+
 /*
  * eval_node - main evaluator dispatch
  */
@@ -1284,7 +1349,9 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
     /*  dialect statement  */
     case NK_DIALECT_STMT: {
         const char *src = node->strval;
-        GraceObject *mod = grace_find_module(src);
+        gc_push_cont_root(&k); /* protect k from gc_sweep_conts while loading module */
+        GraceObject *mod = load_module(env, src);
+        gc_pop_cont_root();
         if (!mod) grace_fatal("Cannot find dialect '%s'", src);
         if (env->scope->vt == &grace_user_vtable) {
             GraceUserObject *uo = (GraceUserObject *)env->scope;
@@ -1297,69 +1364,9 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
     case NK_IMPORT_STMT: {
         const char *src     = node->strval;
         ASTNode    *binding = node->a1;   /* NK_IDENT_DECL */
-        GraceObject *mod = grace_find_module(src);
-        if (!mod) {
-            /* Import loading runs nested synchronous trampolines. Keep the
-             * current object/scope rooted so the enclosing evaluation context
-             * cannot be swept while the module is being parsed and evaluated.
-             * Also protect the outer continuation k from gc_sweep_conts. */
-            gc_push_root(&env->receiver);
-            gc_push_root(&env->scope);
-            gc_push_cont_root(&k);
-            char *msrc;
-            char path[512];
-            if (strncmp(src, "grace:", 6) == 0) {
-                /* Source code in-executable (ZIP format) */
-                const char *fn = src + 6;
-                char need_name[512];
-                snprintf(need_name, sizeof(need_name), "%s.grace", fn);
-                msrc = try_load_from_self(need_name);
-                if (!msrc) {
-                    grace_fatal("Cannot find packed-in module '%s': not found in executable", src);
-                }
-            } else {
-                /* Load src.grace from disk, parse, eval, and register */
-                snprintf(path, sizeof(path), "%s.grace", src);
-                FILE *mf = fopen(path, "r");
-                if (!mf) {
-                    msrc = try_load_from_self(path);
-                    if (!msrc)
-                        grace_fatal("Cannot find module '%s': no such file '%s'", src, path);
-                } else {
-                    fseek(mf, 0, SEEK_END);
-                    long msz = ftell(mf);
-                    fseek(mf, 0, SEEK_SET);
-                    msrc = malloc(msz + 1);
-                    fread(msrc, 1, msz, mf);
-                    msrc[msz] = '\0';
-                    fclose(mf);
-                }
-            }
-            GraceObject *parser_obj = grace_find_module("//parser");
-            if (!parser_obj)
-                grace_fatal("Parser not available for loading module '%s'", src);
-            GraceObject *pargs[2] = {
-                grace_string_new(path),
-                grace_string_take(msrc)
-            };
-            GraceObject *ast_obj = grace_request_sync(parser_obj, env,
-                                                       "parseModule(2)", pargs, 2);
-            ASTNode *prog = grace_ast_to_astnode(ast_obj, env);
-            if (!prog)
-                grace_fatal("Parser returned nothing for module '%s'", src);
-            CaptureCont *mcc = CONT_ALLOC(CaptureCont);
-            mcc->base.apply = capture_apply;
-            mcc->base.gc_trace = capture_cont_trace;
-            mcc->base.cleanup = NULL;
-            mcc->result = grace_done;
-            cont_retain((Cont *)mcc);
-            trampoline(eval_node(prog, env, (Cont *)mcc));
-            mod = mcc->result;
-            cont_release((Cont *)mcc);
-            grace_register_module(str_dup(src), mod);
-            gc_pop_cont_root();
-            gc_pop_roots(2);
-        }
+        gc_push_cont_root(&k); /* protect k from gc_sweep_conts while loading module */
+        GraceObject *mod = load_module(env, src);
+        gc_pop_cont_root();
         const char *bname = binding ? binding->strval : src;
         user_bind_def(env->receiver, bname, mod);
         user_bind_def(env->scope,    bname, mod);
