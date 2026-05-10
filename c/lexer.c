@@ -131,6 +131,13 @@ typedef struct LexerState {
     GraceObject *currentToken;
 } LexerState;
 
+/* Lexer object: piggybacks LexerState */
+typedef struct {
+    LexerState state;
+} LexerObject;
+LexerObject *last_lexer;
+
+/* Lexer state implementation */
 static PendingStep *lexer_state_request(GraceObject *self, Env *env,
                                       const char *name,
                                       GraceObject **args, int nargs, Cont *k) {
@@ -152,6 +159,9 @@ static void lexer_state_trace(GraceObject *self) {
 
 static void lexer_state_sweep_free(GraceObject *self) {
     (void)self;
+    if (last_lexer && (GraceObject *)last_lexer == self) {
+        last_lexer = NULL;
+    }
 }
 
 const GraceVTable lexer_state_vtable = { lexer_state_request, lexer_state_describe, lexer_state_trace, lexer_state_sweep_free };
@@ -171,12 +181,8 @@ GraceObject *lexer_state_new(const char *source) {
     return (GraceObject *)ls;
 }
 
-/* Lexer object itself: piggybacks LexerState
- * No additional data at present.
- */
-typedef struct {
-    LexerState state;
-} LexerObject;
+/* Lexer object implementation. */
+
 
 /* Create memo */
 GraceObject *lexer_state_clone(LexerObject *lex) {
@@ -815,7 +821,6 @@ GraceObject *lexer_newg(GraceObject *source_go) {
 
 /* Lexer *module* object */
 
-LexerObject *last_lexer;
 int init_indentColumn = 0;
 
 static PendingStep *lexer_indentColumn_assn(GraceObject *self, Env *env, GraceObject **args,
