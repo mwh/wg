@@ -93,6 +93,11 @@ public class Converter {
                 var binding = (IdentifierDeclaration)convertNode(bindingObj);
                 return new ImportStmt(source, binding);
             }
+            case "dialectStmt" -> {
+                GraceObject sourceObj = requestSync(node, "source", List.of());
+                String source = GraceString.assertString(sourceObj).toString();
+                return new DialectStmt(source);
+            }
             case "defDec" -> {
                 GraceObject nameObj = requestSync(node, "name", List.of());
                 String name = GraceString.assertString(nameObj).toString();

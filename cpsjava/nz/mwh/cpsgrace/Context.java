@@ -105,6 +105,9 @@ public class Context {
             if (current.hasMethod(name)) {
                 return current;
             }
+            if (current instanceof UserObject uo && uo.getDialect() != null
+                    && uo.getDialect().hasMethod(name))
+                return uo.getDialect();
             current = current.getSurrounding();
         }
         System.err.println("No receiver found for method " + name);

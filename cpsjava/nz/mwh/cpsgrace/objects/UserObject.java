@@ -12,6 +12,7 @@ public class UserObject implements GraceObject {
 
     private Map<String, Method> methods;
     private UserObject surrounding;
+    private GraceObject dialect;
     private boolean stateless = true;
 
     private String debugLabel;
@@ -89,6 +90,14 @@ public class UserObject implements GraceObject {
 
     public boolean hasMethod(String name) {
         return methods != null && methods.containsKey(name);
+    }
+
+    public void setDialect(GraceObject moduleObj) {
+        dialect = moduleObj;
+    }
+
+    public GraceObject getDialect() {
+        return dialect;
     }
 
     public boolean isStateless() {
