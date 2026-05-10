@@ -103,7 +103,13 @@ static PendingStep *print_asstr_apply(Cont *c, GraceObject *str_val) {
     cont_consumed(c);
     printf("%s\n", s);
     env_release(env);
+    /* k must be a GC root here as cont_apply can execute synchronously into
+     * stmts_cont_apply -> eval_node(NK_IMPORT_STMT) -> load_module, which runs
+     * a nested trampoline that may call gc_sweep_conts and free k
+     * before it is released here. */
+    gc_push_cont_root(&k);
     PendingStep *r = cont_apply(k, grace_done);
+    gc_pop_cont_root();
     cont_release(k);
     return r;
 }
