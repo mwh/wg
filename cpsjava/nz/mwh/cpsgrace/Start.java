@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
@@ -25,6 +26,8 @@ public class Start {
     public static UserObject prelude;
     private static GraceObject parserObj;
 
+    private static List<Path> modulePaths = new ArrayList<>();
+
     public static void main(String[] args) {
         if (args.length > 0) {
             String fileName = null;
@@ -43,6 +46,9 @@ public class Start {
                 }
             }
             if (fileName != null) {
+                Path modulePath = Path.of(fileName).getParent();
+		if (modulePath == null) modulePath = Path.of(".");
+                modulePaths.add(modulePath);
                 GraceObject graceAST = parseToGraceAST(fileName);
                 if (graceAST == null) {
                     System.err.println("Failed to parse file '" + fileName + "'; aborting.");
@@ -111,7 +117,15 @@ public class Start {
             GraceObject[] returnVal = new GraceObject[1];
             Context ctx = new Context();
             addPrelude(ctx);
-            String content = Files.readString(Path.of(filename));
+            Path filePath = Path.of(filename);
+            for (Path p : modulePaths) {
+                Path candidate = p.resolve(filename);
+                if (Files.exists(candidate)) {
+                    filePath = candidate;
+                    break;
+                }
+            }
+            String content = Files.readString(filePath);
             PendingStep step;
             if (parserObj == null)
                 step = TheProgram.getModuleAST("parser").toCPS().run(ctx, (GraceObject o) -> {
