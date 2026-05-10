@@ -28,6 +28,12 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
 
     private BaseObject self;
 
+    private List<Path> modulePaths = new ArrayList<>();
+
+    public void addModulePath(Path path) {
+        modulePaths.add(path);
+    }
+
     @Override
     public void setSelf(BaseObject self) {
         this.self = self;
@@ -433,9 +439,16 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
                 object.setField(node.getName(), modules.get(node.getSource()));
                 return done;
             }
-
+            
             String filename = node.getSource() + ".grace";
             try {
+                for (Path modulePath : modulePaths) {
+                    Path fullPath = modulePath.resolve(filename);
+                    if (Files.exists(fullPath)) {
+                        filename = fullPath.toString();
+                        break;
+                    }
+                }
                 String source = Files.readString(Path.of(filename));
                 ObjectConstructor ast = (ObjectConstructor) Parser.parse(node.getSource(), source);
                 GraceObject mod =  this.evaluateModule(ast);
@@ -461,6 +474,13 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
 
             String filename = node.getSource() + ".grace";
             try {
+                for (Path modulePath : modulePaths) {
+                    Path fullPath = modulePath.resolve(filename);
+                    if (Files.exists(fullPath)) {
+                        filename = fullPath.toString();
+                        break;
+                    }
+                }
                 String source = Files.readString(Path.of(filename));
                 ObjectConstructor ast = (ObjectConstructor) Parser.parse(node.getSource(), source);
                 GraceObject mod =  this.evaluateModule(ast);
@@ -848,11 +868,17 @@ public class Evaluator extends ASTConstructors implements Visitor<GraceObject> {
 
     static GraceObject evaluateProgram(ASTNode program) {
         BaseObject lexicalParent = (BaseObject) basePrelude();
-        return evaluateProgram(program, lexicalParent);
+        return evaluateProgram(program, lexicalParent, Path.of("."));
     }
 
-    static GraceObject evaluateProgram(ASTNode program, BaseObject lexicalParent) {
+    static GraceObject evaluateProgram(ASTNode program, Path modulePath) {
+        BaseObject lexicalParent = (BaseObject) basePrelude();
+        return evaluateProgram(program, lexicalParent, modulePath);
+    }
+
+    static GraceObject evaluateProgram(ASTNode program, BaseObject lexicalParent, Path modulePath) {
         Evaluator evaluator = new Evaluator();
+        evaluator.addModulePath(modulePath);
         try {
             return evaluator.visit(lexicalParent, program);
         } catch (GraceException e) {

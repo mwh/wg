@@ -81,7 +81,9 @@ public class Start {
                 updateFile(ast, updateFile);
             } else {
                 try {
-                    Evaluator.evaluateProgram(ast);
+                    Path dir = Path.of(filename).getParent();
+                    if (dir == null) dir = Path.of(".");
+                    Evaluator.evaluateProgram(ast, dir);
                 } catch (GraceException e) {
                     System.err.println("Crash during evaluation: " + e);
                     System.err.println("From call to:");
