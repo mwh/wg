@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -o pipefail
+
 impl=$1
 
 scriptdir="$(dirname "$0")"
@@ -15,7 +17,9 @@ case "$impl" in
     c) set -- "$scriptdir/../c/grace" ;;
     js) set -- node "$scriptdir/../js/run.mjs" ;;
     haskell) set -- "$scriptdir/../haskell/main" run ;;
+    all) rot='|/-\|/-\'; for x in $(sed -ne '/all/q;s/^  *\([a-z]*\)).*/\1/p' "$0") ; do printf "$x... " ; sttm=$(date +%s); "$0" "$x" | while read l ; do printf '\b%s' "${rot%???????}"; rot="${rot#?}${rot%???????}"; done ; xc=$? ; [ $xc -ne 0 ] && failsin="$x $failsin" && tot=$((tot+xc)) ; printf '\b done in %ss %s failed.\n' $(($(date +%s)-sttm)) $xc ; done ; [ "$failsin" ] && echo $tot failures in: "$failsin" && exit 1 ;;
     other) shift ;;
+    '') echo "Usage: $0" $(sed -ne '/other/d;s/^  *\([a-z]*\)).*/\1 |/p' "$0") "other /bin/cmd arg..." ; exit 1 ;;
     *) echo "Unknown implementation: '$impl'. Use 'other' and specify the path to the implementation" >&2 ; exit 1 ;;
 esac # is ridiculous
 
@@ -51,7 +55,7 @@ if [ "$failed" ]
 then
     echo "Failed $failed test cases: $failures_in $failed_cases"
     echo "Failed $failed test cases."
-    exit 1
+    exit $failed
 else
     echo "All $impl tests passed."
 fi
