@@ -10,6 +10,10 @@ public class UseStmt extends nz.mwh.wg.ast.UseStmt implements GraceObject {
         super(parent, extra);
     }
 
+    public UseStmt(String pos, ASTNode parent, Cons<ASTNode> extra) {
+        super(pos, parent, extra);
+    }
+
     public GraceObject request(Request request) {
         throw new RuntimeException("Cannot request method on ASTNode: " + request.getName());
     }

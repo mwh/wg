@@ -10,6 +10,10 @@ public class InheritStmt extends nz.mwh.wg.ast.InheritStmt implements GraceObjec
         super(parent, extra);
     }
 
+    public InheritStmt(String pos, ASTNode parent, Cons<ASTNode> extra) {
+        super(pos, parent, extra);
+    }
+
     public GraceObject request(Request request) {
         throw new RuntimeException("Cannot request method on ASTNode: " + request.getName());
     }

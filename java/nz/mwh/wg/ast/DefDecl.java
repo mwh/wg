@@ -9,12 +9,18 @@ public class DefDecl extends ASTNode {
     ASTNode type;
     List<String> annotations;
     ASTNode value;
+    String pos;
 
     public DefDecl(String name, ASTNode type, Cons<String> annotations,  ASTNode value) {
+        this(null, name, type, annotations, value);
+    }
+
+    public DefDecl(String pos, String name, ASTNode type, Cons<String> annotations,  ASTNode value) {
         this.name = name;
         this.type = type;
         this.annotations = annotations.toList();
         this.value = value;
+        this.pos = pos;
     }
 
     public <T> T accept(T context, Visitor<T> visitor) {

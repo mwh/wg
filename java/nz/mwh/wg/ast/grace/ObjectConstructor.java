@@ -10,6 +10,10 @@ public class ObjectConstructor extends nz.mwh.wg.ast.ObjectConstructor implement
         super(body, annotations);
     }
     
+    public ObjectConstructor(String startPos, String endPos, Cons<ASTNode> body, Cons<String> annotations) {
+        super(startPos, endPos, body, annotations);
+    }
+    
     public GraceObject request(Request request) {
         throw new RuntimeException("Cannot request method on ASTNode: " + request.getName());
     }

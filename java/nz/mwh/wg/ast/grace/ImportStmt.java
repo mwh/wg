@@ -9,6 +9,10 @@ public class ImportStmt extends nz.mwh.wg.ast.ImportStmt implements GraceObject 
         super(source, bnd);
     }
 
+    public ImportStmt(String pos, String source, IdentifierDeclaration bnd) {
+        super(pos, source, bnd);
+    }
+
     public GraceObject request(Request request) {
         throw new RuntimeException("Cannot request method on ASTNode: " + request.getName());
     }

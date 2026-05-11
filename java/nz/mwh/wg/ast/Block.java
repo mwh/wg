@@ -7,10 +7,18 @@ import nz.mwh.wg.Visitor;
 public class Block extends ASTNode {
     List<ASTNode> parameters;
     List<ASTNode> body;
+    String startPos;
+    String endPos;
 
     public Block(Cons<ASTNode> parameters, Cons<ASTNode> body) {
+        this(parameters, body, null, null);
+    }
+
+    public Block(Cons<ASTNode> parameters, Cons<ASTNode> body, String startPos, String endPos) {
         this.parameters = parameters.toList();
         this.body = body.toList();
+        this.startPos = startPos;
+        this.endPos = endPos;
     }
 
     

@@ -8,8 +8,14 @@ public class UseStmt extends ASTNode {
     
     private ASTNode parent;
     private List<ASTNode> extra;
+    String pos;
 
     public UseStmt(ASTNode parent, Cons<ASTNode> extra) {
+        this(null, parent, extra);
+    }
+
+    public UseStmt(String pos, ASTNode parent, Cons<ASTNode> extra) {
+        this.pos = pos;
         this.parent = parent;
         this.extra = extra.toList();
     }

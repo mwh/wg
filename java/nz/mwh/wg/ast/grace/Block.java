@@ -10,6 +10,10 @@ public class Block extends nz.mwh.wg.ast.Block implements GraceObject {
         super(parameters, body);
     }
 
+    public Block(Cons<ASTNode> parameters, Cons<ASTNode> body, String startPos, String endPos) {
+        super(parameters, body, startPos, endPos);
+    }
+
     public GraceObject request(Request request) {
         throw new RuntimeException("Cannot request method on ASTNode: " + request.getName());
     }

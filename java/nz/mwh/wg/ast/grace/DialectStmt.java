@@ -9,6 +9,10 @@ public class DialectStmt extends nz.mwh.wg.ast.DialectStmt implements GraceObjec
         super(source);
     }
 
+    public DialectStmt(String pos, String source) {
+        super(pos, source);
+    }
+
     public GraceObject request(Request request) {
         throw new RuntimeException("Cannot request method on ASTNode: " + request.getName());
     }

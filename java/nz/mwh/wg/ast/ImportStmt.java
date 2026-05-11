@@ -5,8 +5,14 @@ import nz.mwh.wg.Visitor;
 public class ImportStmt extends ASTNode {
     String source;
     IdentifierDeclaration binding;
+    String pos;
 
     public ImportStmt(String src, IdentifierDeclaration bnd) {
+        this(null, src, bnd);
+    }
+
+    public ImportStmt(String pos, String src, IdentifierDeclaration bnd) {
+        this.pos = pos;
         this.source = src;
         this.binding = bnd;
     }

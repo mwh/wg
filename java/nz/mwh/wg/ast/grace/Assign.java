@@ -10,6 +10,10 @@ public class Assign extends nz.mwh.wg.ast.Assign implements GraceObject {
     public Assign(ASTNode target, ASTNode value) {
         super(target, value);
     }
+
+    public Assign(String pos, ASTNode target, ASTNode value) {
+        super(pos, target, value);
+    }
     
     public GraceObject request(Request request) {
         throw new RuntimeException("Cannot request method on ASTNode: " + request.getName());

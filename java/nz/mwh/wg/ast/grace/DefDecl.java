@@ -10,6 +10,10 @@ public class DefDecl extends nz.mwh.wg.ast.DefDecl implements GraceObject {
         super(name, type, annotations, value);
     }
 
+    public DefDecl(String pos, String name, ASTNode type, Cons<String> annotations, ASTNode value) {
+        super(pos, name, type, annotations, value);
+    }
+
     public GraceObject request(Request request) {
         throw new RuntimeException("Cannot request method on ASTNode: " + request.getName());
     }

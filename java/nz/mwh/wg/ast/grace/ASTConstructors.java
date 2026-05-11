@@ -18,6 +18,10 @@ public class ASTConstructors {
         return new ObjectConstructor(body, annotations);
     }
 
+    protected static ObjectConstructor objectConstructor(String startPos, String endPos, Cons<ASTNode> body, Cons<String> annotations) {
+        return new ObjectConstructor(startPos, endPos, body, annotations);
+    }
+
     protected static LexicalRequest lexicalRequest(Cons<Part> parts) {
         return new LexicalRequest("<unknown>", parts);
     }
@@ -58,12 +62,24 @@ public class ASTConstructors {
         return new DefDecl(name, type.isNil() ? null : type.getHead(), annotations, value);
     }
 
+    protected static DefDecl defDecl(String pos, String name, Cons<ASTNode> type, Cons<String> annotations, ASTNode value) {
+        return new DefDecl(pos, name, type.isNil() ? null : type.getHead(), annotations, value);
+    }
+
     protected static VarDecl varDecl(String name, Cons<ASTNode> type, Cons<String> annotations, Cons<ASTNode> value) {
         return new VarDecl(name, type.isNil() ? null : type.getHead(), annotations, value);
     }
 
+    protected static VarDecl varDecl(String pos, String name, Cons<ASTNode> type, Cons<String> annotations, Cons<ASTNode> value) {
+        return new VarDecl(pos, name, type.isNil() ? null : type.getHead(), annotations, value);
+    }
+
     protected static MethodDecl methodDecl(Cons<Part> parts, Cons<ASTNode> type, Cons<String> annotations, Cons<ASTNode> body) {
         return new MethodDecl(parts, type.isNil() ? null : type.getHead(), annotations, body);
+    }
+
+    protected static MethodDecl methodDecl(String pos, Cons<Part> parts, Cons<ASTNode> type, Cons<String> annotations, Cons<ASTNode> body) {
+        return new MethodDecl(pos, parts, type.isNil() ? null : type.getHead(), annotations, body);
     }
 
     protected static MethodSignature methodSignature(Cons<Part> parts, Cons<ASTNode> type) {
@@ -98,12 +114,24 @@ public class ASTConstructors {
         return new Assign(target, value);
     }
 
+    protected static Assign assign(String pos, ASTNode target, ASTNode value) {
+        return new Assign(pos, target, value);
+    }
+
     protected static Block block(Cons<ASTNode> parameters, Cons<ASTNode> body) {
         return new Block(parameters, body);
     }
 
+    protected static Block block(Cons<ASTNode> parameters, Cons<ASTNode> body, String startPos, String endPos) {
+        return new Block(parameters, body, startPos, endPos);
+    }
+
     protected static ReturnStmt returnStmt(ASTNode value) {
         return new ReturnStmt(value);
+    }
+
+    protected static ReturnStmt returnStmt(String pos, ASTNode value) {
+        return new ReturnStmt(pos, value);
     }
 
     protected static Comment comment(String value) {
@@ -114,8 +142,16 @@ public class ASTConstructors {
         return new ImportStmt(source, bnd);
     }
 
+    protected static ImportStmt importStmt(String pos, String source, IdentifierDeclaration bnd) {
+        return new ImportStmt(pos, source, bnd);
+    }
+
     protected static DialectStmt dialectStmt(String source) {
         return new DialectStmt(source);
+    }
+
+    protected static DialectStmt dialectStmt(String pos, String source) {
+        return new DialectStmt(pos, source);
     }
 
     protected static Lineup lineup(Cons<ASTNode> elements) {
@@ -126,8 +162,16 @@ public class ASTConstructors {
         return new InheritStmt(parent, extra);
     }
 
+    protected static InheritStmt inheritStmt(String pos, ASTNode parent, Cons<ASTNode> extra) {
+        return new InheritStmt(pos, parent, extra);
+    }
+
     protected static UseStmt useStmt(ASTNode parent, Cons<ASTNode> extra) {
         return new UseStmt(parent, extra);
+    }
+
+    protected static UseStmt useStmt(String pos, ASTNode parent, Cons<ASTNode> extra) {
+        return new UseStmt(pos, parent, extra);
     }
 
     protected static final String charDollar = "$";

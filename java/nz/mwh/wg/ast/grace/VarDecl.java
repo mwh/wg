@@ -10,6 +10,10 @@ public class VarDecl extends nz.mwh.wg.ast.VarDecl implements GraceObject{
         super(name, type, annotations, value);
     }
 
+    public VarDecl(String pos, String name, ASTNode type, Cons<String> annotations, Cons<ASTNode> value) {
+        super(pos, name, type, annotations, value);
+    }
+
     public GraceObject request(Request request) {
         throw new RuntimeException("Cannot request method on ASTNode: " + request.getName());
     }

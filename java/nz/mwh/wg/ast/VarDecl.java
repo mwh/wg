@@ -9,12 +9,18 @@ public class VarDecl extends ASTNode {
     ASTNode type;
     List<String> annotations;
     ASTNode value;
-
+    String pos;
+    
     public VarDecl(String name, ASTNode type, Cons<String> annotations, Cons<ASTNode> value) {
+        this(null, name, type, annotations, value);
+    }
+
+    public VarDecl(String pos, String name, ASTNode type, Cons<String> annotations, Cons<ASTNode> value) {
         this.name = name;
         this.type = type;
         this.annotations = annotations.toList();
         this.value = value.getHead();
+        this.pos = pos;
     }
 
     public <T> T accept(T context, Visitor<T> visitor) {

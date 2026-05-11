@@ -8,8 +8,14 @@ public class InheritStmt extends ASTNode {
     
     private ASTNode parent;
     private List<ASTNode> extra;
+    String pos;
 
     public InheritStmt(ASTNode parent, Cons<ASTNode> extra) {
+        this(null, parent, extra);
+    }
+
+    public InheritStmt(String pos, ASTNode parent, Cons<ASTNode> extra) {
+        this.pos = pos;
         this.parent = parent;
         this.extra = extra.toList();
     }

@@ -10,6 +10,10 @@ public class ReturnStmt extends nz.mwh.wg.ast.ReturnStmt implements GraceObject 
         super(value);
     }
 
+    public ReturnStmt(String pos, ASTNode value) {
+        super(pos, value);
+    }
+
     public GraceObject request(Request request) {
         throw new RuntimeException("Cannot request method on ASTNode: " + request.getName());
     }

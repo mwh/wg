@@ -4,8 +4,14 @@ import nz.mwh.wg.Visitor;
 
 public class DialectStmt extends ASTNode {
     String source;
+    String pos;
 
     public DialectStmt(String value) {
+        this(null, value);
+    }
+
+    public DialectStmt(String pos, String value) {
+        this.pos = pos;
         this.source = value;
     }
     

@@ -5,8 +5,14 @@ import nz.mwh.wg.Visitor;
 public class Assign extends ASTNode {
     ASTNode target;
     ASTNode value;
+    String pos;
 
     public Assign(ASTNode target, ASTNode value) {
+        this(null, target, value);
+    }
+
+    public Assign(String pos, ASTNode target, ASTNode value) {
+        this.pos = pos;
         this.target = target;
         this.value = value;
     }

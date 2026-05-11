@@ -12,12 +12,18 @@ public class MethodDecl extends ASTNode {
     List<String> annotations;
     List<? extends ASTNode> body;
     private String name;
+    String pos;
 
     public MethodDecl(Cons<? extends Part> parts, ASTNode type, Cons<String> annotations, Cons<? extends ASTNode> body) {
+        this(null, parts, type, annotations, body);
+    }
+
+    public MethodDecl(String pos, Cons<? extends Part> parts, ASTNode type, Cons<String> annotations, Cons<? extends ASTNode> body) {
         this.parts = parts.toList();
         this.type = type;
         this.annotations = annotations.toList();
         this.body = body.toList();
+        this.pos = pos;
         name = this.parts.stream().map(x -> x.getName() + "(" + x.getParameters().size() + ")").collect(Collectors.joining(""));
     }
 
