@@ -97,7 +97,7 @@ echo
 if [ $failed -gt 0 ]
 then
     echo "Passed $passed/$total; failed $failed/$total"
-    exit 1
+    exit $failed
 else
     echo Passed $passed/$total
 fi

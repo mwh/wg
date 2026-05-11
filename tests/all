@@ -1,0 +1,59 @@
+#!/bin/sh
+
+impl=$1
+
+scriptdir="$(dirname "$0")"
+if [ "${scriptdir#/}" = "$scriptdir" ]
+then
+    scriptdir="$PWD/$scriptdir"
+fi
+
+
+case "$impl" in
+    java) set -- java -cp "$scriptdir/../java" nz.mwh.wg.Start ;;
+    cpsjava) set -- java -cp "$scriptdir/../cpsjava" nz.mwh.cpsgrace.Start ;;
+    c) set -- "$scriptdir/../c/grace" ;;
+    js) set -- node "$scriptdir/../js/run.mjs" ;;
+    haskell) set -- "$scriptdir/../haskell/main" run ;;
+    other) shift ;;
+    *) echo "Unknown implementation: '$impl'. Use 'other' and specify the path to the implementation" >&2 ; exit 1 ;;
+esac # is ridiculous
+
+echo Command: "$@"
+cd "$(dirname "$0")"
+
+failed=
+failures_in=
+failed_cases=
+for x in syntax/good syntax/bad basic inherit
+do
+    echo "Tests $x:"
+    failednow=
+    ./harness "$x" "$@" || failednow=$?
+    if [ "$failednow" ]
+    then
+        failed=$((failed + failednow))
+        [ "$failures_in" ] && failures_in="$failures_in, "
+        failures_in="$failures_in$failednow in $x"
+        prev=
+        for t in "$x/_test_data/"*
+        do
+            t=${t##*/}
+            tc=${t%%.*}
+            [ "$tc" = "$prev" ] && continue
+            prev=$tc
+            failed_cases=$(printf '%s\n  %s' "$failed_cases" "$x/$tc")
+        done
+    fi
+done
+
+if [ "$failed" ]
+then
+    echo "Failed $failed test cases: $failures_in $failed_cases"
+    echo "Failed $failed test cases."
+    exit 1
+else
+    echo "All $impl tests passed."
+fi
+
+# vim:set expandtab sw=4 ts=4:
