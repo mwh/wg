@@ -7,6 +7,7 @@ import Data.IORef
 import Data.Char
 import Data.List (isSuffixOf, isPrefixOf)
 import Runtime
+import System.Exit (die)
 
 
 toFunc :: ASTNode -> (Context -> IO ())
@@ -322,11 +323,16 @@ processUseList (expr:rest) selfRef ctx cont =
                         -- Copy methods from mixin that don't already exist, skip builtins
                         let skipNames = ["==(1)", "!=(1)", "asString(0)", "asDebugString(0)", "hash(0)", "::(1)", "self(0)"]
                         let filtered = Data.Map.filterWithKey (\k _ -> k `notElem` skipNames) mixinMeths
-                        let merged = Data.Map.union existMeths filtered
-                        let newObj = BaseObject parent merged
-                        writeIORef selfRef newObj
-                        let ctx' = withSelf ctx newObj
-                        processUseList rest selfRef ctx' cont
+                        let mNames = Data.Map.keys filtered
+                        let isMutable a = ":=(1)" `isSuffixOf` a
+                        if any isMutable mNames
+                            then die $ "Use: object is not a valid mixin (contains mutable methods: " ++ show [n | n <- mNames, isMutable n] ++ ")"
+                            else do
+                                let merged = Data.Map.union existMeths filtered
+                                let newObj = BaseObject parent merged
+                                writeIORef selfRef newObj
+                                let ctx' = withSelf ctx newObj
+                                processUseList rest selfRef ctx' cont
                     _ -> do
                         putStrLn "Use: self is not a BaseObject"
                         cont ctx
