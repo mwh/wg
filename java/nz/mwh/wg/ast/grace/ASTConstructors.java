@@ -98,6 +98,10 @@ public class ASTConstructors {
         return new TypeDecl(name, genericParams, type);
     }
 
+    protected static TypeDecl typeDecl(String pos, String name, Cons<ASTNode> genericParams, ASTNode type) {
+        return new TypeDecl(pos, name, genericParams, type);
+    }
+
     protected static Part declarationPart(String name, Cons<IdentifierDeclaration> parameters) {
         return new Part(name, parameters);
     }

@@ -123,7 +123,9 @@ astModule = BaseObject GraceDone $ fromList [
     , ("importStmt(3)", \ctx [GraceString _, GraceString name, GraceAstObject binding] -> continuation ctx $ GraceAstObject (ImportStmt name binding))
     , ("dialectStmt(1)", \ctx [GraceString name] -> continuation ctx $ GraceAstObject (DialectStmt name))
     , ("dialectStmt(2)", \ctx [GraceString _, GraceString name] -> continuation ctx $ GraceAstObject (DialectStmt name))
-    , ("typeDecl(2)", \ctx [GraceString name, GraceAstObject value] -> continuation ctx $ GraceAstObject (TypeDecl name value))
+    , ("typeDecl(2)", \ctx [GraceString name, GraceAstObject value] -> continuation ctx $ GraceAstObject (TypeDecl name [] value))
+    , ("typeDecl(3)", \ctx [GraceString name, GraceAstList genericParams, GraceAstObject value] -> continuation ctx $ GraceAstObject (TypeDecl name [n | GraceAstObject n <- genericParams] value))
+    , ("typeDecl(4)", \ctx [GraceString _, GraceString name, GraceAstList genericParams, GraceAstObject value] -> continuation ctx $ GraceAstObject (TypeDecl name [n | GraceAstObject n <- genericParams] value))
     , ("methSig(2)", \ctx [GraceAstList parts, GraceAstList rtype] -> continuation ctx $ GraceMethodSignatureObject (MethodSignature [n | GracePartObject n <- parts] (case rtype of { [] -> Nothing ; [GraceAstObject o] -> Just o } )))
     , ("interfaceCons(1)", \ctx [GraceAstList meths] -> continuation ctx $ GraceAstObject (InterfaceConstructor [m | GraceMethodSignatureObject m <- meths]))
     , ("inheritStmt(2)", \ctx [GraceAstObject expr, _extra] -> continuation ctx $ GraceAstObject (InheritStmt expr))
@@ -150,7 +152,7 @@ astObjectToAstNode (GraceAstObject node@(InterpString _ _ _)) = node
 astObjectToAstNode (GraceAstObject node@(Comment _)) = node
 astObjectToAstNode (GraceAstObject node@(ImportStmt _ _)) = node
 astObjectToAstNode (GraceAstObject node@(DialectStmt _)) = node
-astObjectToAstNode (GraceAstObject node@(TypeDecl _ _)) = node
+astObjectToAstNode (GraceAstObject node@(TypeDecl _ _ _)) = node
 astObjectToAstNode (GraceAstObject node@(InterfaceConstructor _)) = node
 astObjectToAstNode (GraceAstObject node@(InheritStmt _)) = node
 astObjectToAstNode (GraceAstObject node@(UseStmt _)) = node

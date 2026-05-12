@@ -195,7 +195,7 @@ toFunc (Lineup elems) =
             evalElemList ctx elemFuncs [] $ \vals ->
                 continuation ctx $ Runtime.makeLineup vals
 
-toFunc (TypeDecl name init) =
+toFunc (TypeDecl name genericParams init) =
     \ctx ->
         do
             let slf = localScope ctx
@@ -341,7 +341,7 @@ varNames (h:t) =
         VarDecl name _ _ _ -> name : varNames t
         DefDecl name _ _ _ -> name : varNames t
         ImportStmt name _ -> name : varNames t
-        TypeDecl name _ -> name : varNames t
+        TypeDecl name _ _ -> name : varNames t
         _ -> varNames t
 
 makeMethods :: [ASTNode] -> IORef GraceObject -> IO (Map String (Context -> [GraceObject] -> IO ()))
@@ -379,7 +379,7 @@ makeMethods (stmt:rest) self =
                                 (continuation ctx) $ GraceDone
                     restMeths <- makeMethods rest self
                     return $ insert getterName getter $ insert setterName setter restMeths
-            TypeDecl name init ->
+            TypeDecl name genericParams init ->
                 do
                     let setterName = "type " ++ name
                         getterName = name ++ "(0)"

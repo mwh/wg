@@ -149,6 +149,13 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
             ASTNode type = (ASTNode) request.getParts().get(0).getArgs().get(2);
             return typeDecl(name, genericParams, type);
         });
+        lexicalParent.addMethod("typeDecl(4)", request -> {
+            String pos = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
+            String name = ((GraceString) request.getParts().get(0).getArgs().get(1)).getValue();
+            Cons<ASTNode> genericParams = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(2);
+            ASTNode type = (ASTNode) request.getParts().get(0).getArgs().get(3);
+            return typeDecl(pos, name, genericParams, type);
+        });
         lexicalParent.addMethod("declarationPart(2)", request -> {
             String name = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
             Cons<IdentifierDeclaration> parameters = (Cons<IdentifierDeclaration>) request.getParts().get(0).getArgs().get(1);

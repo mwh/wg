@@ -9,16 +9,23 @@ public class TypeDecl extends ASTNode {
     private final String name;
     private final List<? extends ASTNode> genericParameters;
     private final ASTNode type;
-
-    public TypeDecl(String name, Cons<ASTNode> genericParams, ASTNode type) {
-        this.name = name;
-        this.genericParameters = genericParams.toList();
-        this.type = type;
-    }
+    private String pos;
 
     public TypeDecl(String name, ASTNode type) {
         this.name = name;
         this.genericParameters = Collections.emptyList();
+        this.type = type;
+        this.pos = "";
+    }
+
+    public TypeDecl(String name, Cons<ASTNode> genericParams, ASTNode type) {
+        this("", name, genericParams, type);
+    }
+
+    public TypeDecl(String pos, String name, Cons<ASTNode> genericParams, ASTNode type) {
+        this.pos = pos;
+        this.name = name;
+        this.genericParameters = genericParams.toList();
         this.type = type;
     }
 

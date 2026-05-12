@@ -16,7 +16,7 @@ data ASTNode = ObjectConstructor [ASTNode] [String]
              | Comment String
              | ImportStmt String ASTNode
              | DialectStmt String
-             | TypeDecl String ASTNode
+             | TypeDecl String [ASTNode] ASTNode
              | InterfaceConstructor [MethodSignature]
              | InheritStmt ASTNode
              | UseStmt ASTNode

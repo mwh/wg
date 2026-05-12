@@ -14,6 +14,10 @@ public class TypeDecl extends nz.mwh.wg.ast.TypeDecl implements GraceObject {
         super(name, genericParams, type);
     }
 
+    public TypeDecl(String pos, String name, Cons<ASTNode> genericParams, ASTNode type) {
+        super(pos, name, genericParams, type);
+    }
+
     @Override
     public GraceObject request(Request request) {
         throw new RuntimeException("Cannot request method on ASTNode: " + request.getName());
