@@ -8,6 +8,7 @@ import Data.Char
 import Data.List (isSuffixOf, isPrefixOf)
 import Runtime
 import System.Exit (die)
+import Program
 
 
 toFunc :: ASTNode -> (Context -> IO ())
@@ -155,15 +156,26 @@ toFunc (ImportStmt name binding) =
             case mod of
                 Just modObj ->
                     do
-                        let setter = getMethod ("import " ++ name) scope
+                        let setter = getMethod ("import " ++ (nameFrom binding)) scope
                         setter ctx [modObj]
                 Nothing ->
-                    putStrLn $ "Cannot import " ++ name ++ ": external imports not supported in this version of Grace (use -i option of Java version to inline)"
+                    do
+                        content <- readFile (name ++ ".grace")
+                        processAST content $ (\result ->
+                            do
+                                case result of
+                                    GraceAstObject n ->
+                                        toFunc n $ resultContext $ \val ->
+                                            let setter = getMethod ("import " ++ (nameFrom binding)) scope
+                                            in
+                                                setter ctx [val]
+                                    _ -> die $ "Parse result for module " ++ name ++ " was not an AST object: " ++ (show result)
+                            )
+                        --die $ "Cannot import " ++ name ++ ": external imports not supported in this version of Grace (use -i option of Java version to inline)"
 
 toFunc (DialectStmt name) =
     \ctx ->
-        do
-            putStrLn $ "Cannot use dialect " ++ name ++ ": external imports not supported in this version of Grace"
+        continuation ctx $ GraceDone
 
 toFunc (InterpString before expr next) =
     let exprFunc = toFunc expr
@@ -207,6 +219,19 @@ toFunc (TypeDecl name genericParams init) =
                         setter ctx [val]
                     )
 
+nameFrom :: ASTNode -> String
+nameFrom (IdentifierDeclaration name _) = name
+nameFrom _ = error "Expected IdentifierDeclaration"
+
+processAST code using =
+    do
+        let func = toFunc program
+        func $ resultContext $ \val ->
+            let parse = getMethod "parse(1)" val
+                string = GraceString code
+            in
+                parse (resultContext using) [string]
+
 evalObjectConstructor :: [ASTNode] -> Context -> Maybe (IORef GraceObject, Map String (Context -> [GraceObject] -> IO ())) -> IO ()
 evalObjectConstructor body ctx inheritingAs =
     do
@@ -224,7 +249,27 @@ evalObjectConstructor body ctx inheritingAs =
                         selfObj <- readIORef self
                         continuation ctx' $ selfObj) mergedMeths
                 Just _ -> mergedMeths  -- self(0) already in existingMeths
-        let obj = BaseObject (localScope ctx) methsSelf
+        let dialectStmts = [name | DialectStmt name <- body]
+        dialect <- do
+            dialectCell <- newIORef (localScope ctx)
+            if length dialectStmts > 1
+                then die "Multiple dialect statements in one object not allowed"
+                else case dialectStmts of
+                    [] -> return ()
+                    [name] -> do
+                        content <- readFile (name ++ ".grace")
+                        let a = processAST
+                        processAST content $ (\result ->
+                            do
+                                return $ GraceNumber 1
+                                case result of
+                                    GraceAstObject n ->
+                                        toFunc n $ resultContext $ \val ->
+                                            writeIORef dialectCell val
+                                    _ -> die $ "Parse result for module " ++ name ++ " was not an AST object: " ++ (show result)
+                            )
+            readIORef dialectCell
+        let obj = BaseObject dialect methsSelf
         writeIORef self obj
         let selfCtx = withSelf ctx obj
         -- Filter body: skip MethodDecl (already handled), skip InheritStmt (handled below)
