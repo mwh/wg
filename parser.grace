@@ -40,6 +40,22 @@ method parseString(lxr) {
     }
 }
 
+method parseRequestNoBlock(lxr) for(label) {
+    def token = lxr.current
+    if (token.nature == "IDENTIFIER") then {
+        var ret := parselexicalRequestNoBlock(lxr, token.value)
+        if (lxr.current.nature == "DOT") then {
+            var token := lxr.current
+            while { token.nature == "DOT" } do {
+                ret := parseexplicitRequest(ret, lxr)
+                token := lxr.current
+            }
+        }
+        return ret
+    }
+    parseError(token.line, token.column, "Unexpected token parsing " ++ label ++ ": " ++ token.asString)
+}
+
 method parselexicalRequestNoBlock(lxr, id) {
     def pos = lxr.current.location
     def parts = parseparts(lxr, false)
@@ -534,8 +550,8 @@ method parseAnnotations(lxr) {
     var anns := ast.nil
     lxr.advance
     while {lxr.current.nature == "IDENTIFIER"} do {
-        anns := ast.cons(lxr.current.value, anns)
-        lxr.advance
+        def ann = parseRequestNoBlock(lxr) for("annotation")
+        anns := ast.cons(ann, anns)
         if (lxr.current.nature == "COMMA") then {
             lxr.advance
         }

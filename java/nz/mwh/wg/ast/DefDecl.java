@@ -7,15 +7,15 @@ import nz.mwh.wg.Visitor;
 public class DefDecl extends ASTNode {
     String name;
     ASTNode type;
-    List<String> annotations;
+    List<ASTNode> annotations;
     ASTNode value;
     String pos;
 
-    public DefDecl(String name, ASTNode type, Cons<String> annotations,  ASTNode value) {
+    public DefDecl(String name, ASTNode type, Cons<ASTNode> annotations,  ASTNode value) {
         this(null, name, type, annotations, value);
     }
 
-    public DefDecl(String pos, String name, ASTNode type, Cons<String> annotations,  ASTNode value) {
+    public DefDecl(String pos, String name, ASTNode type, Cons<ASTNode> annotations,  ASTNode value) {
         this.name = name;
         this.type = type;
         this.annotations = annotations.toList();
@@ -35,7 +35,7 @@ public class DefDecl extends ASTNode {
         return name;
     }
 
-    public List<String> getAnnotations() {
+    public List<ASTNode> getAnnotations() {
         return annotations;
     }
 

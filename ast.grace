@@ -217,11 +217,11 @@ method defDecl(pos, id, dtype, anns, val) {
         def kind is public = "defDec"
 
         method asString {
-            "defDec(\"" ++ name ++ "\", "  ++ decType ++ ", " ++ anns.map { x -> "\"" ++ x ++ "\"" } ++ ", " ++ value ++ ")"
+            "defDec(\"" ++ name ++ "\", "  ++ decType ++ ", " ++ anns ++ ", " ++ value ++ ")"
         }
 
         method concise {
-            "d3F(\"" ++ name ++ "\","  ++ decType.concise ++ "," ++ (anns.map { x -> "\"" ++ x ++ "\"" }.conciseRaw) ++ "," ++ value.concise ++ ")"
+            "d3F(\"" ++ name ++ "\","  ++ decType.concise ++ "," ++ anns.concise ++ "," ++ value.concise ++ ")"
         }
     }
 }
@@ -294,11 +294,11 @@ method varDecl(pos, id, dtype, anns, val) {
         def kind is public = "varDec"
 
         method asString {
-            "varDec(\"" ++ name ++ "\", " ++ dtype ++ ", " ++ anns.map { x -> "\"" ++ x ++ "\"" } ++ ", " ++ value ++ ")"
+            "varDec(\"" ++ name ++ "\", " ++ dtype ++ ", " ++ anns ++ ", " ++ value ++ ")"
         }
 
         method concise {
-            "v4R(\"" ++ name ++ "\"," ++ dtype.concise ++ "," ++ (anns.map { x -> "\"" ++ x ++ "\"" }.conciseRaw) ++ "," ++ value.concise ++ ")"
+            "v4R(\"" ++ name ++ "\"," ++ dtype.concise ++ "," ++ anns.concise ++ "," ++ value.concise ++ ")"
         }
     }
 }
@@ -422,7 +422,7 @@ method methodDecl(pos, declarationParts, retType, anns, bd) {
         }
 
         method concise {
-            "m0D(" ++ parts.concise ++ "," ++ returnType.concise ++ "," ++ (annotations.map { x -> "\"" ++ x ++ "\"" }.conciseRaw) ++ "," ++ body.concise ++ ")"
+            "m0D(" ++ parts.concise ++ "," ++ returnType.concise ++ "," ++ annotations.concise ++ "," ++ body.concise ++ ")"
         }
     }
 }
@@ -440,11 +440,11 @@ method objectConstructor(startPos, endPos, bd, anns) {
         def kind is public = "objCons"
 
         method asString {
-            "objCons(" ++ body ++ ", " ++ annotations.map { x -> "\"" ++ x ++ "\"" } ++ ")"
+            "objCons(" ++ body ++ ", " ++ annotations ++ ")"
         }
 
         method concise {
-            "o0C(" ++ body.concise ++ "," ++ (annotations.map { x -> "\"" ++ x ++ "\"" }.concise) ++ ")"
+            "o0C(" ++ body.concise ++ "," ++ annotations.concise ++ ")"
         }
     }
 

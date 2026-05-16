@@ -104,8 +104,7 @@ public class Converter {
                 GraceObject dtypeObj = requestSync(node, "decType", List.of());
                 ASTNode dtype = convertNode(dtypeObj);
                 GraceObject annotsObj = requestSync(node, "annotations", List.of());
-                List<String> annotsStr = convertStringList(annotsObj);
-                List<ASTNode> annots = annotsStr.stream().map(x -> (ASTNode)new LexReq(List.of(new Part(x, List.of(), List.of())), "<unknown>")).toList();
+                List<ASTNode> annots = convertNodeList(annotsObj);
                 GraceObject bodyObj = requestSync(node, "value", List.of());
                 ASTNode body = convertNode(bodyObj);
                 return new DefDec(name, dtype, annots, body);
@@ -116,8 +115,7 @@ public class Converter {
                 GraceObject dtypeObj = requestSync(node, "decType", List.of());
                 ASTNode dtype = convertNode(dtypeObj);
                 GraceObject annotsObj = requestSync(node, "annotations", List.of());
-                List<String> annotsStr = convertStringList(annotsObj);
-                List<ASTNode> annots = annotsStr.stream().map(x -> (ASTNode)new LexReq(List.of(new Part(x, List.of(), List.of())), "<unknown>")).toList();
+                List<ASTNode> annots = convertNodeList(annotsObj);
                 GraceObject valueObj = requestSync(node, "value", List.of());
                 ASTNode value = convertNode(valueObj);
                 return new VarDec(name, dtype, annots, value);
@@ -144,8 +142,7 @@ public class Converter {
                 GraceObject returnTypeObj = requestSync(node, "returnType", List.of());
                 ASTNode returnType = convertNode(returnTypeObj);
                 GraceObject annotsObj = requestSync(node, "annotations", List.of());
-                List<String> annotsStr = convertStringList(annotsObj);
-                List<ASTNode> annots = annotsStr.stream().map(x -> (ASTNode)new LexReq(List.of(new Part(x, List.of(), List.of())), "<unknown>")).toList();
+                List<ASTNode> annots = convertNodeList(annotsObj);
                 GraceObject bodyObj = requestSync(node, "body", List.of());
                 List<ASTNode> body = convertNodeList(bodyObj);
                 return new MethodDecl(parts.stream().map(x -> (Part)x).toList(), returnType, annots, body);

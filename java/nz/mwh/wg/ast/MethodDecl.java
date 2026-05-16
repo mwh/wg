@@ -9,16 +9,16 @@ import nz.mwh.wg.Visitor;
 public class MethodDecl extends ASTNode {
     List<? extends Part> parts;
     ASTNode type;
-    List<String> annotations;
+    List<ASTNode> annotations;
     List<? extends ASTNode> body;
     private String name;
     String pos;
 
-    public MethodDecl(Cons<? extends Part> parts, ASTNode type, Cons<String> annotations, Cons<? extends ASTNode> body) {
+    public MethodDecl(Cons<? extends Part> parts, ASTNode type, Cons<ASTNode> annotations, Cons<? extends ASTNode> body) {
         this(null, parts, type, annotations, body);
     }
 
-    public MethodDecl(String pos, Cons<? extends Part> parts, ASTNode type, Cons<String> annotations, Cons<? extends ASTNode> body) {
+    public MethodDecl(String pos, Cons<? extends Part> parts, ASTNode type, Cons<ASTNode> annotations, Cons<? extends ASTNode> body) {
         this.parts = parts.toList();
         this.type = type;
         this.annotations = annotations.toList();

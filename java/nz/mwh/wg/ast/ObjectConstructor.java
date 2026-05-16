@@ -6,15 +6,15 @@ import nz.mwh.wg.Visitor;
 
 public class ObjectConstructor extends ASTNode {
     List<ASTNode> body;
-    List<String> annotations;
+    List<ASTNode> annotations;
     String startPos;
     String endPos;
 
-    public ObjectConstructor(Cons<ASTNode> body, Cons<String> annotations) {
+    public ObjectConstructor(Cons<ASTNode> body, Cons<ASTNode> annotations) {
         this(null, null, body, annotations);
     }
 
-    public ObjectConstructor(String startPos, String endPos, Cons<ASTNode> body, Cons<String> annotations) {
+    public ObjectConstructor(String startPos, String endPos, Cons<ASTNode> body, Cons<ASTNode> annotations) {
         this.body = body.toList();
         this.annotations = annotations.toList();
         this.startPos = startPos;
@@ -33,7 +33,7 @@ public class ObjectConstructor extends ASTNode {
         return body;
     }
 
-    public List<String> getAnnotations() {
+    public List<ASTNode> getAnnotations() {
         return annotations;
     }
 }

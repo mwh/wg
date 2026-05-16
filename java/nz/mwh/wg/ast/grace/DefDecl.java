@@ -6,11 +6,11 @@ import nz.mwh.wg.runtime.Request;
 
 public class DefDecl extends nz.mwh.wg.ast.DefDecl implements GraceObject {
     
-    public DefDecl(String name, ASTNode type, Cons<String> annotations, ASTNode value) {
+    public DefDecl(String name, ASTNode type, Cons<ASTNode> annotations, ASTNode value) {
         super(name, type, annotations, value);
     }
 
-    public DefDecl(String pos, String name, ASTNode type, Cons<String> annotations, ASTNode value) {
+    public DefDecl(String pos, String name, ASTNode type, Cons<ASTNode> annotations, ASTNode value) {
         super(pos, name, type, annotations, value);
     }
 
