@@ -105,7 +105,11 @@ public class GraceBlock implements GraceObject {
             GraceObject result = apply(request, part);
             return new GraceMatchResult(true, result);
         }
+        BaseObject oldSelf = request.getVisitor().getSelf();
+        if (lexicalParent instanceof BaseObject bo)
+            request.getVisitor().setSelf((BaseObject)bo.findNearestSelf());
         GraceObject pattern = patternExpr.accept(lexicalParent, request.getVisitor());
+        request.getVisitor().setSelf(oldSelf);
 
         GraceObject target = part.getArgs().get(0);
 
