@@ -25,6 +25,10 @@ public class GraceMatchResult implements GraceObject {
         return succeeded;
     }
 
+    public GraceObject getValue() {
+        return value;
+    }
+
     @Override
     public String toString() {
         return succeeded ? "MatchResult(succeeded with " + value + ")" : "MatchResult(failed)";

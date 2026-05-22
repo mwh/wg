@@ -49,9 +49,22 @@ public class GraceExceptionKind implements GraceObject {
                 }, "asString", java.util.List.of());
 
             case "match(1)":
-                // For now, exception types always match
+                // Match exceptions by label
                 GraceObject target = args.get(0);
-                return returnCont.returning(ctx, new GraceMatchResult(true, target));
+                return target.requestMethod(ctx, (GraceObject name) -> {
+                        if (name instanceof GraceString gs) {
+                            if (label.equals(gs.toString()))
+                                return returnCont.returning(ctx, new GraceMatchResult(true, target));
+                            // Look further up refinement hierarchy for matches also
+                            GraceExceptionKind pe = parent;
+                            while (pe != null) {
+                                if (pe.label.equals(gs.toString()))
+                                    return returnCont.returning(ctx, new GraceMatchResult(true, target));
+                                pe = pe.parent;
+                            }
+                        }
+                        return returnCont.returning(ctx, new GraceMatchResult(false, target));
+                    }, "name", java.util.List.of(), java.util.List.of());
             default:
                 throw new RuntimeException("No such method " + methodName + " on exception kind");
         }
