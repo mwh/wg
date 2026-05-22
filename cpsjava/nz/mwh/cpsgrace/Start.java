@@ -47,7 +47,7 @@ public class Start {
             }
             if (fileName != null) {
                 Path modulePath = Path.of(fileName).getParent();
-		if (modulePath == null) modulePath = Path.of(".");
+                if (modulePath == null) modulePath = Path.of(".");
                 modulePaths.add(modulePath);
                 GraceObject graceAST = parseToGraceAST(fileName);
                 if (graceAST == null) {
@@ -355,6 +355,23 @@ public class Start {
             return tryBlock.requestMethod(tryCtx, cont, "apply", java.util.List.of(), java.util.List.of());
         }));
 
+        // try(1)catch(1) through try(1)...catch(1)*10
+        // Each catch argument is a matching block. We try each catch block's match(target) in order.
+        // The first successful match result is returned. If there is none, re-raise the exception from here.
+        String tryCatchName = "try(1)";
+        for (int i = 0; i < 10; i++) {
+            tryCatchName += "catch(1)";
+            final String finalName = tryCatchName;
+            prelude.addMethod(finalName, Method.java((ctx, cont, _, args) -> {
+                GraceObject tryBlock = args.get(0);
+                Continuation exnCont = (GraceObject exnValue) -> {
+                    return tryTryCatch(ctx, cont, exnValue, args, 1);
+                };
+                Context tryCtx = ctx.withExceptionContinuation(exnCont);
+                return tryBlock.requestMethod(tryCtx, cont, "apply", java.util.List.of(), java.util.List.of());
+            }));
+        }
+
         UserObject primitiveArray = new UserObject();
         primitiveArray.setDebugLabel("PrimitiveArray");
         primitiveArray.addMethod("new(1)", Method.java((ctx, cont, _, args) -> {
@@ -380,6 +397,25 @@ public class Start {
                 return cont.returning(ctx, mr);
             }
             return tryMatchCases(ctx, cont, target, args, caseIndex + 1);
+        }, "match(1)", java.util.List.of(target));
+    }
+
+    private static PendingStep tryTryCatch(Context ctx, Continuation cont, GraceObject target, java.util.List<GraceObject> args, int caseIndex) {
+        if (caseIndex >= args.size()) {
+            // No case matched - reraise
+            Continuation exnK = ctx.getExceptionContinuation();
+            if (exnK != null) {
+                return exnK.apply(target);
+            }
+            throw new RuntimeException("Unhandled exception: " + target);
+        }
+        GraceObject pattern = args.get(caseIndex);
+        return pattern.requestMethod(ctx, (GraceObject matchResultObj) -> {
+            GraceMatchResult mr = GraceMatchResult.assertMatchResult(matchResultObj);
+            if (mr.isSuccess()) {
+                return cont.returning(ctx, mr.getValue());
+            }
+            return tryTryCatch(ctx, cont, target, args, caseIndex + 1);
         }, "match(1)", java.util.List.of(target));
     }
 
