@@ -28,14 +28,14 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
         });
         lexicalParent.addMethod("objectConstructor(2)", request -> {
             Cons<ASTNode> body = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(0);
-            Cons<String> annotations = (Cons<String>) request.getParts().get(0).getArgs().get(1);
+            Cons<ASTNode> annotations = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(1);
             return objectConstructor(body, annotations);
         });
         lexicalParent.addMethod("objectConstructor(4)", request -> {
             String startPos = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
             String endPos = ((GraceString) request.getParts().get(0).getArgs().get(1)).getValue();
             Cons<ASTNode> body = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(2);
-            Cons<String> annotations = (Cons<String>) request.getParts().get(0).getArgs().get(3);
+            Cons<ASTNode> annotations = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(3);
             return objectConstructor(startPos, endPos, body, annotations);
         });
         lexicalParent.addMethod("numberNode(1)", request -> {
@@ -87,7 +87,7 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
         lexicalParent.addMethod("defDecl(4)", request -> {
             String name = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
             Cons<ASTNode> typeCons = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(1);
-            Cons<String> annotations = (Cons<String>) request.getParts().get(0).getArgs().get(2);
+            Cons<ASTNode> annotations = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(2);
             ASTNode value = (ASTNode) request.getParts().get(0).getArgs().get(3);
             return defDecl(name, typeCons, annotations, value);
         });
@@ -95,14 +95,14 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
             String pos = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
             String name = ((GraceString) request.getParts().get(0).getArgs().get(1)).getValue();
             Cons<ASTNode> typeCons = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(2);
-            Cons<String> annotations = (Cons<String>) request.getParts().get(0).getArgs().get(3);
+            Cons<ASTNode> annotations = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(3);
             ASTNode value = (ASTNode) request.getParts().get(0).getArgs().get(4);
             return defDecl(pos, name, typeCons, annotations, value);
         });
         lexicalParent.addMethod("varDecl(4)", request -> {
             String name = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
             Cons<ASTNode> typeCons = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(1);
-            Cons<String> annotations = (Cons<String>) request.getParts().get(0).getArgs().get(2);
+            Cons<ASTNode> annotations = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(2);
             Cons<ASTNode> value = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(3);
             return varDecl(name, typeCons, annotations, value);
         });
@@ -110,14 +110,14 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
             String pos = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
             String name = ((GraceString) request.getParts().get(0).getArgs().get(1)).getValue();
             Cons<ASTNode> typeCons = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(2);
-            Cons<String> annotations = (Cons<String>) request.getParts().get(0).getArgs().get(3);
+            Cons<ASTNode> annotations = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(3);
             Cons<ASTNode> value = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(4);
             return varDecl(pos, name, typeCons, annotations, value);
         });
         lexicalParent.addMethod("methodDecl(4)", request -> {
             Cons<Part> parts = (Cons<Part>) request.getParts().get(0).getArgs().get(0);
             Cons<ASTNode> typeCons = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(1);
-            Cons<String> anns = (Cons<String>) request.getParts().get(0).getArgs().get(2);
+            Cons<ASTNode> anns = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(2);
             Cons<ASTNode> body = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(3);
             return methodDecl(parts, typeCons, anns, body);
         });
@@ -125,7 +125,7 @@ public class GraceASTHelps extends nz.mwh.wg.ast.grace.ASTConstructors {
             String pos = ((GraceString) request.getParts().get(0).getArgs().get(0)).getValue();
             Cons<Part> parts = (Cons<Part>) request.getParts().get(0).getArgs().get(1);
             Cons<ASTNode> typeCons = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(2);
-            Cons<String> anns = (Cons<String>) request.getParts().get(0).getArgs().get(3);
+            Cons<ASTNode> anns = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(3);
             Cons<ASTNode> body = (Cons<ASTNode>) request.getParts().get(0).getArgs().get(4);
             return methodDecl(pos, parts, typeCons, anns, body);
         });

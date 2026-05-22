@@ -293,6 +293,9 @@ static GraceObject *lexer_object_realLexString(LexerObject *lex) {
             } else if (escapeKind == '"') {
                 processed[ri++] = '"';
                 i += 1;
+            } else if (escapeKind == '{') {
+                processed[ri++] = '{';
+                i += 1;
             } else if (escapeKind == 'u' || escapeKind == 'U') {
                 int codepoint = 0;
                 int digits = (escapeKind == 'u') ? 4 : 6;

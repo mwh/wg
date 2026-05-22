@@ -45,11 +45,11 @@ public class ASTConstructors {
     @SuppressWarnings("rawtypes")
     static Cons no = nil;
 
-    static ObjectConstructor objectConstructor(Cons<ASTNode> body, Cons<String> annotations) {
+    static ObjectConstructor objectConstructor(Cons<ASTNode> body, Cons<ASTNode> annotations) {
         return new ObjectConstructor(body, annotations);
     }
 
-    static ObjectConstructor objCons(Cons<ASTNode> body, Cons<String> annotations) {
+    static ObjectConstructor objCons(Cons<ASTNode> body, Cons<ASTNode> annotations) {
         return new ObjectConstructor(body, annotations);
     }
 
@@ -97,27 +97,27 @@ public class ASTConstructors {
         return new IdentifierDeclaration(name, type.isNil() ? null : type.getHead());
     }
 
-    static DefDecl defDecl(String name, Cons<ASTNode> type, Cons<String> annotations, ASTNode value) {
+    static DefDecl defDecl(String name, Cons<ASTNode> type, Cons<ASTNode> annotations, ASTNode value) {
         return new DefDecl(name, type.isNil() ? null : type.getHead(), annotations, value);
     }
     
-    static DefDecl defDec(String name, Cons<ASTNode> type, Cons<String> annotations, ASTNode value) {
+    static DefDecl defDec(String name, Cons<ASTNode> type, Cons<ASTNode> annotations, ASTNode value) {
         return new DefDecl(name, type.isNil() ? null : type.getHead(), annotations, value);
     }
 
-    static VarDecl varDecl(String name, Cons<ASTNode> type, Cons<String> annotations, Cons<ASTNode> value) {
+    static VarDecl varDecl(String name, Cons<ASTNode> type, Cons<ASTNode> annotations, Cons<ASTNode> value) {
         return new VarDecl(name, type.isNil() ? null : type.getHead(), annotations, value);
     }
 
-    static VarDecl varDec(String name, Cons<ASTNode> type, Cons<String> annotations, Cons<ASTNode> value) {
+    static VarDecl varDec(String name, Cons<ASTNode> type, Cons<ASTNode> annotations, Cons<ASTNode> value) {
         return new VarDecl(name, type.isNil() ? null : type.getHead(), annotations, value);
     }
 
-    static MethodDecl methodDecl(Cons<Part> parts, Cons<ASTNode> type, Cons<String> annotations, Cons<ASTNode> body) {
+    static MethodDecl methodDecl(Cons<Part> parts, Cons<ASTNode> type, Cons<ASTNode> annotations, Cons<ASTNode> body) {
         return new MethodDecl(parts, type.isNil() ? null : type.getHead(), annotations, body);
     }
 
-    static MethodDecl methDec(Cons<Part> parts, Cons<ASTNode> type, Cons<String> annotations, Cons<ASTNode> body) {
+    static MethodDecl methDec(Cons<Part> parts, Cons<ASTNode> type, Cons<ASTNode> annotations, Cons<ASTNode> body) {
         return new MethodDecl(parts, type.isNil() ? null : type.getHead(), annotations, body);
     }
 

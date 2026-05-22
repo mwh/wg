@@ -1,13 +1,13 @@
 module Ast where
 
-data ASTNode = ObjectConstructor [ASTNode] [String]
-             | VarDecl String [ASTNode] [String] [ASTNode]
-             | DefDecl String [ASTNode] [String] ASTNode
+data ASTNode = ObjectConstructor [ASTNode] [ASTNode]
+             | VarDecl String [ASTNode] [ASTNode] [ASTNode]
+             | DefDecl String [ASTNode] [ASTNode] ASTNode
              | ExplicitRequest ASTNode [Part]
              | LexicalRequest [Part]
              | NumberNode Float
              | Block [ASTNode] [ASTNode]
-             | MethodDecl [Part] [ASTNode] [String] [ASTNode]
+             | MethodDecl [Part] [ASTNode] [ASTNode] [ASTNode]
              | Assign ASTNode ASTNode
              | ReturnStmt ASTNode
              | IdentifierDeclaration String [ASTNode]
@@ -91,24 +91,24 @@ ppASTList l = case l of
              (h:t) -> "cons(" ++ (prettyPrint h) ++ ", " ++ (ppASTList t) ++ ")"
 
 prettyPrint :: ASTNode -> String
-prettyPrint (ObjectConstructor body anns) = "objCons(" ++ (ppASTList body) ++ ", " ++(ppStrList anns) ++ ")"
+prettyPrint (ObjectConstructor body anns) = "objCons(" ++ (ppASTList body) ++ ", " ++(ppASTList anns) ++ ")"
 prettyPrint (VarDecl name dtype anns val) =
         "varDec(\"" ++
                 name ++ "\", " ++
                 (ppASTList dtype) ++ ", " ++
-                ppStrList anns ++ ", " ++
+                ppASTList anns ++ ", " ++
                 ppASTList val ++ ")"
 prettyPrint (DefDecl name dtype anns val) =
         "defDec(\"" ++
                 name ++ "\", " ++
                 (ppASTList dtype) ++ ", " ++
-                ppStrList anns ++ ", " ++
+                ppASTList anns ++ ", " ++
                 prettyPrint val ++ ")"
 prettyPrint (MethodDecl parts rtype anns body) =
         "methDec(" ++
                 ppList (map ppPart parts) ++ ", " ++
                 ppASTList rtype ++ ", " ++
-                ppStrList anns ++ ", " ++
+                ppASTList anns ++ ", " ++
                 ppASTList body ++ ")"
 prettyPrint (ExplicitRequest receiver req) =
         "dotReq(" ++

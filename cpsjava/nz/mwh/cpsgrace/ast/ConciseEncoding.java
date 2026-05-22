@@ -64,9 +64,8 @@ public class ConciseEncoding {
         return new VarDec(name, declaredType.single(), annotations.asList(), valueExpr.single());
     }
 
-    protected static DefDec d3F(String name, ConsList<ASTNode> declaredType, ConsList<String> annotations, ASTNode valueExpr) {
-        List<ASTNode> annots = annotations.asList().stream().map(x -> (ASTNode)new LexReq(List.of(new Part(x, List.of(), List.of())), "<unknown>")).toList();
-        return new DefDec(name, declaredType.single(), annots, valueExpr);
+    protected static DefDec d3F(String name, ConsList<ASTNode> declaredType, ConsList<ASTNode> annotations, ASTNode valueExpr) {
+        return new DefDec(name, declaredType.single(), annotations.asList(), valueExpr);
     }
 
     protected static Assn a5N(ASTNode left, ASTNode right) {
