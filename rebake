@@ -1,13 +1,15 @@
 # Makefile for rebaking all the embedded ASTs in the implementations
 # Usage: make -f rebake js
-# Supported targets: c, cpsjava, js, java
+# Supported targets: c, cpsjava, js, java, haskell
 
 IMPL = java -cp cpsjava nz.mwh.cpsgrace.Start -P
 IMPL_LONG = java -cp cpsjava nz.mwh.cpsgrace.Start -p
+IMPL_LONG_LEXER = java -cp java nz.mwh.wg.Start -p -I lexer
 
 all:
+	@echo 'Usage: make -f rebake {c,java,js,cpsjava,haskell}'
 
-.PHONY: c cpsjava js java
+.PHONY: c cpsjava js java haskell
 
 
 ast/%.concise: %.grace rebake
@@ -15,6 +17,9 @@ ast/%.concise: %.grace rebake
 
 ast/%.long: %.grace rebake
 	$(IMPL_LONG) $< > $@
+
+ast/parser-lexer.long: parser.grace lexer.grace rebake
+	$(IMPL_LONG_LEXER) $< > $@
 
 js/modules.js: ast/lexer.concise ast/parser.concise ast/ast.concise
 	sed -ne '/export const/q;p' $@ > $@.tmp
@@ -55,8 +60,17 @@ java/nz/mwh/wg/ParserData.java java/nz/mwh/wg/LexerData.java:
 	sed -ne '1,/ASTNode program =/d;/^ *;/d;p' $@ >> $@.tmp
 	mv $@.tmp $@
 
+haskell/Program.hs: ast/parser-lexer.long
+	sed -ne '/program =/q;p' $@ > $@.tmp
+	printf 'program = ' >> $@.tmp
+	cat ast/parser-lexer.long >> $@.tmp
+	echo '' >> $@.tmp
+	sed -ne '1,/program =/d; /^ *$$/d;p' $@ >> $@.tmp
+	mv $@.tmp $@
+
 
 c: c/baked/lexer.c c/baked/parser.c c/baked/ast.c
 cpsjava: cpsjava/nz/mwh/cpsgrace/baked/LexerData.java cpsjava/nz/mwh/cpsgrace/baked/ParserData.java cpsjava/nz/mwh/cpsgrace/baked/ASTData.java
 js: js/modules.js
 java: java/nz/mwh/wg/LexerData.java java/nz/mwh/wg/ParserData.java
+haskell: haskell/Program.hs
