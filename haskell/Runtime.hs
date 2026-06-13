@@ -300,6 +300,7 @@ getMethod n (GraceAstList items) =
                 let reversed = reverse items
                 continuation ctx $ GraceAstList reversed
         "size(0)" -> \ctx [] -> continuation ctx $ GraceNumber (fromIntegral $ length items)
+        "end(0)" -> \ctx [] -> continuation ctx $ GraceBool (null items)
         _ -> \ctx _ ->
             do
                 die $ "AstList method not found: " ++ n
