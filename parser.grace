@@ -97,6 +97,9 @@ method parseparts(lxr, allowBlock) {
                     lxr.advance
                 }
             }
+            if (args.end) then {
+                parseError(lxr.current.line, lxr.current.column, "Empty argument list in request part '" ++ id ++ "'.")
+            }
             lxr.advance
             def part = ast.part(id, args.reversed(ast.nil), genericParams)
             parts := ast.cons(part, parts)
@@ -737,6 +740,9 @@ method parseMethodDeclaration(lxr) {
                     if (lxr.current.nature == "COMMA") then {
                         lxr.advance
                     }
+                }
+                if (args.end) then {
+                    parseError(lxr.current.line, lxr.current.column, "Empty parameter list in method declaration part '" ++ id ++ "'.")
                 }
                 lxr.advance
                 def part = ast.part(id, args.reversed(ast.nil), genericParams)
