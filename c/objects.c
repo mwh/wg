@@ -196,6 +196,11 @@ GraceObject *grace_range_new(double start, double end, double step) {
     user_bind_def(range, "start", grace_number_new(start));
     user_bind_def(range, "end",   grace_number_new(end));
     user_bind_def(range, "step",  grace_number_new(step));
+    double diff = (end - start) / step;
+    if (diff < 0)
+        user_bind_def(range, "size",  grace_number_new(0));
+    else
+        user_bind_def(range, "size",  grace_number_new(diff + 1));
     RangeData *rd = malloc(sizeof(RangeData));
     rd->start = start; rd->end = end; rd->step = step;
     user_add_method(range, "do(1)",        range_do_fn,    rd);
