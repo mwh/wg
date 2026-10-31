@@ -6,6 +6,7 @@
 #include <sys/farptr.h>
 #include <go32.h>
 #include <dpmi.h>
+#include <time.h>
 #include "grace.h"
 #include "gc.h"
 
@@ -169,6 +170,12 @@ static PendingStep *vga_delay(GraceObject *s, Env *e,
     return cont_apply(k, grace_done);
 }
 
+static PendingStep *vga_clock(GraceObject *s, Env *e,
+        GraceObject **args, int n, Cont *k, void *d) {
+    (void)s;(void)e;(void)n;(void)d;(void)args;
+    GraceObject *val = grace_number_new(clock());
+    return cont_apply(k, val);
+}
 
 GraceObject *make_vga(void) {
     GraceObject *p = grace_user_new(NULL);
@@ -186,6 +193,7 @@ GraceObject *make_vga(void) {
     user_add_method(p, "kbHit(0)", vga_kbhit, NULL);
     user_add_method(p, "goToXY(2)", vga_goToXY, NULL);
     user_add_method(p, "delay(1)", vga_delay, NULL);
+    user_add_method(p, "clock(0)", vga_clock, NULL);
 
     return p;
 }
