@@ -109,6 +109,14 @@ static PendingStep *vga_kbhit(GraceObject *s, Env *e,
     return cont_apply(k, grace_false);
 }
 
+static PendingStep *vga_textcolour(GraceObject *s, Env *e,
+        GraceObject **args, int n, Cont *k, void *d) {
+    (void)s;(void)e;(void)n;(void)d;
+    int col = (int) grace_number_val(args[0]);
+    textcolor(col);
+    return cont_apply(k, grace_done);
+}
+
 static PendingStep *vga_mouseEnabled_assign(GraceObject *s, Env *e,
         GraceObject **args, int n, Cont *k, void *d) {
     (void)s;(void)e;(void)n;(void)d;
@@ -187,6 +195,7 @@ GraceObject *make_vga(void) {
     user_add_method(p, "at(1)put(1)", vga_setOffset_to, NULL);
     user_add_method(p, "rectFrom(2)to(2)colour(1)", vga_rectFrom_to_colour, NULL);
     user_add_method(p, "getch(0)", vga_getch, NULL);
+    user_add_method(p, "textcolour(1)", vga_textcolour, NULL);
     user_add_method(p, "mouseX(0)", vga_mouseX, NULL);
     user_add_method(p, "mouseY(0)", vga_mouseY, NULL);
     user_add_method(p, "mouseButton(0)", vga_mouseButton, NULL);
