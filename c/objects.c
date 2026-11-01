@@ -332,6 +332,55 @@ double grace_number_val(GraceObject *o) {
     return ((GraceNumber *)o)->value;
 }
 
+/*  GraceBlob */
+static const char *blob_describe(GraceObject *self) {
+    static char buf[64];
+    snprintf(buf, sizeof(buf), "Blob(%ld bytes)", ((GraceBlob*)self)->length);
+    return buf;
+}
+
+static PendingStep *blob_request(GraceObject *self, Env *env,
+                                    const char *name,
+                                    GraceObject **args, int nargs, Cont *k) {
+    (void)args;(void)env;(void)nargs;
+    GraceBlob *blob = (GraceBlob *)self;
+
+    if (strcmp(name,"asString(0)")==0 || strcmp(name,"asDebugString(0)")==0) {
+        return cont_apply(k, grace_string_new(blob_describe(self)));
+    }
+    if (strcmp(name,"hash(0)")==0) {
+        uint32_t hash = 1234;
+        return cont_apply(k, grace_number_new((double)hash));
+    }
+    if (strcmp(name,"size(0)")==0) {
+        return cont_apply(k, grace_number_new((double)blob->length));
+    }
+    if (strcmp(name,"decodeUTF8(0)")==0) {
+        return cont_apply(k, grace_string_new(blob->value));
+    }
+    if (strcmp(name, "at(1)") == 0) {
+        int n = (int)grace_number_val(args[0]);
+        return cont_apply(k, grace_number_new((double)(unsigned char)blob->value[n]));
+    }
+    grace_fatal("No method '%s' on Blob", name);
+}
+
+void blob_free(GraceObject *self) {
+    GraceBlob *blob = (GraceBlob *)self;
+    free(blob->value);
+}
+
+const GraceVTable grace_blob_vtable = { blob_request, blob_describe, NULL, blob_free };
+
+GraceObject *grace_blob_new(char *data, size_t len) {
+    GraceBlob *b = (GraceBlob *)gc_alloc(sizeof(GraceBlob));
+    b->base.vt = &grace_blob_vtable;
+    b->value = data;
+    b->length = len;
+    return (GraceObject *)b;
+}
+
+
 /*  GraceString  */
 /* Continuation for string ++ <arbitrary object>: receives asString result */
 typedef struct {

@@ -261,6 +261,17 @@ GraceObject *grace_string_take(char *s);  /* takes ownership of malloc'd s */
 const char *grace_string_val(GraceObject *o);   /* asserts it's a string */
 GraceObject *grace_string_concat(GraceObject *a, GraceObject *b);
 
+/*
+ * GraceBlob
+ */
+GraceObject *grace_blob_new(char *data, size_t len);
+
+typedef struct {
+    GraceObject base;
+    char *value;
+    size_t length;
+} GraceBlob;
+
 /* 
  * GraceBool
  *  */
