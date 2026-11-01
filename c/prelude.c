@@ -351,20 +351,51 @@ static PendingStep *prelude_getResource_fn(GraceObject *self, Env *env,
     (void)self; (void)nargs; (void)data;
     size_t data_len;
     const char *path = grace_string_val(args[0]);
-    char *msrc = try_load_from_self(path, &data_len);
-    if (msrc) {
-        return cont_apply(k, grace_blob_new(msrc, data_len));
+    char *msrc; // = try_load_from_self(path, &data_len);
+    // if (msrc) {
+    //     return cont_apply(k, grace_blob_new(msrc, data_len));
+    // }
+    GraceModuleSearchPath *sp = grace_get_module_search_paths();
+    while (sp) {
+        if (sp->path == NULL) {
+            msrc = try_load_from_self(path, &data_len);
+            if (msrc) {
+                break;
+            }
+            sp = sp->next;
+            continue;
+        }
+        char path_buf[512];
+        snprintf(path_buf, sizeof(path_buf), "%s/%s", sp->path, path);
+        FILE *mf = fopen(path_buf, "r");
+        if (mf) {
+            fseek(mf, 0, SEEK_END);
+            long msz = ftell(mf);
+            fseek(mf, 0, SEEK_SET);
+            msrc = malloc(msz + 1);
+            fread(msrc, 1, msz, mf);
+            msrc[msz] = '\0';
+            fclose(mf);
+            data_len = msz;
+            break;
+        }
+        sp = sp->next;
     }
-    FILE *f = fopen(path, "r");
-    if (!f) return grace_raise(env, "FileNotFound", "Cannot open file '%s'", path);
-    fseek(f, 0, SEEK_END);
-    long sz = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    char *buf = malloc(sz + 1);
-    fread(buf, 1, sz, f);
-    buf[sz] = '\0';
-    fclose(f);
-    return cont_apply(k, grace_blob_new(buf, sz));
+    if (!msrc) {
+        char *search_paths = "";
+        for (sp = grace_module_search_paths; sp; sp = sp->next) {
+            if (sp->path) {
+                char buf[512];
+                snprintf(buf, sizeof(buf), "\n  %s", sp->path);
+                search_paths = str_cat(search_paths, buf);
+            } else {
+                search_paths = str_cat(search_paths, "\n  (packed in executable)");
+            }
+        }
+        //grace_fatal("Cannot find resource '%s': no such file in search paths:%s", src, search_paths);
+        return grace_raise(env, "FileNotFound", "Cannot open resource '%s': search paths:%s", path, search_paths);
+    }
+    return cont_apply(k, grace_blob_new(msrc, data_len));
 }
 
 /*  match case helpers  */
