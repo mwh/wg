@@ -10,7 +10,6 @@
 
 
 extern char *executable_path;
-char *try_load_from_self(const char *fn);
 
 /*
  * parts_to_name: build method name like "at(1)put(1)" from NK_PART list
@@ -992,6 +991,7 @@ static GraceObject *load_module(Env *env, const char *src) {
         gc_push_root(&env->receiver);
         gc_push_root(&env->scope);
         size_t src_len = strlen(src);
+        size_t code_len;
         char *msrc;
         char path[512];
         if (strncmp(src, "grace:", 6) == 0) {
@@ -999,7 +999,7 @@ static GraceObject *load_module(Env *env, const char *src) {
             const char *fn = src + 6;
             char need_name[512];
             snprintf(need_name, sizeof(need_name), "%s.grace", fn);
-            msrc = try_load_from_self(need_name);
+            msrc = try_load_from_self(need_name, &code_len);
             if (!msrc) {
                 grace_fatal("Cannot find packed-in module '%s': not found in executable", src);
             }
@@ -1008,7 +1008,7 @@ static GraceObject *load_module(Env *env, const char *src) {
             GraceModuleSearchPath *sp = grace_get_module_search_paths();
             while (sp) {
                 if (sp->path == NULL) {
-                    msrc = try_load_from_self(src);
+                    msrc = try_load_from_self(src, &code_len);
                     if (msrc) {
                         break;
                     }
@@ -1053,7 +1053,7 @@ static GraceObject *load_module(Env *env, const char *src) {
             while (sp) {
                 if (sp->path == NULL) {
                     snprintf(path, sizeof(path), "%s.grace", src);
-                    msrc = try_load_from_self(path);
+                    msrc = try_load_from_self(path, &code_len);
                     if (msrc) {
                         found = 1;
                         break;
@@ -1495,7 +1495,7 @@ PendingStep *eval_node(ASTNode *node, Env *env, Cont *k) {
     return NULL; /* unreachable */
 }
 
-char *try_load_from_self(const char *fn) {
+char *try_load_from_self(const char *fn, size_t *len) {
     char *msrc = NULL;
     /* Source code in-executable (ZIP format) */
     const char *need_name = fn;
@@ -1562,6 +1562,7 @@ char *try_load_from_self(const char *fn) {
                     fread(msrc, 1, uncomp_size, zf);
                     msrc[uncomp_size] = '\0';
                     fclose(zf);
+                    *len = uncomp_size;
                     break;
                 }
             }

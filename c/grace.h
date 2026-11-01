@@ -458,4 +458,6 @@ extern GraceModuleSearchPath *grace_module_search_paths;
 GraceModuleSearchPath *grace_get_module_search_paths(void);
 void grace_add_module_search_path(const char *path);
 
+char *try_load_from_self(const char *fn, size_t *len);
+
 #endif /* GRACE_H */
