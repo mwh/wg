@@ -344,6 +344,29 @@ static PendingStep *prelude_getFileContents_fn(GraceObject *self, Env *env,
     return cont_apply(k, grace_string_new(buf));
 }
 
+/*  getResource(1)  */
+static PendingStep *prelude_getResource_fn(GraceObject *self, Env *env,
+                                                GraceObject **args, int nargs,
+                                                Cont *k, void *data) {
+    (void)self; (void)nargs; (void)data;
+    size_t data_len;
+    const char *path = grace_string_val(args[0]);
+    char *msrc = try_load_from_self(path, &data_len);
+    if (msrc) {
+        return cont_apply(k, grace_blob_new(msrc, data_len));
+    }
+    FILE *f = fopen(path, "r");
+    if (!f) return grace_raise(env, "FileNotFound", "Cannot open file '%s'", path);
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    char *buf = malloc(sz + 1);
+    fread(buf, 1, sz, f);
+    buf[sz] = '\0';
+    fclose(f);
+    return cont_apply(k, grace_blob_new(buf, sz));
+}
+
 /*  match case helpers  */
 /*
  * match(1)case(1): match subject against one block-pattern
@@ -950,6 +973,7 @@ GraceObject *make_prelude(void) {
     user_add_method(p, "try(1)catch(1)catch(1)catch(1)catch(1)", prelude_try_catch_fn, NULL);
     user_add_method(p, "try(1)catch(1)catch(1)catch(1)catch(1)catch(1)", prelude_try_catch_fn, NULL);
     user_add_method(p, "getFileContents(1)", prelude_getFileContents_fn, NULL);
+    user_add_method(p, "getResource(1)", prelude_getResource_fn, NULL);
 
     /* if/then variants */
     user_add_method(p, "if(1)then(1)",          prelude_if_then_fn,      NULL);
