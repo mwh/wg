@@ -185,6 +185,27 @@ static PendingStep *vga_clock(GraceObject *s, Env *e,
     return cont_apply(k, val);
 }
 
+static PendingStep *vga_drawSprite(GraceObject *s, Env *e,
+        GraceObject **args, int n, Cont *k, void *d) {
+    (void)s;(void)e;(void)n;(void)d;(void)args;
+    GraceBlob *blob = (GraceBlob *)args[0];
+    int width = (int)grace_number_val(args[1]);
+    int height = (int)grace_number_val(args[2]);
+    int bx = (int)grace_number_val(args[3]);
+    int by = (int)grace_number_val(args[4]);
+    unsigned short offset;
+    for (int y = 0; y < height; y++) {
+        int cy = (by + y) * 320;
+        for (int x = 0; x < width; x++) {
+            unsigned char col = blob->value[y * height + x];
+            offset = cy + bx + x;
+            if (col != 255) {
+	            _farpokeb(_dos_ds, 0xa0000 + offset, col);
+            }
+        }
+    }
+    return cont_apply(k, grace_done);
+}
 GraceObject *make_vga(void) {
     GraceObject *p = grace_user_new(NULL);
     user_add_method(p, "mode:=(1)", vga_mode_set, NULL);
@@ -198,6 +219,7 @@ GraceObject *make_vga(void) {
     user_add_method(p, "textcolour(1)", vga_textcolour, NULL);
     user_add_method(p, "mouseX(0)", vga_mouseX, NULL);
     user_add_method(p, "mouseY(0)", vga_mouseY, NULL);
+    user_add_method(p, "drawSprite(3)atX(1)Y(1)", vga_drawSprite, NULL);
     user_add_method(p, "mouseButton(0)", vga_mouseButton, NULL);
     user_add_method(p, "kbHit(0)", vga_kbhit, NULL);
     user_add_method(p, "goToXY(2)", vga_goToXY, NULL);
