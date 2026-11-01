@@ -6,6 +6,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef __DJGPP__
+extern GraceObject *make_vga(void);
+#endif
+
 extern char *executable_path;
 
 static GraceObject *evaluate_module(char *name, ASTNode *ast, Env *env) {
@@ -36,6 +40,11 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Usage: %s [--notices]\n", argv[0]);
         return 1;
     }
+    // Register built-in modules
+    #ifdef __DJGPP__
+    grace_register_module("vga", make_vga());
+    #endif
+
     executable_path = argv[0];
     GraceObject *prelude = make_prelude();
     gc_push_root(&prelude);

@@ -1074,6 +1074,21 @@ static GraceObject *load_module(Env *env, const char *src) {
                     found = 1;
                     break;
                 }
+                #ifdef __DJGPP__
+                snprintf(path, sizeof(path), "%s/%s.grc", sp->path, src);
+                mf = fopen(path, "r");
+                if (mf) {
+                    fseek(mf, 0, SEEK_END);
+                    long msz = ftell(mf);
+                    fseek(mf, 0, SEEK_SET);
+                    msrc = malloc(msz + 1);
+                    fread(msrc, 1, msz, mf);
+                    msrc[msz] = '\0';
+                    fclose(mf);
+                    found = 1;
+                    break;
+                }
+                #endif
                 sp = sp->next;
             }
             if (!found) {
