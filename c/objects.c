@@ -364,6 +364,31 @@ static PendingStep *blob_request(GraceObject *self, Env *env,
         int n = (int)grace_number_val(args[0]);
         return cont_apply(k, grace_number_new((double)(unsigned char)blob->value[n]));
     }
+    if (strcmp(name, "atUtf8(1)") == 0) {
+        char buf[5];
+        int basen = (int)grace_number_val(args[0]);
+        if (basen < 0) {
+            return grace_raise(env, "ArgumentError", "Invalid index %d into blob", basen);
+        }
+        unsigned int n = (unsigned int) basen;
+        unsigned char c = blob->value[n];
+        if (c < 128)
+            snprintf(buf, 5, "%c", c);
+        else if (c < 128 + 64 + 32 && n + 1 < blob->length) {
+            // two-byte
+            snprintf(buf, 5, "%c%c", c, blob->value[n+1]);
+        } else if (c < 128 + 64 + 32 && n + 2 < blob->length) {
+            // three-byte
+            snprintf(buf, 5, "%c%c%c", c, blob->value[n+1], blob->value[n+2]);
+        } else if (c < 128 + 64 + 32 + 16 && n + 3 < blob->length) {
+            // four-byte
+            snprintf(buf, 5, "%c%c%c%c", c, blob->value[n+1], blob->value[n+2], blob->value[n + 3]);
+        } else {
+            return grace_raise(env, "EncodingError", "Invalid UTF-8 at position %d", n);
+        }
+
+        return cont_apply(k, grace_string_new(buf));
+    }
     grace_fatal("No method '%s' on Blob", name);
 }
 
