@@ -321,8 +321,10 @@ GraceObject *grace_number_new(double v) {
     n->base.vt = &grace_number_vtable; n->value = v;
     if (candidate) {
         small_ints[(int)v] = n;
-        if (!gc_ints_root_tracer_registered)
+        if (!gc_ints_root_tracer_registered) {
             gc_register_root_tracer(&grace_number_intern_tracer);
+            gc_ints_root_tracer_registered = 1;
+        }
     }
     return (GraceObject *)n;
 }
@@ -590,8 +592,10 @@ GraceObject *grace_string_new(const char *s) {
     gs->value = str_dup(s ? s : "");
     if (candidate) {
         small_strings[c] = gs;
-        if (!gc_strings_root_tracer_registered)
+        if (!gc_strings_root_tracer_registered) {
             gc_register_root_tracer(&grace_strings_intern_tracer);
+            gc_strings_root_tracer_registered = 1;
+        }
     }
     return (GraceObject *)gs;
 }
