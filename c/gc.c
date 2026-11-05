@@ -52,6 +52,8 @@ static GCStats gc_statistics = {0, 0, 0, 0};
 /* Current mark epoch; 0 means "never marked". */
 static unsigned int gc_trace_epoch = 1;
 
+static int gc_trigger_start = 0;
+
 static int gc_is_white(GraceObject *obj) {
     return obj && obj->gc_color != GC_STATIC && obj->gc_epoch != gc_trace_epoch;
 }
@@ -540,8 +542,17 @@ void gc_collect(void) {
         gc_finish_cycle();
 }
 
+void gc_trigger(void) {
+    gc_trigger_start = 1;
+}
+
 void gc_maybe_collect(void) {
     if (gc_suppress_count > 0) return;
+    if (gc_trigger_start) {
+        gc_trigger_start = 0;
+        gc_collect();
+        return;
+    }
     if (gc_phase == GC_PHASE_IDLE) {
         if (gc_alloc_counter >= gc_next_threshold)
             gc_start_cycle();

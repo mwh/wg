@@ -79,6 +79,10 @@ void gc_sweep_conts(void);
  * allocation threshold has been reached.  Call from the trampoline loop. */
 void gc_maybe_collect(void);
 
+/* Request a full GC run at the next gc_maybe_collect.
+ * This will still respect gc_suppress. */
+void gc_trigger(void);
+
 /* Write barrier: call before storing a GraceObject* into any mutable field
  * of a live (GC-managed) object.  Required for incremental marking
  * correctness: greys the new value so it isn't missed by the mark pass. */
