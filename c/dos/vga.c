@@ -206,6 +206,14 @@ static PendingStep *vga_drawSprite(GraceObject *s, Env *e,
     }
     return cont_apply(k, grace_done);
 }
+
+static PendingStep *vga_gc(GraceObject *s, Env *e,
+        GraceObject **args, int n, Cont *k, void *d) {
+    (void)s;(void)e;(void)n;(void)d;(void)args;
+    gc_trigger();
+    return cont_apply(k, grace_done);
+}
+
 GraceObject *make_vga(void) {
     GraceObject *p = grace_user_new(NULL);
     user_add_method(p, "mode:=(1)", vga_mode_set, NULL);
@@ -225,7 +233,7 @@ GraceObject *make_vga(void) {
     user_add_method(p, "goToXY(2)", vga_goToXY, NULL);
     user_add_method(p, "delay(1)", vga_delay, NULL);
     user_add_method(p, "clock(0)", vga_clock, NULL);
-
+    user_add_method(p, "gc(0)", vga_gc, NULL);
     return p;
 }
 
