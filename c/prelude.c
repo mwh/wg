@@ -133,7 +133,7 @@ static PendingStep *prelude_readInput_fn(GraceObject *self, Env *env,
                                       void *data) {
     (void)self; (void)nargs; (void)data; (void)args; (void)env;
     char buf[MAX_INPUT + 1];
-    gets(buf);
+    fgets(buf, MAX_INPUT, stdin);
     return cont_apply(k, grace_string_new(buf));
 }
 
