@@ -7,6 +7,8 @@
 #include <go32.h>
 #include <dpmi.h>
 #include <time.h>
+#include <sys/nearptr.h>
+
 #include "grace.h"
 #include "gc.h"
 
@@ -16,14 +18,40 @@ __dpmi_regs regs;
 typedef unsigned char byte;
 byte *VGA = (byte*)0xA0000000L;
 
+byte *rom_font_8x8;
+
+byte video_mode;
+
+byte text_fg;
+byte text_bg;
+
 static PendingStep *vga_mode_set(GraceObject *s, Env *e, GraceObject **args,
                              int n, Cont *k, void *d) {
     (void)s;(void)e;(void)n;(void)d;
     double md = grace_number_val(args[0]);
+    video_mode = (int)md;
+
     memset(&regs, 0, sizeof(regs));
     regs.h.ah = 00;
-    regs.h.al = (int)md;
+    regs.h.al = video_mode;
     __dpmi_int(0x10, &regs);
+
+    if (video_mode == 0x13) {
+        regs.x.ax = 0x1130;
+        regs.h.bh = 0x03; // Request pointer to the ROM 8x8 font
+        __dpmi_int(0x10, &regs);
+
+        // Convert segmented to real flat physical address
+        unsigned long font_phys_addr = (regs.x.es << 4) + regs.x.bp;
+        rom_font_8x8 = (unsigned char *)(__djgpp_conventional_base + font_phys_addr);
+
+        VGA = (unsigned char *)(__djgpp_conventional_base + 0xA0000);
+        if (__djgpp_nearptr_enable() == 0) {
+            printf("Error: Could not enable DJGPP near pointers!\n");
+        }
+    } else {
+        __djgpp_nearptr_disable();
+    }
     return cont_apply(k, grace_true);
 }
 
@@ -114,6 +142,16 @@ static PendingStep *vga_textcolour(GraceObject *s, Env *e,
     (void)s;(void)e;(void)n;(void)d;
     int col = (int) grace_number_val(args[0]);
     textcolor(col);
+    text_fg = col;
+    return cont_apply(k, grace_done);
+}
+
+static PendingStep *vga_textbg(GraceObject *s, Env *e,
+        GraceObject **args, int n, Cont *k, void *d) {
+    (void)s;(void)e;(void)n;(void)d;
+    int col = (int) grace_number_val(args[0]);
+    textbackground(col);
+    text_bg = col;
     return cont_apply(k, grace_done);
 }
 
@@ -214,6 +252,78 @@ static PendingStep *vga_gc(GraceObject *s, Env *e,
     return cont_apply(k, grace_done);
 }
 
+void draw_char_with_bg(int x, int y, char c, unsigned char fg_color, unsigned char bg_color) {
+    // Index into font table to find character (8 bit rows*8 bytes each character)
+    unsigned char *glyph = &rom_font_8x8[(unsigned char)c * 8];
+
+    for (int row = 0; row < 8; row++) {
+        unsigned char bitmask = glyph[row];
+        for (int col = 0; col < 8; col++) {
+            int screen_x = x + col;
+            int screen_y = y + row;
+            if (screen_x >= 0 && screen_x < 320 && screen_y >= 0 && screen_y < 200) {
+                int pixel_offset = screen_y * 320 + screen_x;
+                // Foreground for 1, background for 0
+                if (bitmask & (0x80 >> col)) {
+                    VGA[pixel_offset] = fg_color;
+                } else {
+                    VGA[pixel_offset] = bg_color;
+                }
+            }
+        }
+    }
+}
+
+// Iterates through a string to draw text cleanly across pixel coordinates
+void draw_string_with_bg(int x, int y, const char *str, unsigned char fg_color, unsigned char bg_color) {
+    while (*str) {
+        draw_char_with_bg(x, y, *str, fg_color, bg_color);
+        x += 8;
+        str++;
+    }
+}
+
+static PendingStep *vga_puts(GraceObject *s, Env *e,
+        GraceObject **args, int n, Cont *k, void *d) {
+    (void)s;(void)e;(void)n;(void)d;(void)args;
+    GraceObject *sObj = args[0];
+    if (sObj->vt != &grace_string_vtable) {
+        return grace_raise(e, "TypeError", "vga.puts given non-string argument");
+    }
+    const char *str = grace_string_val(sObj);
+    if (video_mode == 0x13) {
+        // Get initial cursor position
+        regs.h.ah = 0x03;
+        regs.h.bh = 0x00;
+        __dpmi_int(0x10, &regs);
+        int row = regs.h.dh;
+        int col = regs.h.dl;
+        draw_string_with_bg((col - 1) * 10, row * 8, str, text_fg, text_bg);
+    } else {
+        cputs(str);
+    }
+    return cont_apply(k, grace_done);
+}
+
+static PendingStep *vga_putsAt(GraceObject *s, Env *e,
+        GraceObject **args, int n, Cont *k, void *d) {
+    (void)s;(void)e;(void)n;(void)d;(void)args;
+    GraceObject *sObj = args[0];
+    if (sObj->vt != &grace_string_vtable) {
+        return grace_raise(e, "TypeError", "vga.putsAt given non-string argument");
+    }
+    const char *str = grace_string_val(sObj);
+    int x = grace_number_val(args[1]);
+    int y = grace_number_val(args[2]);
+    if (video_mode == 0x13) {
+        draw_string_with_bg(x, y, str, text_fg, text_bg);
+    } else {
+        gotoxy(x, y);
+        cputs(str);
+    }
+    return cont_apply(k, grace_done);
+}
+
 GraceObject *make_vga(void) {
     GraceObject *p = grace_user_new(NULL);
     user_add_method(p, "mode:=(1)", vga_mode_set, NULL);
@@ -225,6 +335,9 @@ GraceObject *make_vga(void) {
     user_add_method(p, "rectFrom(2)to(2)colour(1)", vga_rectFrom_to_colour, NULL);
     user_add_method(p, "getch(0)", vga_getch, NULL);
     user_add_method(p, "textcolour(1)", vga_textcolour, NULL);
+    user_add_method(p, "textbg(1)", vga_textbg, NULL);
+    user_add_method(p, "puts(1)", vga_puts, NULL);
+    user_add_method(p, "puts(1)at(2)", vga_putsAt, NULL);
     user_add_method(p, "mouseX(0)", vga_mouseX, NULL);
     user_add_method(p, "mouseY(0)", vga_mouseY, NULL);
     user_add_method(p, "drawSprite(3)atX(1)Y(1)", vga_drawSprite, NULL);
