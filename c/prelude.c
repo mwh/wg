@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include "grace.h"
 #include "gc.h"
 
@@ -125,6 +126,15 @@ static PendingStep *prelude_print_fn(GraceObject *self, Env *env,
     pc->env = env_retain(env);
     pc->k   = cont_retain(k);
     return grace_request(args[0], env, "asString(0)", NULL, 0, (Cont *)pc);
+}
+
+static PendingStep *prelude_readInput_fn(GraceObject *self, Env *env,
+                                      GraceObject **args, int nargs, Cont *k,
+                                      void *data) {
+    (void)self; (void)nargs; (void)data; (void)args; (void)env;
+    char buf[MAX_INPUT + 1];
+    gets(buf);
+    return cont_apply(k, grace_string_new(buf));
 }
 
 /*  try(1)catch(N)  */
@@ -991,6 +1001,7 @@ GraceObject *make_prelude(void) {
     GraceObject *p = grace_user_new(NULL);
 
     user_add_method(p, "print(1)",       prelude_print_fn,           NULL);
+    user_add_method(p, "readInput(0)",   prelude_readInput_fn,           NULL);
     user_add_method(p, "true(0)",        true_fn,                    NULL);
     user_add_method(p, "false(0)",       false_fn,                   NULL);
     user_add_method(p, "Exception(0)",   prelude_exception_fn,       NULL);
