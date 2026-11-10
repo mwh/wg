@@ -284,7 +284,7 @@ static PendingStep *vga_gc_assign(GraceObject *s, Env *e,
     return cont_apply(k, grace_done);
 }
 
-void draw_char_with_bg(int x, int y, char c, unsigned char fg_color, unsigned char bg_color) {
+void draw_char_with_bg(int x, int y, char c, unsigned char fg_colour, unsigned char bg_colour) {
     // Index into font table to find character (8 bit rows*8 bytes each character)
     unsigned char *glyph = &rom_font_8x8[(unsigned char)c * 8];
 
@@ -297,9 +297,9 @@ void draw_char_with_bg(int x, int y, char c, unsigned char fg_color, unsigned ch
                 int pixel_offset = screen_y * 320 + screen_x;
                 // Foreground for 1, background for 0
                 if (bitmask & (0x80 >> col)) {
-                    VGA[pixel_offset] = fg_color;
+                    VGA[pixel_offset] = fg_colour;
                 } else {
-                    VGA[pixel_offset] = bg_color;
+                    VGA[pixel_offset] = bg_colour;
                 }
             }
         }
@@ -307,9 +307,9 @@ void draw_char_with_bg(int x, int y, char c, unsigned char fg_color, unsigned ch
 }
 
 // Iterates through a string to draw text cleanly across pixel coordinates
-void draw_string_with_bg(int x, int y, const char *str, unsigned char fg_color, unsigned char bg_color) {
+void draw_string_with_bg(int x, int y, const char *str, unsigned char fg_colour, unsigned char bg_colour) {
     while (*str) {
-        draw_char_with_bg(x, y, *str, fg_color, bg_color);
+        draw_char_with_bg(x, y, *str, fg_colour, bg_colour);
         x += 8;
         str++;
     }
