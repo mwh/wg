@@ -266,6 +266,24 @@ static PendingStep *vga_gc(GraceObject *s, Env *e,
     return cont_apply(k, grace_done);
 }
 
+static PendingStep *vga_gcliving(GraceObject *s, Env *e,
+        GraceObject **args, int n, Cont *k, void *d) {
+    (void)s;(void)e;(void)n;(void)d;(void)args;
+    const GCStats *stats = gc_stats();
+    return cont_apply(k, grace_number_new(stats->heap_size));
+}
+
+static PendingStep *vga_gc_assign(GraceObject *s, Env *e,
+        GraceObject **args, int n, Cont *k, void *d) {
+    (void)s;(void)e;(void)n;(void)d;(void)args;
+    if (grace_bool_val(args[0])) {
+        gc_unsuppress();
+    } else {
+        gc_suppress();
+    }
+    return cont_apply(k, grace_done);
+}
+
 void draw_char_with_bg(int x, int y, char c, unsigned char fg_color, unsigned char bg_color) {
     // Index into font table to find character (8 bit rows*8 bytes each character)
     unsigned char *glyph = &rom_font_8x8[(unsigned char)c * 8];
@@ -362,6 +380,8 @@ GraceObject *make_vga(void) {
     user_add_method(p, "clock(0)", vga_clock, NULL);
     user_add_method(p, "timeofday(0)", vga_timeofday, NULL);
     user_add_method(p, "gc(0)", vga_gc, NULL);
+    user_add_method(p, "gcliving(0)", vga_gcliving, NULL);
+    user_add_method(p, "gc:=(1)", vga_gc_assign, NULL);
     return p;
 }
 
