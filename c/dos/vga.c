@@ -223,6 +223,19 @@ static PendingStep *vga_clock(GraceObject *s, Env *e,
     return cont_apply(k, val);
 }
 
+static PendingStep *vga_timeofday(GraceObject *s, Env *e,
+        GraceObject **args, int n, Cont *k, void *d) {
+    (void)s;(void)e;(void)n;(void)d;(void)args;
+    struct timeval tv;
+    struct timezone tz;
+    gettimeofday(&tv, &tz);
+    double r = tv.tv_usec;
+    r /= 1000000;
+    r += tv.tv_sec;
+    GraceObject *val = grace_number_new(r);
+    return cont_apply(k, val);
+}
+
 static PendingStep *vga_drawSprite(GraceObject *s, Env *e,
         GraceObject **args, int n, Cont *k, void *d) {
     (void)s;(void)e;(void)n;(void)d;(void)args;
@@ -346,6 +359,7 @@ GraceObject *make_vga(void) {
     user_add_method(p, "goToXY(2)", vga_goToXY, NULL);
     user_add_method(p, "delay(1)", vga_delay, NULL);
     user_add_method(p, "clock(0)", vga_clock, NULL);
+    user_add_method(p, "timeofday(0)", vga_timeofday, NULL);
     user_add_method(p, "gc(0)", vga_gc, NULL);
     return p;
 }
