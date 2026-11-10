@@ -212,6 +212,7 @@ static PendingStep *vga_delay(GraceObject *s, Env *e,
         GraceObject **args, int n, Cont *k, void *d) {
     (void)s;(void)e;(void)n;(void)d;
     int ms = (int)grace_number_val(args[0]);
+    if (ms < 0) ms = 0;
     delay(ms);
     return cont_apply(k, grace_done);
 }
