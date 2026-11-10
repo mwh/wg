@@ -109,11 +109,10 @@ static PendingStep *vga_rectFrom_to_colour(GraceObject *s, Env *e,
     x2 = (unsigned short)grace_number_val(args[2]);
     y2 = (unsigned short)grace_number_val(args[3]);
     colour = (unsigned short)grace_number_val(args[4]);
-    for (int x = x1; x < x2; x++) {
-        for (int y = y1; y < y2; y++) {
-            unsigned short offset = y * 320 + x;
-            _farpokeb(_dos_ds, 0xa0000 + offset, colour);
-        }
+    char row[x2 - x1];
+    memset(row, colour, x2 - x1);
+    for (int y = y1; y < y2; y++) {
+        memcpy(VGA + y * 320 + x1, row, x2 - x1);
     }
     return cont_apply(k, grace_true);
 }
