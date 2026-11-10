@@ -286,6 +286,8 @@ static int gc_heap_summary_enabled(void) {
     return enabled;
 }
 
+static int gc_auto_since_force = 0;
+
 static void gc_print_heap_summary(void) {
     size_t numbers = 0;
     size_t strings = 0;
@@ -339,8 +341,16 @@ static void gc_print_heap_summary(void) {
         }
     }
 
+    char buf[12];
+    sprintf(buf, "f%03u", gc_auto_since_force);
+    if (gc_trigger_start)
+        gc_auto_since_force = 0;
+    else
+        gc_auto_since_force++;
+
     fprintf(stderr,
-            "GC %zu heap summary: freed %zu living %zu conts=%zu/%zu consumed=%zu roots=%d cont_roots=%d tramp=%d; user=%zu userLex=%zu userReturn=%zu userNoMethods=%zu number=%zu string=%zu block=%zu lineup=%zu primarray=%zu bool=%zu exception=%zu other=%zu ever=%zu\n",
+            "GC %s %zu heap summary: freed %zu living %zu conts=%zu/%zu consumed=%zu roots=%d cont_roots=%d tramp=%d; user=%zu userLex=%zu userReturn=%zu userNoMethods=%zu number=%zu string=%zu block=%zu lineup=%zu primarray=%zu bool=%zu exception=%zu other=%zu ever=%zu\n",
+            gc_trigger_start ? buf : "auto",
             gc_statistics.collections,
             gc_phase_start_live - gc_statistics.heap_size,
             gc_statistics.heap_size,
@@ -547,12 +557,12 @@ void gc_trigger(void) {
 }
 
 void gc_maybe_collect(void) {
-    if (gc_suppress_count > 0) return;
     if (gc_trigger_start) {
-        gc_trigger_start = 0;
         gc_collect();
+        gc_trigger_start = 0;
         return;
     }
+    if (gc_suppress_count > 0) return;
     if (gc_phase == GC_PHASE_IDLE) {
         if (gc_alloc_counter >= gc_next_threshold)
             gc_start_cycle();
