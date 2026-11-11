@@ -6,3 +6,4 @@ test.grace
 /*.grace
 !/wg.grace
 /java/*.grace
+/c
