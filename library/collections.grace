@@ -48,6 +48,10 @@ class list(elems) {
         elements.at(index - 1) put(value)
     }
 
+    method clear {
+        itemSize := 0
+    }
+
     method removeAt(index) {
         if ((index < 1) || (index > itemSize)) then {
             OutOfRange.raise "List index must be in range 1..{itemSize}, not {index}"
@@ -58,6 +62,16 @@ class list(elems) {
         }
         itemSize := itemSize - 1
         removed
+    }
+
+    method removeItem(item) {
+        for (0..(itemSize - 1)) do { i ->
+            if (elements.at(i) == item) then {
+                removeAt(i + 1)
+                return true
+            }
+        }
+        false
     }
 
     method do(blk) {
